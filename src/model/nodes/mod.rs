@@ -1,15 +1,17 @@
-use ark_serialize::CanonicalSerialize;
-use ark_poly_commit::PolynomialCommitment;
 use ark_ff::PrimeField;
+use ark_poly_commit::PolynomialCommitment;
+use ark_std::log2;
 
-use crate::model::{
-    Poly,
-    CryptographicSponge,
-    nodes::{relu::ReLUNode, fc::FCNode},
+use crate::{
+    model::{
+        nodes::{fc::FCNode, relu::ReLUNode},
+        CryptographicSponge, Poly,
+    },
+    quantization::QSmallType,
 };
 
-pub(crate) mod relu;
 pub(crate) mod fc;
+pub(crate) mod relu;
 
 // mod parser;
 
@@ -21,49 +23,50 @@ pub(crate) mod fc;
 /// It stores information about the transition (such as a matrix and bias, if
 /// applicable), but not about about the specific values of its nodes: these
 /// are handled by the methods only.
-// pub trait Node<F, S, PCS>
-// where
-//     F: PrimeField,
-//     S: CryptographicSponge,
-//     PCS: PolynomialCommitment<F, Poly<F>, S>,
-// {
-//     /// A commitment associated to the layer's transition function. For
-//     /// instance, it is empty for a ReLU transition; and a commitment to the
-//     /// matrix and bias for a MatMul transition.
-//     type Commitment;
+pub trait NodeOps<F, S, PCS>
+where
+    F: PrimeField,
+    S: CryptographicSponge,
+    PCS: PolynomialCommitment<F, Poly<F>, S>,
+{
+    /// A commitment associated to the layer's transition function. For
+    /// instance, it is empty for a ReLU transition; and a commitment to the
+    /// matrix and bias for a MatMul transition.
+    type Commitment;
 
-//     // /// A proof of execution of the layer's transition function to a particular
-//     // /// set of node values
-//     type Proof;
+    // /// A proof of execution of the layer's transition function to a particular
+    // /// set of node values
+    type Proof;
 
-//     /// Returns the number of nodes in the layer
-//     fn num_nodes(&self) -> usize;
+    /// Returns the number of nodes in the layer
+    fn num_nodes(&self) -> usize;
 
-//     /// Returns the base-two logarithm of the number of nodes in the layer, i.e.
-//     /// the number of variables of the MLE of the node values
-//     fn log_num_nodes(&self) -> usize {
-//         log2(self.num_nodes()) as usize
-//     }
+    /// Returns the base-two logarithm of the number of nodes in the layer, i.e.
+    /// the number of variables of the MLE of the node values
+    fn log_num_nodes(&self) -> usize {
+        log2(self.num_nodes()) as usize
+    }
 
-//     /// Evaluate the layer on the given input natively.
-//     fn evaluate(&self, input: Vec<F>) -> Vec<F>;
+    /// Evaluate the layer on the given input natively.
+    fn evaluate(&self, input: Vec<QSmallType>) -> Vec<QSmallType>;
 
-//     // TODO: is it okay to trim all keys from the same original PCS key?
-//     // (e.g. to trim the same key to for the matrix and for the bias in the
-//     // case of MatMul)
-//     // fn setup(&self, params: PCS::UniversalParams) -> (, Self::VerifierKey);
+    // TODO: is it okay to trim all keys from the same original PCS key?
+    // (e.g. to trim the same key to for the matrix and for the bias in the
+    // case of MatMul)
+    // fn setup(&self, params: PCS::UniversalParams) -> (, Self::VerifierKey);
 
-//     /// Evaluate the layer on the given input natively.
-//     fn commit(&self) -> PCS::Commitment;
+    /// Evaluate the layer on the given input natively.
+    fn commit(&self) -> PCS::Commitment;
 
-//     /// Prove that the layer was executed correctly on the given input.
-//     fn prove(com: Self::Commitment, input: Vec<F>) -> Self::Proof;
+    /// Prove that the layer was executed correctly on the given input.
+    fn prove(com: Self::Commitment, input: Vec<F>) -> Self::Proof;
 
-//     /// Check that the layer transition was executed correctly.
-//     fn check(com: Self::Commitment, proof: Self::Proof) -> bool;
-// }
+    /// Check that the layer transition was executed correctly.
+    fn check(com: Self::Commitment, proof: Self::Proof) -> bool;
+}
 
-pub(crate) enum Node<F, S, PCS> where
+pub(crate) enum Node<F, S, PCS>
+where
     F: PrimeField,
     S: CryptographicSponge,
     PCS: PolynomialCommitment<F, Poly<F>, S>,
@@ -72,7 +75,8 @@ pub(crate) enum Node<F, S, PCS> where
     ReLU(ReLUNode<F, S, PCS>),
 }
 
-impl<F, S, PCS> Node<F, S, PCS> where
+impl<F, S, PCS> Node<F, S, PCS>
+where
     F: PrimeField,
     S: CryptographicSponge,
     PCS: PolynomialCommitment<F, Poly<F>, S>,
@@ -88,7 +92,7 @@ impl<F, S, PCS> Node<F, S, PCS> where
         }
     }
 
-    pub(crate) fn evaluate(&self, input: Vec<F>) -> Vec<F> {
+    pub(crate) fn evaluate(&self, input: Vec<QSmallType>) -> Vec<QSmallType> {
         match self {
             Node::MatMul(n) => n.evaluate(input),
             Node::ReLU(r) => r.evaluate(input),
@@ -110,4 +114,3 @@ impl<F, S, PCS> Node<F, S, PCS> where
         unimplemented!()
     }
 }
-

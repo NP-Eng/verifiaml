@@ -2,11 +2,10 @@ use std::marker::PhantomData;
 
 use ark_crypto_primitives::sponge::CryptographicSponge;
 use ark_ff::PrimeField;
-use ark_poly::{DenseMultilinearExtension, Polynomial};
+use ark_poly::DenseMultilinearExtension;
 use ark_poly_commit::PolynomialCommitment;
-use ark_std::log2;
 
-use crate::model::nodes::Node;
+use crate::{model::nodes::Node, quantization::QSmallType};
 
 mod nodes;
 
@@ -37,5 +36,13 @@ where
             layers,
             phantom: PhantomData,
         }
+    }
+
+    fn evaluate(&self, input: Vec<QSmallType>) -> Vec<QSmallType> {
+        let mut output = input;
+        for layer in &self.layers {
+            output = layer.evaluate(output);
+        }
+        output
     }
 }

@@ -1,3 +1,3 @@
 
 mod model;
-mod quantization;
+pub(crate) mod quantization;
