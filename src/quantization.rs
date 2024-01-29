@@ -62,3 +62,53 @@ fn requantise_fc_nnafz(output: &[QLargeType], q_info: &FCQInfo) -> Vec<QSmallTyp
         })
         .collect()
 }
+
+#[cfg(test)]
+mod tests {
+
+    use super::*;
+    #[test]
+    fn test_nnafz_noop() {
+        let output = vec![0, 1, 2, 3, 4, 5, 6, 7];
+        let q_info = FCQInfo {
+            input_info: QInfo {
+                scale: 1.0,
+                zero_point: 0,
+            },
+            weight_info: QInfo {
+                scale: 1.0,
+                zero_point: 0,
+            },
+            output_info: QInfo {
+                scale: 1.0,
+                zero_point: 0,
+            },
+        };
+        let expected = vec![0, 1, 2, 3, 4, 5, 6, 7];
+        let actual = requantise_fc(&output, &q_info, RoundingScheme::NaiveNearestAwayFromZero);
+        assert_eq!(expected, actual);
+    }
+
+    #[test]
+    fn test_nnafz_halves() {
+        // test when the output lands at .5 intervals
+        let output = vec![-3, -2, -1, 0, 1, 2, 3];
+        let q_info = FCQInfo {
+            input_info: QInfo {
+                scale: 0.5,
+                zero_point: 0,
+            },
+            weight_info: QInfo {
+                scale: 1.0,
+                zero_point: 0,
+            },
+            output_info: QInfo {
+                scale: 1.0,
+                zero_point: 0,
+            },
+        };
+        let expected = vec![-2, -1, -1, 0, 1, 1, 2];
+        let actual = requantise_fc(&output, &q_info, RoundingScheme::NaiveNearestAwayFromZero);
+        assert_eq!(expected, actual);
+    }
+}
