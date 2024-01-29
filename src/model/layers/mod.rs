@@ -1,3 +1,3 @@
 
-mod matmul;
+pub mod matmul;
 mod relu;

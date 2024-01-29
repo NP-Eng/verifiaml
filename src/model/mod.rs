@@ -1,12 +1,15 @@
+use std::marker::PhantomData;
 
 use ark_crypto_primitives::sponge::CryptographicSponge;
 use ark_ff::PrimeField;
-use ark_poly::Polynomial;
+use ark_poly::{DenseMultilinearExtension, Polynomial};
 use ark_poly_commit::PolynomialCommitment;
 use ark_std::log2;
 
 mod layers;
-mod parser;
+pub type Poly<F> = DenseMultilinearExtension<F>;
+use layers::matmul::MatMulLayer;
+// mod parser;
 
 // TODO: batched methods (e.g. for multiple evaluations)
 // TODO: issue: missing info about size of the next output? Or reduplicate it?
@@ -16,25 +19,19 @@ mod parser;
 /// It stores information about the transition (such as a matrix and bias, if
 /// applicable), but not about about the specific values of its nodes: these
 /// are handled by the methods only.
-pub trait Layer<F, P, S, PCS>
+pub trait Layer<F, S, PCS>
 where
     F: PrimeField,
-    P: Polynomial<F>,
     S: CryptographicSponge,
-    PCS: PolynomialCommitment<F, P, S>,
+    PCS: PolynomialCommitment<F, Poly<F>, S>,
 {
-// pub trait Layer<F: PrimeField, PCS: PolynomialCommitment<F, P: Polynomial<F>, S: CryptographicSponge>> {    
-    /// Types for the prover and verifier keys
-    type ProverKey: Clone;
-    type VerifierKey: Clone;
-
     /// A commitment associated to the layer's transition function. For
     /// instance, it is empty for a ReLU transition; and a commitment to the
     /// matrix and bias for a MatMul transition.
     type Commitment;
 
-    /// A proof of execution of the layer's transition function to a particular
-    /// set of node values
+    // /// A proof of execution of the layer's transition function to a particular
+    // /// set of node values
     type Proof;
 
     /// Returns the number of nodes in the layer
@@ -49,14 +46,13 @@ where
     /// Evaluate the layer on the given input natively.
     fn evaluate(&self, input: Vec<F>) -> Vec<F>;
 
-    /// Evaluate the layer on the given input natively.
     // TODO: is it okay to trim all keys from the same original PCS key?
     // (e.g. to trim the same key to for the matrix and for the bias in the
     // case of MatMul)
-    fn setup(&self, params: PCS::UniversalParams) -> (Self::ProverKey, Self::VerifierKey);
+    // fn setup(&self, params: PCS::UniversalParams) -> (, Self::VerifierKey);
 
     /// Evaluate the layer on the given input natively.
-    fn commit(&self) -> Self::Commitment;
+    fn commit(&self) -> PCS::Commitment;
 
     /// Prove that the layer was executed correctly on the given input.
     fn prove(com: Self::Commitment, input: Vec<F>) -> Self::Proof;
@@ -65,30 +61,33 @@ where
     fn check(com: Self::Commitment, proof: Self::Proof) -> bool;
 }
 
-// TODO: for now, we require all layers to use the same PCS; this might change
-// in the future
-struct Model<F, P, S, PCS>
-where
-    F: PrimeField,
-    P: Polynomial<F>,
-    S: CryptographicSponge,
-    PCS: PolynomialCommitment<F, P, S>,
-{
-    layers: Vec<Box<dyn Layer<F, P, S, PCS>>>,
+pub enum LayerType<F> {
+    MatMul(MatMulLayer<F>),
+    ReLU,
 }
 
-impl<F, P, S, PCS> Model<F, P, S, PCS>
+// TODO: for now, we require all layers to use the same PCS; this might change
+// in the future
+pub struct Model<F, S, PCS>
 where
     F: PrimeField,
-    P: Polynomial<F>,
     S: CryptographicSponge,
-    PCS: PolynomialCommitment<F, P, S>,
+    PCS: PolynomialCommitment<F, Poly<F>, S>,
 {
-    fn new(layers: Vec<dyn Layer>) -> Self {
+    layers: Vec<LayerType<F>>,
+    phantom: PhantomData<(F, S, PCS)>,
+}
+
+impl<F, S, PCS> Model<F, S, PCS>
+where
+    F: PrimeField,
+    S: CryptographicSponge,
+    PCS: PolynomialCommitment<F, Poly<F>, S>,
+{
+    fn new(layers: Vec<LayerType<F>>) -> Self {
         Self {
             layers,
+            phantom: PhantomData,
         }
     }
 }
-
-
