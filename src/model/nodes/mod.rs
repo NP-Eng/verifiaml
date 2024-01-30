@@ -1,6 +1,5 @@
 use ark_ff::PrimeField;
 use ark_poly_commit::PolynomialCommitment;
-use ark_std::log2;
 
 use crate::model::{
     nodes::{fc::FCNode, relu::ReLUNode},
@@ -41,13 +40,13 @@ where
     type Proof;
 
     /// The log2 of the number of output units of the node
-    fn num_units(&self) -> usize;
+    fn num_units(&self) -> usize {
+        1 << self.log_num_units()
+    }
 
     /// Returns the base-two logarithm of the number of nodes in the layer, i.e.
     /// the number of variables of the MLE of the node values
-    fn log_num_units(&self) -> usize {
-        log2(self.num_units()) as usize
-    }
+    fn log_num_units(&self) -> usize;
 
     /// Evaluate the node natively
     fn evaluate(&self, input: QArray) -> QArray;

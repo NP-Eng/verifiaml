@@ -3,10 +3,11 @@ use std::marker::PhantomData;
 use ark_crypto_primitives::sponge::CryptographicSponge;
 use ark_ff::PrimeField;
 use ark_poly_commit::PolynomialCommitment;
+use ark_std::log2;
 
 use crate::model::qarray::QArray;
 use crate::model::Poly;
-use crate::quantization::{requantise_fc, FCQInfo, QLargeType, QSmallType, RoundingScheme};
+use crate::quantization::{requantise_fc, FCQInfo, QInfo, QLargeType, QScaleType, QSmallType, RoundingScheme};
 
 use super::NodeOps;
 
@@ -37,8 +38,8 @@ where
     // this will be the sumcheck proof
     type Proof = PCS::Proof;
 
-    fn num_units(&self) -> usize {
-        self.dims.1
+    fn log_num_units(&self) -> usize {
+        log2(self.dims.1) as usize
     }
 
     fn evaluate(&self, input: QArray) -> QArray {
@@ -82,6 +83,65 @@ where
 
     fn check(com: PCS::Commitment, proof: PCS::Proof) -> bool {
         unimplemented!()
+    }
+}
+
+impl<F, S, PCS> FCNode<F, S, PCS>
+where
+    F: PrimeField,
+    S: CryptographicSponge,
+    PCS: PolynomialCommitment<F, Poly<F>, S>,
+{
+    pub(crate) fn new(
+        weights: Vec<QSmallType>,
+        bias: Vec<QLargeType>,
+        dims: (usize, usize),
+        s_i: QScaleType,
+        z_i: QSmallType,
+        s_w: QScaleType,
+        z_w: QSmallType,
+        s_o: QScaleType,
+        z_o: QSmallType,
+    ) -> Self {
+        assert_eq!(
+            weights.len(),
+            dims.0 * dims.1,
+            "Weights vector length does not match the product of the dimensions"
+        );
+
+        assert_eq!(
+            bias.len(),
+            dims.1,
+            "Bias vector length does not match the number of columns"
+        );
+
+        assert!(
+            dims.0.is_power_of_two() && dims.1.is_power_of_two(),
+            "Dimensions must be powers of two",
+        ); 
+
+        let q_info = FCQInfo {
+            input_info: QInfo {
+                scale: s_i,
+                zero_point: z_i,
+            },
+            weight_info: QInfo {
+                scale: s_w,
+                zero_point: z_w,
+            },
+            output_info: QInfo {
+                scale: s_o,
+                zero_point: z_o,
+            },
+        };
+
+        Self {
+            weights,
+            bias,
+            dims,
+            q_info,
+            phantom: PhantomData,
+        }
     }
 }
 

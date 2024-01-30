@@ -67,3 +67,17 @@ where
         todo!()
     }
 }
+
+impl<F, S, PCS> ReLUNode<F, S, PCS>
+where
+    F: PrimeField,
+    S: CryptographicSponge,
+    PCS: PolynomialCommitment<F, Poly<F>, S>,
+{
+    pub(crate) fn new(log_num_units: usize) -> Self {
+        Self {
+            log_num_units,
+            phantom: PhantomData,
+        }
+    }
+}

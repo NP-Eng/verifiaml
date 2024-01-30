@@ -10,7 +10,11 @@ use crate::quantization::QSmallType;
 
 use super::NodeOps;
 
-pub(crate) struct ReshapeNode<F, S, PCS> {
+pub(crate) struct ReshapeNode<F, S, PCS> where
+    F: PrimeField,
+    S: CryptographicSponge,
+    PCS: PolynomialCommitment<F, Poly<F>, S>,
+{
     input_dimensions: Vec<usize>,
     output_dimensions: Vec<usize>,
     phantom: PhantomData<(F, S, PCS)>,
@@ -26,7 +30,7 @@ where
 
     type Proof = PCS::Proof;
 
-    fn num_units(&self) -> usize {
+    fn log_num_units(&self) -> usize {
         return self.output_dimensions.iter().product();
     }
 
@@ -38,14 +42,6 @@ where
                 input.check_dimensions().unwrap(),
                 self.input_dimensions,
             );
-        }
-
-        // the two checks below should be performed upon construction
-        if self.output_dimensions.len() != 1 {
-            panic!("Only reshaping to 1 dimension is currently supported");
-        }
-        if self.input_dimensions.iter().product::<usize>() != self.output_dimensions[0] {
-            panic!("Input and output dimensions do not match");
         }
 
         if self.input_dimensions.len() == 1 {
@@ -71,6 +67,40 @@ where
 
     fn check(com: PCS::Commitment, proof: PCS::Proof) -> bool {
         unimplemented!()
+    }
+}
+
+impl<F, S, PCS> ReshapeNode<F, S, PCS> where
+    F: PrimeField,
+    S: CryptographicSponge,
+    PCS: PolynomialCommitment<F, Poly<F>, S>,
+{
+    pub(crate) fn new(input_dimensions: Vec<usize>, output_dimensions: Vec<usize>) -> Self {
+
+        assert_eq!(
+            output_dimensions.len(),
+            1,
+            "Only reshaping to 1 dimension is currently supported"  
+        );
+
+        assert_eq!(
+            input_dimensions.iter().product::<usize>(),
+            output_dimensions[0],
+            "Input and output dimensions do not match",
+        );
+
+        for d in input_dimensions.iter().chain(output_dimensions.iter()) {
+            assert!(
+                d.is_power_of_two(),
+                "All dimensions must be powers of two"
+            );
+        }
+
+        Self {
+            input_dimensions,
+            output_dimensions,
+            phantom: PhantomData,
+        }
     }
 }
 
