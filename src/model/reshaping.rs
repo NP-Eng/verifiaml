@@ -16,11 +16,13 @@ pub(crate) fn pad_pow2_1d<T: Clone>(mut array: Vec<T>, pad: T) -> Vec<T> {
 // new subarrays of length N filled with the value `pad`.
 //
 // Panics if `array` is empty
-pub(crate) fn pad_pow2_2d<T: Clone>(array: Vec<Vec<T>>, pad: T) -> Vec<Vec<T>> {
+pub(crate) fn pad_pow2_2d<T: Copy>(array: Vec<Vec<T>>, pad: T) -> Vec<Vec<T>> {
 
     assert!(array.is_empty());
 
-    let m = array.len().next_power_of_two();
+    let m_0 = array.len();
+    let m = m_0.next_power_of_two();
+    
 
     let n = array[0].len().next_power_of_two();
 
@@ -32,7 +34,7 @@ pub(crate) fn pad_pow2_2d<T: Clone>(array: Vec<Vec<T>>, pad: T) -> Vec<Vec<T>> {
         padded_array.push(s);
     }
 
-    for _ in 0..(m - array.len()) {
+    for _ in 0..(m - m_0) {
         padded_array.push(vec![pad; n]);
     }
 

@@ -1,5 +1,5 @@
 
-const WEIGHTS: &[i8] = [
+pub(crate) const WEIGHTS: &[i8] = &[
     -3,
     -6,
     -1,
@@ -7842,7 +7842,7 @@ const WEIGHTS: &[i8] = [
     6
 ];
 
-const BIAS: &[i32] = [
+pub(crate) const BIAS: &[i32] = &[
     -7230,
     9558,
     1607,
@@ -7855,9 +7855,9 @@ const BIAS: &[i32] = [
     -3804
 ];
 
-const S_I: f32 = 0.003921568859368563;
-const Z_I: u8 = 0;
-const S_W: f32 = 0.012436429969966412;
-const Z_W: u8 = 0;
-const S_O: f32 = 0.1573459506034851;
-const Z_O: u8 = 47;
+pub(crate) const S_I: f32 = 0.003921568859368563;
+pub(crate) const Z_I: i8 = 0;
+pub(crate) const S_W: f32 = 0.012436429969966412;
+pub(crate) const Z_W: i8 = 0;
+pub(crate) const S_O: f32 = 0.1573459506034851;
+pub(crate) const Z_O: i8 = 47;

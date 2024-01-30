@@ -11,7 +11,7 @@ use self::qarray::QArray;
 
 mod examples;
 mod nodes;
-mod padding;
+mod reshaping;
 mod qarray;
 
 pub(crate) type Poly<F> = DenseMultilinearExtension<F>;
