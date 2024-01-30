@@ -34,6 +34,7 @@ where
     S: CryptographicSponge,
     PCS: PolynomialCommitment<F, Poly<F>, S>,
 {
+    
     fn new(layers: Vec<Node<F, S, PCS>>) -> Self {
         Self {
             layers,
