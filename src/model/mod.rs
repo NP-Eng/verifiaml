@@ -9,7 +9,9 @@ use crate::model::nodes::Node;
 
 use self::qarray::QArray;
 
+mod examples;
 mod nodes;
+mod padding;
 mod qarray;
 
 pub(crate) type Poly<F> = DenseMultilinearExtension<F>;
