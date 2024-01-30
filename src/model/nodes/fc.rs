@@ -37,12 +37,10 @@ where
     // this will be the sumcheck proof
     type Proof = PCS::Proof;
 
-    /// Returns the number of nodes in the layer
-    fn num_nodes(&self) -> usize {
+    fn num_units(&self) -> usize {
         self.dims.1
     }
 
-    /// Evaluate the layer on the given input natively.
     fn evaluate(&self, input: QArray) -> QArray {
         if input.check_dimensions().unwrap().len() != 1 {
             panic!("FC node expects a 1-dimensional array");

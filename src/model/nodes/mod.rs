@@ -38,12 +38,12 @@ where
     type Proof;
 
     /// Returns the number of nodes in the layer
-    fn num_nodes(&self) -> usize;
+    fn num_units(&self) -> usize;
 
     /// Returns the base-two logarithm of the number of nodes in the layer, i.e.
     /// the number of variables of the MLE of the node values
-    fn log_num_nodes(&self) -> usize {
-        log2(self.num_nodes()) as usize
+    fn log_num_units(&self) -> usize {
+        log2(self.num_units()) as usize
     }
 
     /// Evaluate the layer on the given input natively.
@@ -80,14 +80,16 @@ where
     S: CryptographicSponge,
     PCS: PolynomialCommitment<F, Poly<F>, S>,
 {
-    pub(crate) fn num_nodes(&self) -> usize {
-        1 << self.log_num_nodes()
+    /// The number of output units of the node
+    pub(crate) fn num_units(&self) -> usize {
+        1 << self.log_num_units()
     }
 
-    pub(crate) fn log_num_nodes(&self) -> usize {
+    /// The log2 of the number of output units of the node
+    pub(crate) fn log_num_units(&self) -> usize {
         match self {
-            Node::FC(n) => n.log_num_nodes(),
-            Node::ReLU(r) => r.log_num_nodes(),
+            Node::FC(n) => n.log_num_units(),
+            Node::ReLU(r) => r.log_num_units(),
         }
     }
 

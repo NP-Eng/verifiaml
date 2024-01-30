@@ -19,7 +19,7 @@ where
     S: CryptographicSponge,
     PCS: PolynomialCommitment<F, Poly<F>, S>,
 {
-    log_num_nodes: usize,
+    log_num_units: usize,
     phantom: PhantomData<(F, S, PCS)>,
 }
 
@@ -34,8 +34,8 @@ where
 
     type Proof = PCS::Proof;
 
-    fn log_num_nodes(&self) -> usize {
-        self.log_num_nodes
+    fn log_num_units(&self) -> usize {
+        self.log_num_units
     }
 
     fn evaluate(&self, input: QArray) -> QArray {
@@ -63,7 +63,7 @@ where
         unimplemented!()
     }
 
-    fn num_nodes(&self) -> usize {
+    fn num_units(&self) -> usize {
         todo!()
     }
 }
