@@ -7,10 +7,13 @@ use crate::model::{
     CryptographicSponge, Poly,
 };
 
+use self::reshape::ReshapeNode;
+
 use super::qarray::QArray;
 
 pub(crate) mod fc;
 pub(crate) mod relu;
+pub(crate) mod reshape;
 
 // mod parser;
 
@@ -33,11 +36,11 @@ where
     /// matrix and bias for a MatMul transition.
     type Commitment;
 
-    // /// A proof of execution of the layer's transition function to a particular
-    // /// set of node values
+    /// A proof of execution of the layer's transition function to a particular
+    /// set of node values
     type Proof;
 
-    /// Returns the number of nodes in the layer
+    /// The log2 of the number of output units of the node
     fn num_units(&self) -> usize;
 
     /// Returns the base-two logarithm of the number of nodes in the layer, i.e.
@@ -46,7 +49,7 @@ where
         log2(self.num_units()) as usize
     }
 
-    /// Evaluate the layer on the given input natively.
+    /// Evaluate the node natively
     fn evaluate(&self, input: QArray) -> QArray;
 
     // TODO: is it okay to trim all keys from the same original PCS key?
@@ -54,13 +57,13 @@ where
     // case of MatMul)
     // fn setup(&self, params: PCS::UniversalParams) -> (, Self::VerifierKey);
 
-    /// Evaluate the layer on the given input natively.
+    /// Commit to the layer parameters
     fn commit(&self) -> PCS::Commitment;
 
-    /// Prove that the layer was executed correctly on the given input.
+    /// Produce a node output proof
     fn prove(com: Self::Commitment, input: Vec<F>) -> Self::Proof;
 
-    /// Check that the layer transition was executed correctly.
+    /// Verify a node output proof
     fn check(com: Self::Commitment, proof: Self::Proof) -> bool;
 }
 
@@ -72,6 +75,7 @@ where
 {
     FC(FCNode<F, S, PCS>),
     ReLU(ReLUNode<F, S, PCS>),
+    Reshape(ReshapeNode<F, S, PCS>),
 }
 
 impl<F, S, PCS> Node<F, S, PCS>
@@ -90,27 +94,34 @@ where
         match self {
             Node::FC(n) => n.log_num_units(),
             Node::ReLU(r) => r.log_num_units(),
+            Node::Reshape(r) => r.log_num_units(),
         }
     }
 
+    /// Evaluate the node natively
     pub(crate) fn evaluate(&self, input: QArray) -> QArray {
         match self {
             Node::FC(n) => n.evaluate(input),
             Node::ReLU(r) => r.evaluate(input),
+            Node::Reshape(r) => r.evaluate(input),
         }
     }
 
+    /// Commit to the layer parameters
     pub(crate) fn commit(&self) -> PCS::Commitment {
         match self {
             Node::FC(n) => n.commit(),
             Node::ReLU(r) => r.commit(),
+            Node::Reshape(r) => r.commit(),
         }
     }
 
+    /// Produce a node output proof
     pub(crate) fn prove(com: PCS::Commitment, input: Vec<F>) -> PCS::Proof {
         unimplemented!()
     }
 
+    /// Verify a node output proof
     pub(crate) fn check(com: PCS::Commitment, proof: PCS::Proof) -> bool {
         unimplemented!()
     }

@@ -72,17 +72,14 @@ where
         ).into()
     }
 
-    /// Evaluate the layer on the given input natively.
     fn commit(&self) -> PCS::Commitment {
         unimplemented!()
     }
 
-    /// Prove that the layer was executed correctly on the given input.
     fn prove(com: PCS::Commitment, input: Vec<F>) -> PCS::Proof {
         unimplemented!()
     }
 
-    /// Check that the layer transition was executed correctly.
     fn check(com: PCS::Commitment, proof: PCS::Proof) -> bool {
         unimplemented!()
     }
