@@ -37,14 +37,14 @@ where
     PCS: PolynomialCommitment<F, Poly<F>, S>,
 {
     
-    fn new(layers: Vec<Node<F, S, PCS>>) -> Self {
+    pub(crate) fn new(layers: Vec<Node<F, S, PCS>>) -> Self {
         Self {
             layers,
             phantom: PhantomData,
         }
     }
 
-    fn evaluate(&self, input: QArray) -> QArray {
+    pub(crate) fn evaluate(&self, input: QArray) -> QArray {
         let mut output = input;
         for layer in &self.layers {
             output = layer.evaluate(output);

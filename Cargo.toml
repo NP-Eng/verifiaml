@@ -20,5 +20,8 @@ ark-ff = { git = "https://github.com/arkworks-rs/algebra/" }
 ark-ec = { git = "https://github.com/arkworks-rs/algebra/" }
 ark-serialize = { git = "https://github.com/arkworks-rs/algebra/" }
 ark-poly = { git = "https://github.com/arkworks-rs/algebra/" }
-ark-poly-commit = { git = "https://github.com/arkworks-rs/poly-commit/" }
+ark-poly-commit = { git = "https://github.com/HungryCatsStudio/poly-commit", branch = "hyrax-pcs" }
 ark-crypto-primitives = { git = "https://github.com/arkworks-rs/crypto-primitives" }
+
+[dev-dependencies]
+ark-bn254 = { version = "^0.4.0", default-features = false, features = [ "curve" ] }

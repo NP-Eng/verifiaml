@@ -21,6 +21,17 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0942ffc6dcaadf03badf6e6a2d0228460359d5e34b57ccdc720b7382dfbd5ec5"
 
 [[package]]
+name = "ark-bn254"
+version = "0.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a22f4561524cd949590d78d7d4c5df8f592430d221f7f3c9497bbafd8972120f"
+dependencies = [
+ "ark-ec",
+ "ark-ff",
+ "ark-std",
+]
+
+[[package]]
 name = "ark-crypto-primitives"
 version = "0.4.0"
 source = "git+https://github.com/arkworks-rs/crypto-primitives#9f9324b6fa8aeee11d8db3052950e88d16135b40"
@@ -122,7 +133,7 @@ dependencies = [
 [[package]]
 name = "ark-poly-commit"
 version = "0.4.0"
-source = "git+https://github.com/arkworks-rs/poly-commit/#12f5529c9ca609d07dd4683fcd1e196bc375eb0d"
+source = "git+https://github.com/HungryCatsStudio/poly-commit?branch=hyrax-pcs#ac4a14c5e7a3486d845229e0ef529ed64457648e"
 dependencies = [
  "ark-crypto-primitives",
  "ark-ec",
@@ -130,6 +141,7 @@ dependencies = [
  "ark-poly",
  "ark-serialize",
  "ark-std",
+ "blake2 0.10.6",
  "derivative",
  "digest 0.10.7",
 ]
@@ -554,6 +566,7 @@ checksum = "3354b9ac3fae1ff6755cb6db53683adb661634f67557942dea4facebec0fee4b"
 name = "verifiaml"
 version = "0.1.0"
 dependencies = [
+ "ark-bn254",
  "ark-crypto-primitives",
  "ark-ec",
  "ark-ff",

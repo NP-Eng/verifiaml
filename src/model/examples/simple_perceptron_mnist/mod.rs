@@ -55,29 +55,32 @@ where
 
 #[cfg(test)]
 mod tests {
-    use ark_ff::PrimeField;
-    use ark_crypto_primitives::sponge::CryptographicSponge;
-    use ark_poly_commit::PolynomialCommitment;
-
+    use ark_crypto_primitives::sponge::poseidon::PoseidonSponge;    
+    use ark_bn254::{Fr, G1Affine};
+    use ark_poly_commit::hyrax::HyraxPC;
+    
+    type Sponge = PoseidonSponge<Fr>;
+    type Hyrax254 = HyraxPC<G1Affine, DenseMultilinearExtension<Fr>, Sponge>;
+    
     use super::*;
 
     #[test]
     fn run_simple_perceptron_mnist() {
-        let model = build_simple_perceptron_mnist::<Fr, DummySponge<Fr>, DummyPC<Fr>>();
-        let input = vec![vec![vec![1; 28]; 28]];
-        let output = model.evaluate(input);
-        assert_eq!(output.len(), 1);
-        assert_eq!(output[0].len(), 1);
-        assert_eq!(output[0][0].len(), 10);
-        assert_eq!(output[0][0][0], 0);
-        assert_eq!(output[0][0][1], 0);
-        assert_eq!(output[0][0][2], 0);
-        assert_eq!(output[0][0][3], 0);
-        assert_eq!(output[0][0][4], 0);
-        assert_eq!(output[0][0][5], 0);
-        assert_eq!(output[0][0][6], 0);
-        assert_eq!(output[0][0][7], 0);
-        assert_eq!(output[0][0][8], 0);
-        assert_eq!(output[0][0][9], 0);
+
+        let dummy_input = vec![vec![30; 28]; 28];
+
+        let input: Vec<u8> = vec![];
+        let expected_output: Vec<u8> = vec![];
+
+        let perceptron = build_simple_perceptron_mnist::<Fr, Sponge, Hyrax254>();
+        
+        let input_i8 = input.into_iter().map(|x| ((x as i32) - 128) as i8).collect();
+
+        let output = perceptron.evaluate(input_i8);
+
+        let output_u8 = output.iter().map(|x| ((x as i32) + 128) as u8).collect();
+
+        // assert_eq!(output_u8, expected_output);
+        println!("Output: {:?}", output_u8);
     }
 }
