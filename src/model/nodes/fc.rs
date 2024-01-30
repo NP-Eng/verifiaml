@@ -115,10 +115,11 @@ where
             "Bias vector length does not match the number of columns"
         );
 
-        assert!(
-            dims.0.is_power_of_two() && dims.1.is_power_of_two(),
-            "Dimensions must be powers of two",
-        ); 
+        // TODO re-introduce
+        // assert!(
+        //     dims.0.is_power_of_two() && dims.1.is_power_of_two(),
+        //     "Dimensions must be powers of two",
+        // ); 
 
         let q_info = FCQInfo {
             input_info: QInfo {

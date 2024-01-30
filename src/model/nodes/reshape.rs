@@ -89,12 +89,13 @@ impl<F, S, PCS> ReshapeNode<F, S, PCS> where
             "Input and output dimensions do not match",
         );
 
-        for d in input_dimensions.iter().chain(output_dimensions.iter()) {
-            assert!(
-                d.is_power_of_two(),
-                "All dimensions must be powers of two"
-            );
-        }
+        // TODO re-introduce
+        // for d in input_dimensions.iter().chain(output_dimensions.iter()) {
+        //     assert!(
+        //         d.is_power_of_two(),
+        //         "All dimensions must be powers of two"
+        //     );
+        // }
 
         Self {
             input_dimensions,

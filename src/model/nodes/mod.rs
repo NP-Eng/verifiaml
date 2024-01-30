@@ -24,7 +24,7 @@ pub(crate) mod reshape;
 /// It stores information about the transition (such as a matrix and bias, if
 /// applicable), but not about about the specific values of its nodes: these
 /// are handled by the methods only.
-pub trait NodeOps<F, S, PCS>
+pub(crate) trait NodeOps<F, S, PCS>
 where
     F: PrimeField,
     S: CryptographicSponge,
