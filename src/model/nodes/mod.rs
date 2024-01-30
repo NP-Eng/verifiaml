@@ -2,13 +2,12 @@ use ark_ff::PrimeField;
 use ark_poly_commit::PolynomialCommitment;
 use ark_std::log2;
 
-use crate::{
-    model::{
-        nodes::{fc::FCNode, relu::ReLUNode},
-        CryptographicSponge, Poly,
-    },
-    quantization::QSmallType,
+use crate::model::{
+    nodes::{fc::FCNode, relu::ReLUNode},
+    CryptographicSponge, Poly,
 };
+
+use super::qarray::QArray;
 
 pub(crate) mod fc;
 pub(crate) mod relu;
@@ -48,7 +47,7 @@ where
     }
 
     /// Evaluate the layer on the given input natively.
-    fn evaluate(&self, input: Vec<QSmallType>) -> Vec<QSmallType>;
+    fn evaluate(&self, input: QArray) -> QArray;
 
     // TODO: is it okay to trim all keys from the same original PCS key?
     // (e.g. to trim the same key to for the matrix and for the bias in the
@@ -71,7 +70,7 @@ where
     S: CryptographicSponge,
     PCS: PolynomialCommitment<F, Poly<F>, S>,
 {
-    MatMul(FCNode<F, S, PCS>),
+    FC(FCNode<F, S, PCS>),
     ReLU(ReLUNode<F, S, PCS>),
 }
 
@@ -87,21 +86,21 @@ where
 
     pub(crate) fn log_num_nodes(&self) -> usize {
         match self {
-            Node::MatMul(n) => n.log_num_nodes(),
+            Node::FC(n) => n.log_num_nodes(),
             Node::ReLU(r) => r.log_num_nodes(),
         }
     }
 
-    pub(crate) fn evaluate(&self, input: Vec<QSmallType>) -> Vec<QSmallType> {
+    pub(crate) fn evaluate(&self, input: QArray) -> QArray {
         match self {
-            Node::MatMul(n) => n.evaluate(input),
+            Node::FC(n) => n.evaluate(input),
             Node::ReLU(r) => r.evaluate(input),
         }
     }
 
     pub(crate) fn commit(&self) -> PCS::Commitment {
         match self {
-            Node::MatMul(n) => n.commit(),
+            Node::FC(n) => n.commit(),
             Node::ReLU(r) => r.commit(),
         }
     }

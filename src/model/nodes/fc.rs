@@ -4,6 +4,7 @@ use ark_crypto_primitives::sponge::CryptographicSponge;
 use ark_ff::PrimeField;
 use ark_poly_commit::PolynomialCommitment;
 
+use crate::model::qarray::QArray;
 use crate::model::Poly;
 use crate::quantization::{requantise_fc, FCQInfo, QLargeType, QSmallType, RoundingScheme};
 
@@ -42,7 +43,13 @@ where
     }
 
     /// Evaluate the layer on the given input natively.
-    fn evaluate(&self, input: Vec<QSmallType>) -> Vec<QSmallType> {
+    fn evaluate(&self, input: QArray) -> QArray {
+        if input.check_dimensions().unwrap().len() != 1 {
+            panic!("FC node expects a 1-dimensional array");
+        }
+
+        let input = input.values()[0][0].clone();
+
         assert_eq!(input.len(), self.dims.0);
 
         let shifted_input: Vec<_> = input
@@ -64,7 +71,7 @@ where
             &accumulators,
             &self.q_info,
             RoundingScheme::NaiveNearestAwayFromZero,
-        )
+        ).into()
     }
 
     /// Evaluate the layer on the given input natively.
