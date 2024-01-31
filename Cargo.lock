@@ -23,8 +23,7 @@ checksum = "0942ffc6dcaadf03badf6e6a2d0228460359d5e34b57ccdc720b7382dfbd5ec5"
 [[package]]
 name = "ark-bn254"
 version = "0.4.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a22f4561524cd949590d78d7d4c5df8f592430d221f7f3c9497bbafd8972120f"
+source = "git+https://github.com/arkworks-rs/algebra/#228787b5ab87139dc2a79359d2f6b25237f46dac"
 dependencies = [
  "ark-ec",
  "ark-ff",
