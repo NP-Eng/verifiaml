@@ -1,4 +1,4 @@
-pub(crate) type QSmallType = i8; // core type for quantised arithmetic: activation, matrix weights, etc.
+pub(crate) type QSmallType = i8;  // core type for quantised arithmetic: activation, matrix weights, etc.
 pub(crate) type QLargeType = i32; // larger type for quantised arithmetic, used in FC and convolutional biases
 pub(crate) type QScaleType = f32; // type for quantisation scales
                                   // TODO this one is likely exclusive to this module, reconsider visibility
@@ -22,8 +22,8 @@ pub(crate) struct FCQInfo {
 }
 
 pub(crate) enum RoundingScheme {
-    NaiveNearestAwayFromZero,
-    NaiveNearestEven,
+    NearestTiesAwayFromZero,
+    NearestTiesEven,
 }
 
 pub(crate) fn requantise_fc(
@@ -32,12 +32,12 @@ pub(crate) fn requantise_fc(
     scheme: RoundingScheme,
 ) -> Vec<QSmallType> {
     match scheme {
-        RoundingScheme::NaiveNearestAwayFromZero => requantise_fc_nnafz(output, q_info),
-        RoundingScheme::NaiveNearestEven => requantise_fc_nne(output, q_info),
+        RoundingScheme::NearestTiesAwayFromZero => requantise_fc_ntafz(output, q_info),
+        RoundingScheme::NearestTiesEven => requantise_fc_nte(output, q_info),
     }
 }
 
-fn requantise_fc_nnafz(output: &[QLargeType], q_info: &FCQInfo) -> Vec<QSmallType> {
+fn requantise_fc_ntafz(output: &[QLargeType], q_info: &FCQInfo) -> Vec<QSmallType> {
     // 1. Computing scale
     // TODO In actual schemes, this will be decomposed as (int, shift)
     let (s_i, s_w, s_o) = (
@@ -65,7 +65,7 @@ fn requantise_fc_nnafz(output: &[QLargeType], q_info: &FCQInfo) -> Vec<QSmallTyp
         .collect()
 }
 
-fn requantise_fc_nne(output: &[QLargeType], q_info: &FCQInfo) -> Vec<QSmallType> {
+fn requantise_fc_nte(output: &[QLargeType], q_info: &FCQInfo) -> Vec<QSmallType> {
     // 1. Computing scale
     // TODO In actual schemes, this will be decomposed as (int, shift)
     let (s_i, s_w, s_o) = (
@@ -93,6 +93,18 @@ fn requantise_fc_nne(output: &[QLargeType], q_info: &FCQInfo) -> Vec<QSmallType>
         .collect()
 }
 
+pub(crate) fn quantise_f32_u32_nne(values: &[f32], scale: QScaleType, zero: u8) -> Vec<u8> {
+
+    values.iter()
+        .map(|x|
+            ((((*x as QScaleType) / scale) + (zero as QScaleType))
+            .round_ties_even() as QLargeType)
+            .clamp(u8::MIN as QLargeType, u8::MAX as QLargeType) as u8
+        )
+        .collect()
+}
+
+
 #[cfg(test)]
 mod tests {
 
@@ -115,7 +127,7 @@ mod tests {
             },
         };
         let expected = vec![0, 1, 2, 3, 4, 5, 6, 7];
-        let actual = requantise_fc(&output, &q_info, RoundingScheme::NaiveNearestAwayFromZero);
+        let actual = requantise_fc(&output, &q_info, RoundingScheme::NearestTiesAwayFromZero);
         assert_eq!(expected, actual);
     }
 
@@ -138,7 +150,7 @@ mod tests {
             },
         };
         let expected = vec![-2, -1, -1, 0, 1, 1, 2];
-        let actual = requantise_fc(&output, &q_info, RoundingScheme::NaiveNearestAwayFromZero);
+        let actual = requantise_fc(&output, &q_info, RoundingScheme::NearestTiesAwayFromZero);
         assert_eq!(expected, actual);
     }
 }

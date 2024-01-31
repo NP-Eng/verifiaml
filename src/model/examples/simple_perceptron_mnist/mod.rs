@@ -15,8 +15,10 @@ use crate::model::{
 };
 
 mod parameters;
+mod input;
 
 use parameters::*;
+use input::*;
 
 const INPUT_DIMS: &[usize] = &[28, 28];
 const OUTPUT_DIMS: &[usize] = &[10];
@@ -59,7 +61,7 @@ mod tests {
     use ark_bn254::{Fr, G1Affine};
     use ark_poly_commit::hyrax::HyraxPC;
 
-    use crate::model::Poly;
+    use crate::{model::{qarray::QArray, Poly}, quantization::quantise_f32_u32_nne};
     
     type Sponge = PoseidonSponge<Fr>;
     type Hyrax254 = HyraxPC<G1Affine, Poly<Fr>, Sponge>;
@@ -69,12 +71,16 @@ mod tests {
     #[test]
     fn run_simple_perceptron_mnist() {
 
-        let input = vec![vec![30; 28]; 28];
-        let expected_output: Vec<u8> = vec![];
+        /**** Change here ****/
+        let input = NORMALISED_INPUT_TEST_150;
+        let expected_output: Vec<u8> = vec![135, 109, 152, 161, 187, 157, 159, 151, 173, 202];
+        /**********************/
+        
+        let quantised_input: Vec<Vec<u8>> = input.iter().map(|r| quantise_f32_u32_nne(r, S_INPUT, Z_INPUT)).collect();
 
         let perceptron = build_simple_perceptron_mnist::<Fr, Sponge, Hyrax254>();
         
-        let input_i8 = input.into_iter().map(|r|
+        let input_i8 = quantised_input.into_iter().map(|r|
             r.into_iter().map(|x| ((x as i32) - 128) as i8).collect::<Vec<i8>>()
         ).collect::<Vec<Vec<i8>>>().into();
 
@@ -82,7 +88,7 @@ mod tests {
 
         let output_u8: Vec<u8> = output.values()[0][0].iter().map(|x| ((*x as i32) + 128) as u8).collect();
 
-        // assert_eq!(output_u8, expected_output);
         println!("Output: {:?}", output_u8);
+        assert_eq!(output_u8, expected_output);
     }
 }

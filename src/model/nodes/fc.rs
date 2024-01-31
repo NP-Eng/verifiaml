@@ -48,28 +48,30 @@ where
         }
 
         let input = input.values()[0][0].clone();
+        let input: Vec<QLargeType> = input.into_iter().map(|x| x as QLargeType).collect();
 
         assert_eq!(input.len(), self.dims.0);
 
         let shifted_input: Vec<_> = input
             .iter()
-            .map(|x| (x - self.q_info.input_info.zero_point) as QLargeType)
+            .map(|x| x - (self.q_info.input_info.zero_point as QLargeType))
             .collect();
 
         let mut accumulators = self.bias.clone();
 
+        // TODO since we have acumulators, this can be done more efficiently going row-wise to avoid re-caching the input
         for col in 0..self.dims.1 {
             // TODO does the compiler realise it doesn't need to access accumulators[col] on every iteration of the inner loop? ow change
             for row in 0..self.dims.0 {
                 accumulators[col] +=
-                    shifted_input[row] * self.weights[row * self.dims.1 + col] as QLargeType;
+                    shifted_input[row] * (self.weights[row * self.dims.1 + col] as QLargeType)
             }
         }
 
         requantise_fc(
             &accumulators,
             &self.q_info,
-            RoundingScheme::NaiveNearestEven,
+            RoundingScheme::NearestTiesEven,
         ).into()
     }
 
