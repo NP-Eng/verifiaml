@@ -23,6 +23,7 @@ pub(crate) struct FCQInfo {
 
 pub(crate) enum RoundingScheme {
     NaiveNearestAwayFromZero,
+    NaiveNearestEven,
 }
 
 pub(crate) fn requantise_fc(
@@ -32,6 +33,7 @@ pub(crate) fn requantise_fc(
 ) -> Vec<QSmallType> {
     match scheme {
         RoundingScheme::NaiveNearestAwayFromZero => requantise_fc_nnafz(output, q_info),
+        RoundingScheme::NaiveNearestEven => requantise_fc_nne(output, q_info),
     }
 }
 
@@ -57,6 +59,34 @@ fn requantise_fc_nnafz(output: &[QLargeType], q_info: &FCQInfo) -> Vec<QSmallTyp
         .map(|x| {
             let x = *x as QScaleType * s;
             let mut x = x.round() as QLargeType; // TODO which type to pick here? Should we check for overflows?
+            x += q_info.output_info.zero_point as QLargeType;
+            x.clamp(QSmallType::MIN as QLargeType, QSmallType::MAX as QLargeType) as QSmallType
+        })
+        .collect()
+}
+
+fn requantise_fc_nne(output: &[QLargeType], q_info: &FCQInfo) -> Vec<QSmallType> {
+    // 1. Computing scale
+    // TODO In actual schemes, this will be decomposed as (int, shift)
+    let (s_i, s_w, s_o) = (
+        q_info.input_info.scale,
+        q_info.weight_info.scale,
+        q_info.output_info.scale,
+    );
+    let (s_i, s_w, s_o) = (
+        s_i as QScaleComputationType,
+        s_w as QScaleComputationType,
+        s_o as QScaleComputationType,
+    );
+    let s = (s_i * s_w / s_o) as QScaleType;
+
+    // 2. Requantise
+    // TODO add rayon for parallelisation?
+    output
+        .iter()
+        .map(|x| {
+            let x = *x as QScaleType * s;
+            let mut x = x.round_ties_even() as QLargeType; // TODO which type to pick here? Should we check for overflows?
             x += q_info.output_info.zero_point as QLargeType;
             x.clamp(QSmallType::MIN as QLargeType, QSmallType::MAX as QLargeType) as QSmallType
         })

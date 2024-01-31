@@ -69,7 +69,7 @@ where
         requantise_fc(
             &accumulators,
             &self.q_info,
-            RoundingScheme::NaiveNearestAwayFromZero,
+            RoundingScheme::NaiveNearestEven,
         ).into()
     }
 
