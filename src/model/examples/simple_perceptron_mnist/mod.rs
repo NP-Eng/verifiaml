@@ -23,6 +23,7 @@ use input::*;
 const INPUT_DIMS: &[usize] = &[28, 28];
 const OUTPUT_DIMS: &[usize] = &[10];
 
+// TODO this is incorrect now that we have switched to logs
 fn build_simple_perceptron_mnist<F, S, PCS>() -> Model<F, S, PCS> 
 where
     F: PrimeField,

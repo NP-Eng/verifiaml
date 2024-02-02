@@ -1,3 +1,4 @@
+use std::iter::zip;
 use std::marker::PhantomData;
 
 use ark_crypto_primitives::sponge::CryptographicSponge;
@@ -15,8 +16,8 @@ pub(crate) struct ReshapeNode<F, S, PCS> where
     S: CryptographicSponge,
     PCS: PolynomialCommitment<F, Poly<F>, S>,
 {
-    input_dimensions: Vec<usize>,
-    output_dimensions: Vec<usize>,
+    input_dimension_logs: Vec<usize>,
+    output_dimension_logs: Vec<usize>,
     phantom: PhantomData<(F, S, PCS)>,
 }
 
@@ -26,46 +27,50 @@ where
     S: CryptographicSponge,
     PCS: PolynomialCommitment<F, Poly<F>, S>,
 {
-    type Commitment = PCS::Commitment;
-
-    type Proof = PCS::Proof;
+    type NodeCommitment = ();
+    type InputData = QSmallType;
+    type OutputData = QSmallType;
+    type Proof = (); // TODO to decide
 
     fn log_num_units(&self) -> usize {
-        return self.output_dimensions.iter().product();
+        return self.output_dimension_logs.iter().sum();
     }
 
-    /// Evaluate the layer on the given input natively.
-    fn evaluate(&self, input: QArray) -> QArray {
-        if input.check_dimensions().unwrap() != self.input_dimensions {
-            panic!(
-                "Incorrect input dimensions: found {:?}, expected {:?}",
-                input.check_dimensions().unwrap(),
-                self.input_dimensions,
-            );
-        }
+    fn evaluate(&self, input: QArray<Self::InputData>) -> QArray<Self::OutputData> {
+        // Sanity checks
+        // TODO systematise
+        assert!(
+            zip(
+                self.input_dimension_logs.iter(),
+                input.shape().iter()
+            ).all(|(l, d)| 1 << l == *d),
+            "Received input shape does not match node input shape"
+        );
 
-        if self.input_dimensions.len() == 1 {
-            return input;
-        }
-        if self.input_dimensions.len() == 2 {
-            let v: Vec<QSmallType> = input.values()[0].clone().into_iter().flatten().collect();
-            return v.into();
-        }
-        else {
-            let v: Vec<QSmallType> = input.move_values().into_iter().flatten().flatten().collect();
-            return v.into();
-        }
+        // TODO better way than cloning? Receive mutable reference?
+        let mut output = input.clone();
+        output.reshape(self.output_dimension_logs.iter().map(|l| 1 << l).collect());
+
+        output
     }
 
-    fn commit(&self) -> PCS::Commitment {
+    fn commit(&self) -> Self::NodeCommitment {
+        // TODO assuming we want to make the reshape parameters public info,
+        // no commitment is needed
+        ()
+    }
+
+    fn prove(
+        node_com: Self::NodeCommitment,
+        input: QArray<Self::InputData>,
+        input_com: PCS::Commitment,
+        output: QArray<Self::OutputData>,
+        output_com: PCS::Commitment,
+    ) -> Self::Proof {
         unimplemented!()
     }
 
-    fn prove(com: PCS::Commitment, input: Vec<F>) -> PCS::Proof {
-        unimplemented!()
-    }
-
-    fn check(com: PCS::Commitment, proof: PCS::Proof) -> bool {
+    fn verify(node_com: Self::NodeCommitment, proof: Self::Proof) -> bool {
         unimplemented!()
     }
 }
@@ -75,18 +80,11 @@ impl<F, S, PCS> ReshapeNode<F, S, PCS> where
     S: CryptographicSponge,
     PCS: PolynomialCommitment<F, Poly<F>, S>,
 {
-    pub(crate) fn new(input_dimensions: Vec<usize>, output_dimensions: Vec<usize>) -> Self {
-
+    pub(crate) fn new(input_dimension_logs: Vec<usize>, output_dimension_logs: Vec<usize>) -> Self {
         assert_eq!(
-            output_dimensions.len(),
-            1,
-            "Only reshaping to 1 dimension is currently supported"  
-        );
-
-        assert_eq!(
-            input_dimensions.iter().product::<usize>(),
-            output_dimensions[0],
-            "Input and output dimensions do not match",
+            input_dimension_logs.iter().sum::<usize>(),
+            output_dimension_logs.iter().sum::<usize>(),
+            "Input and output shapes have a different number of entries",
         );
 
         // TODO re-introduce
@@ -98,8 +96,8 @@ impl<F, S, PCS> ReshapeNode<F, S, PCS> where
         // }
 
         Self {
-            input_dimensions,
-            output_dimensions,
+            input_dimension_logs,
+            output_dimension_logs,
             phantom: PhantomData,
         }
     }

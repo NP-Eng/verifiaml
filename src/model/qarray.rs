@@ -1,84 +1,161 @@
 
-use std::vec;
+// TODO change to ark_std?
+use std::{vec, ops::{Add, Sub, Mul, Div}};
 
-use crate::quantization::QSmallType;
+use crate::quantization::{QSmallType, QLargeType};
 
-pub(crate) struct QArray(Vec<Vec<Vec<QSmallType>>>);
+pub(crate) trait InnerType {}
 
-impl QArray {
-    // TODO change error type
-    /// Check that all sub– and subsubarrays have the correct length
-    pub fn check_dimensions(&self) -> Result<Vec<usize>, String> {
-        let (m, n, l) = self.raw_dimensions();
+impl InnerType for QSmallType {}
 
-        for i in 0..m {
-            if self.0[i].len() != n {
-                return Err(format!(
-                    "Subarray with index {} has length {}, but {} was expected",
-                    i,
-                    self.0[i].len(),
-                    n
-                ));
-            }
+impl InnerType for QLargeType {}
 
-            for j in 0..n {
-                if self.0[i][j].len() != l {
-                    return Err(format!(
-                        "Subsubarray with index ({}, {}) has length {}, but {} was expected",
-                        i,
-                        j,
-                        self.0[i][j].len(),
-                        l
-                    ));
-                }
-            }
-        }
+#[derive(Debug, Clone)]
+pub(crate) struct QArray<T: InnerType> {
+    flattened: Vec<T>,
+    shape: Vec<usize>,
+}
 
-        Ok(self.dimensions())
+impl<T: InnerType> QArray<T> {
+    
+    pub(crate) fn check_dimensions(&self) -> bool {
+        self.flattened.len() == self.shape.iter().product()
     }
 
-    /// Return array dimensions without checking sub- or subsubarray lengths
-    pub(crate) fn dimensions(&self) -> Vec<usize> {
-        let (m, n, l) = self.raw_dimensions();
+    pub(crate) fn shape(&self) -> &Vec<usize> {
+        &self.shape
+    }
 
-        if m == 1 {
-            if n == 1 {
-                vec![l]
-            } else {
-                vec![n, l]
-            }
-        } else {
-            vec![m, n, l]
+    pub(crate) fn len(&self) -> usize {
+        self.flattened.len()
+    }
+
+    pub(crate) fn num_dims(&self) -> usize {
+        self.shape.len()
+    }
+
+    pub(crate) fn values(&self) -> &Vec<T> {
+        &self.flattened
+    }
+
+    pub(crate) fn move_values(self) -> Vec<T> {
+        self.flattened
+    }
+
+    pub(crate) fn cast<S: InnerType>(self) -> QArray<S> where S: From<T> {
+        let flattened = self.flattened.into_iter().map(|x| x.into()).collect();
+        QArray {
+            flattened,
+            shape: self.shape.clone(),
         }
     }
 
-    fn raw_dimensions(&self) -> (usize, usize, usize) {
-        (self.0.len(), self.0[0].len(), self.0[0][0].len())
-    }
-
-    pub(crate) fn values(&self) -> &Vec<Vec<Vec<QSmallType>>> {
-        &self.0
-    }
-
-    pub(crate) fn move_values(self) -> Vec<Vec<Vec<QSmallType>>> {
-        self.0
-    }
-}
-
-impl From<Vec<QSmallType>> for QArray {
-    fn from(value: Vec<QSmallType>) -> Self {
-        Self(vec![vec![value]])
+    // Reshapes the QArray in-place
+    pub(crate) fn reshape(&mut self, shape: Vec<usize>) {
+        
+        assert_eq!(
+            self.len(),
+            shape.iter().product(),
+            "New shape must have the same number of elements as the original one"
+        );
+        
+        self.shape = shape;
     }
 }
 
-impl From<Vec<Vec<QSmallType>>> for QArray {
-    fn from(value: Vec<Vec<QSmallType>>) -> Self {
-        Self(vec![value])
+/************************ Operators ************************/
+
+// Since numerical type control is essential, we implement only QArray<T> + T
+// insead of the more general QArray<T> + S for any S which can be added to T,
+// thus forcing the programmer to make intentional casts. The same applies to
+// other operator implementations below.
+impl<T: InnerType> Add<T> for QArray<T> where T: Add<Output = T>{
+    type Output = QArray<T>;
+
+    fn add(self, rhs: T) -> QArray<T> {
+        let flattened = self.flattened.into_iter().map(|x| x + rhs).collect();
+        QArray {
+            flattened,
+            shape: self.shape,
+        }
     }
 }
 
-impl From<Vec<Vec<Vec<QSmallType>>>> for QArray {
-    fn from(value: Vec<Vec<Vec<QSmallType>>>) -> Self {
-        Self(value)
+// Addition in the other direction cannot be implemented in the same way, cf.
+// https://stackoverflow.com/questions/70220168/how-to-implement-mul-trait-for-a-custom-struct-type-to-work-in-both-ways
+// There is a workaround, but it is not necessary for now
+// impl<T: InnerType> ops::Add<QArray<T>> for T where T: ops::Add<Output = T>
+
+impl<T: InnerType> Sub<T> for QArray<T> where T: Sub<Output = T>{
+    type Output = QArray<T>;
+
+    fn sub(self, rhs: T) -> QArray<T> {
+        let flattened = self.flattened.into_iter().map(|x| x - rhs).collect();
+        QArray {
+            flattened,
+            shape: self.shape,
+        }
     }
 }
+
+impl<T: InnerType> Mul<T> for QArray<T> where T: Mul<Output = T>{
+    type Output = QArray<T>;
+
+    fn mul(self, rhs: T) -> QArray<T> {
+        let flattened = self.flattened.into_iter().map(|x| x * rhs).collect();
+        QArray {
+            flattened,
+            shape: self.shape,
+        }
+    }
+}
+
+impl<T: InnerType> Div<T> for QArray<T> where T: Div<Output = T>{
+    type Output = QArray<T>;
+
+    fn div(self, rhs: T) -> QArray<T> {
+        let flattened = self.flattened.into_iter().map(|x| x / rhs).collect();
+        QArray {
+            flattened,
+            shape: self.shape,
+        }
+    }
+}
+
+/******************* Conversion from Vec *******************/
+
+impl<T: InnerType> From<Vec<T>> for QArray<T> {
+    fn from(values: Vec<T>) -> Self {
+        Self {
+            flattened: values,
+            shape: vec![values.len()],
+        }
+    }
+}
+
+impl<T: InnerType> From<Vec<Vec<T>>> for QArray<T> {
+    fn from(values: Vec<Vec<T>>) -> Self {
+
+        assert!(
+            values.iter().all(|x| x.len() == values[0].len()),
+            "All sub-vectors must have the same length"
+        );
+
+        let shape = vec![values.len(), values[0].len()];
+        
+        let flattened = values.into_iter().flatten().collect();
+        Self { flattened, shape }
+    }
+}
+
+// This doesn't work, cf.
+// https://stackoverflow.com/questions/37347311/how-is-there-a-conflicting-implementation-of-from-when-using-a-generic-type
+// impl<T: InnerType, S: InnerType> From<QArray<T>> for QArray<S> where S: From<T> {
+//     fn from(input: QArray<T>) -> Self {
+//         let flattened = input.move_values().into_iter().map(|x| x as S).collect();
+//         Self {
+//             flattened,
+//             shape: input.shape,
+//         }
+//     }
+// }

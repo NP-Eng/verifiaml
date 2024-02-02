@@ -5,7 +5,7 @@ use ark_ff::PrimeField;
 use ark_poly::DenseMultilinearExtension;
 use ark_poly_commit::PolynomialCommitment;
 
-use crate::model::nodes::Node;
+use crate::{model::nodes::Node, quantization::QSmallType};
 
 use self::qarray::QArray;
 
@@ -44,7 +44,7 @@ where
         }
     }
 
-    pub(crate) fn evaluate(&self, input: QArray) -> QArray {
+    pub(crate) fn evaluate(&self, input: QArray<QSmallType>) -> QArray<QSmallType> {
         let mut output = input;
         for layer in &self.layers {
             output = layer.evaluate(output);

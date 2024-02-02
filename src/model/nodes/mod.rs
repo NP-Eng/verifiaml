@@ -4,6 +4,7 @@ use ark_poly_commit::PolynomialCommitment;
 use crate::model::{
     nodes::{fc::FCNode, relu::ReLUNode},
     CryptographicSponge, Poly,
+    qarray::InnerType,
 };
 
 use self::reshape::ReshapeNode;
@@ -33,37 +34,49 @@ where
     /// A commitment associated to the layer's transition function. For
     /// instance, it is empty for a ReLU transition; and a commitment to the
     /// matrix and bias for a MatMul transition.
-    type Commitment;
+    type NodeCommitment;
+
+    // Type of the node's input
+    type InputData: InnerType;
+
+    // Type of the node's output
+    type OutputData: InnerType;
 
     /// A proof of execution of the layer's transition function to a particular
     /// set of node values
     type Proof;
+
+    /// Returns the base-two logarithm of the number of nodes in the layer, i.e.
+    /// the number of variables of the MLE of the node values
+    fn log_num_units(&self) -> usize;
 
     /// The log2 of the number of output units of the node
     fn num_units(&self) -> usize {
         1 << self.log_num_units()
     }
 
-    /// Returns the base-two logarithm of the number of nodes in the layer, i.e.
-    /// the number of variables of the MLE of the node values
-    fn log_num_units(&self) -> usize;
-
     /// Evaluate the node natively
-    fn evaluate(&self, input: QArray) -> QArray;
+    fn evaluate(&self, input: QArray<Self::InputData>) -> QArray<Self::OutputData>;
 
     // TODO: is it okay to trim all keys from the same original PCS key?
     // (e.g. to trim the same key to for the matrix and for the bias in the
     // case of MatMul)
     // fn setup(&self, params: PCS::UniversalParams) -> (, Self::VerifierKey);
 
-    /// Commit to the layer parameters
-    fn commit(&self) -> PCS::Commitment;
+    /// Commit to the node parameters
+    fn commit(&self) -> Self::NodeCommitment;
 
     /// Produce a node output proof
-    fn prove(com: Self::Commitment, input: Vec<F>) -> Self::Proof;
+    fn prove(
+        node_com: Self::NodeCommitment,
+        input: QArray<Self::InputData>,
+        input_com: PCS::Commitment,
+        output: QArray<Self::OutputData>,
+        output_com: PCS::Commitment,
+    ) -> Self::Proof;
 
     /// Verify a node output proof
-    fn check(com: Self::Commitment, proof: Self::Proof) -> bool;
+    fn verify(node_com: Self::NodeCommitment, proof: Self::Proof) -> bool;
 }
 
 pub(crate) enum Node<F, S, PCS>
@@ -97,31 +110,33 @@ where
         }
     }
 
-    /// Evaluate the node natively
-    pub(crate) fn evaluate(&self, input: QArray) -> QArray {
-        match self {
-            Node::FC(n) => n.evaluate(input),
-            Node::ReLU(r) => r.evaluate(input),
-            Node::Reshape(r) => r.evaluate(input),
-        }
-    }
+    // /// Evaluate the node natively
+    // TODO solve typing issue; enums?
+    // pub(crate) fn evaluate(&self, input: QArray) -> QArray {
+    //     match self {
+    //         Node::FC(n) => n.evaluate(input),
+    //         Node::ReLU(r) => r.evaluate(input),
+    //         Node::Reshape(r) => r.evaluate(input),
+    //     }
+    // }
 
-    /// Commit to the layer parameters
-    pub(crate) fn commit(&self) -> PCS::Commitment {
-        match self {
-            Node::FC(n) => n.commit(),
-            Node::ReLU(r) => r.commit(),
-            Node::Reshape(r) => r.commit(),
-        }
-    }
+    // /// Commit to the layer parameters
+    // TODO solve typing issue; enums or traits? Same for the two methods below
+    // pub(crate) fn commit(&self) -> PCS::Commitment {
+    //     match self {
+    //         Node::FC(n) => n.commit(),
+    //         Node::ReLU(r) => r.commit(),
+    //         Node::Reshape(r) => r.commit(),
+    //     }
+    // }
 
-    /// Produce a node output proof
-    pub(crate) fn prove(com: PCS::Commitment, input: Vec<F>) -> PCS::Proof {
-        unimplemented!()
-    }
+    // /// Produce a node output proof
+    // pub(crate) fn prove(com: PCS::Commitment, input: Vec<F>) -> PCS::Proof {
+    //     unimplemented!()
+    // }
 
-    /// Verify a node output proof
-    pub(crate) fn check(com: PCS::Commitment, proof: PCS::Proof) -> bool {
-        unimplemented!()
-    }
+    // /// Verify a node output proof
+    // pub(crate) fn check(com: PCS::Commitment, proof: PCS::Proof) -> bool {
+    //     unimplemented!()
+    // }
 }

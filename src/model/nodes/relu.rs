@@ -23,27 +23,30 @@ where
     phantom: PhantomData<(F, S, PCS)>,
 }
 
-// TODO: it will be more efficient to add size checks here
+pub(crate) struct ReLUProof {
+    // this will be a lookup proof
+}
+
 impl<F, S, PCS> NodeOps<F, S, PCS> for ReLUNode<F, S, PCS>
 where
     F: PrimeField,
     S: CryptographicSponge,
     PCS: PolynomialCommitment<F, Poly<F>, S>,
 {
-    type Commitment = PCS::Commitment;
-
-    type Proof = PCS::Proof;
+    type NodeCommitment = ();
+    type InputData = QSmallType;
+    type OutputData = QSmallType;
+    type Proof = ReLUProof;
 
     fn log_num_units(&self) -> usize {
         self.log_num_units
     }
 
-    fn evaluate(&self, input: QArray) -> QArray {
-        if input.check_dimensions().unwrap().len() != 1 {
-            panic!("ReLU node expects a 1-dimensional array");
-        }
+    fn evaluate(&self, input: QArray<Self::InputData>) -> QArray<Self::OutputData> {
+        // TODO sanity checks (cf. FC); systematise
         
-        let v: Vec<QSmallType> = input.values()[0][0]
+        // TODO Can be done more elegantly, probably
+        let v: Vec<QSmallType> = input.values()
             .iter()
             .map(|x| *max(x, &(0 as QSmallType)))
             .collect();
@@ -51,20 +54,23 @@ where
         v.into()
     }
 
-    fn commit(&self) -> PCS::Commitment {
+    fn commit(&self) -> Self::NodeCommitment {
+        // ReLU nodes have no parameters to commit to
+        ()
+    }
+
+    fn prove(
+        node_com: Self::NodeCommitment,
+        input: QArray<Self::InputData>,
+        input_com: PCS::Commitment,
+        output: QArray<Self::OutputData>,
+        output_com: PCS::Commitment,
+    ) -> Self::Proof {
         unimplemented!()
     }
 
-    fn prove(com: PCS::Commitment, input: Vec<F>) -> PCS::Proof {
+    fn verify(node_com: Self::NodeCommitment, proof: Self::Proof) -> bool {
         unimplemented!()
-    }
-
-    fn check(com: PCS::Commitment, proof: PCS::Proof) -> bool {
-        unimplemented!()
-    }
-
-    fn num_units(&self) -> usize {
-        todo!()
     }
 }
 

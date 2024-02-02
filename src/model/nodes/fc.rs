@@ -27,37 +27,61 @@ pub(crate) struct FCNode<F, S, PCS> {
     phantom: PhantomData<(F, S, PCS)>,
 }
 
+struct FCCommitment<F, S, PCS>
+where
+    F: PrimeField,
+    S: CryptographicSponge,
+    PCS: PolynomialCommitment<F, Poly<F>, S>,
+{
+    weight_com: PCS::Commitment,
+    bias_com: PCS::Commitment,
+}
+
+struct FCProof {
+    // this will be the sumcheck proof
+}
+
 impl<F, S, PCS> NodeOps<F, S, PCS> for FCNode<F, S, PCS>
 where
     F: PrimeField,
     S: CryptographicSponge,
     PCS: PolynomialCommitment<F, Poly<F>, S>,
 {
-    type Commitment = PCS::Commitment;
-
-    // this will be the sumcheck proof
-    type Proof = PCS::Proof;
+    type NodeCommitment = FCCommitment<F, S, PCS>;
+    type InputData = QSmallType;
+    type OutputData = QLargeType;
+    type Proof = FCProof;
 
     fn log_num_units(&self) -> usize {
         log2(self.dims.1) as usize
     }
 
-    fn evaluate(&self, input: QArray) -> QArray {
-        if input.check_dimensions().unwrap().len() != 1 {
-            panic!("FC node expects a 1-dimensional array");
-        }
+    fn evaluate(&self, input: QArray<Self::InputData>) -> QArray<Self::OutputData> {
 
-        let input = input.values()[0][0].clone();
-        let input: Vec<QLargeType> = input.into_iter().map(|x| x as QLargeType).collect();
+        // Sanity checks
+        // TODO systematise
+        assert_eq!(
+            input.num_dims(),
+            1,
+            "Incorrect shape: Fully connected node expected a 1-dimensional input array"
+        );
+        assert_eq!(
+            self.dims.0,
+            input.len(),
+            "Length mismatch: Fully connected node expected input with {} elements, got {} elements instead",
+            self.dims.0,
+            input.len()
+        );
 
-        assert_eq!(input.len(), self.dims.0);
+        let input: QArray<QLargeType> = input.cast();
 
-        let shifted_input: Vec<_> = input
-            .iter()
-            .map(|x| x - (self.q_info.input_info.zero_point as QLargeType))
-            .collect();
+        // TODO this is a bigger question: can this overflow an i8? Supposedly the point of quantisation
+        // is that input-by-weight products can be computed in i8. To be safe, let us use the large type here
+        let shifted_input = (input - self.q_info.input_info.zero_point as QLargeType).values();
 
         let mut accumulators = self.bias.clone();
+
+        // TODO this can be made more elegant (efficient?) using addition of QArrays after defining suitable operators
 
         // TODO since we have acumulators, this can be done more efficiently going row-wise to avoid re-caching the input
         for col in 0..self.dims.1 {
@@ -68,22 +92,30 @@ where
             }
         }
 
-        requantise_fc(
-            &accumulators,
-            &self.q_info,
-            RoundingScheme::NearestTiesEven,
-        ).into()
+        accumulators.into()
+
+        // requantise_fc(
+        //     &accumulators,
+        //     &self.q_info,
+        //     RoundingScheme::NearestTiesEven,
+        // ).into()
     }
 
-    fn commit(&self) -> PCS::Commitment {
+    fn commit(&self) -> Self::NodeCommitment {
         unimplemented!()
     }
 
-    fn prove(com: PCS::Commitment, input: Vec<F>) -> PCS::Proof {
+    fn prove(
+        node_com: Self::NodeCommitment,
+        input: QArray<Self::InputData>,
+        input_com: PCS::Commitment,
+        output: QArray<Self::OutputData>,
+        output_com: PCS::Commitment,
+    ) -> Self::Proof {
         unimplemented!()
     }
 
-    fn check(com: PCS::Commitment, proof: PCS::Proof) -> bool {
+    fn verify(com: Self::NodeCommitment, proof: Self::Proof) -> bool {
         unimplemented!()
     }
 }
