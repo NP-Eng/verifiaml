@@ -36,8 +36,12 @@ where
     type NodeCommitment = ();
     type Proof = ReLUProof;
 
-    fn log_num_units(&self) -> usize {
-        self.log_num_units
+    fn shape(&self) -> Vec<usize> {
+        vec![1 << self.log_num_units]
+    }
+
+    fn padded_shape_log(&self) -> Vec<usize> {
+        vec![self.log_num_units]
     }
 
     fn evaluate(&self, input: QArray<QSmallType>) -> QArray<QSmallType> {

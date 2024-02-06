@@ -16,8 +16,10 @@ pub(crate) struct ReshapeNode<F, S, PCS> where
     S: CryptographicSponge,
     PCS: PolynomialCommitment<F, Poly<F>, S>,
 {
-    input_dimension_logs: Vec<usize>,
-    output_dimension_logs: Vec<usize>,
+    input_shape: Vec<usize>,
+    output_shape: Vec<usize>,
+    padded_input_shape_logs: Vec<usize>,
+    padded_output_shape_logs: Vec<usize>,
     phantom: PhantomData<(F, S, PCS)>,
 }
 
@@ -30,24 +32,26 @@ where
     type NodeCommitment = ();
     type Proof = (); // TODO to decide
 
-    fn log_num_units(&self) -> usize {
-        return self.output_dimension_logs.iter().sum();
+    fn shape(&self) -> Vec<usize> {
+        self.output_shape.clone()
+    }
+
+    fn padded_shape_log(&self) -> Vec<usize> {
+        self.padded_output_shape_logs.clone()
     }
 
     fn evaluate(&self, input: QArray<QSmallType>) -> QArray<QSmallType> {
         // Sanity checks
         // TODO systematise
-        assert!(
-            zip(
-                self.input_dimension_logs.iter(),
-                input.shape().iter()
-            ).all(|(l, d)| 1 << l == *d),
+        assert_eq!(
+            *input.shape(),
+            self.input_shape,
             "Received input shape does not match node input shape"
         );
 
         // TODO better way than cloning? Receive mutable reference?
         let mut output = input.clone();
-        output.reshape(self.output_dimension_logs.iter().map(|l| 1 << l).collect());
+        output.reshape(self.output_shape);
 
         output
     }
@@ -78,20 +82,12 @@ impl<F, S, PCS> ReshapeNode<F, S, PCS> where
     S: CryptographicSponge,
     PCS: PolynomialCommitment<F, Poly<F>, S>,
 {
-    pub(crate) fn new(input_dimension_logs: Vec<usize>, output_dimension_logs: Vec<usize>) -> Self {
+    pub(crate) fn new(input_dimension: Vec<usize>, output_dimension_logs: Vec<usize>) -> Self {
         assert_eq!(
             input_dimension_logs.iter().sum::<usize>(),
             output_dimension_logs.iter().sum::<usize>(),
             "Input and output shapes have a different number of entries",
         );
-
-        // TODO re-introduce
-        // for d in input_dimensions.iter().chain(output_dimensions.iter()) {
-        //     assert!(
-        //         d.is_power_of_two(),
-        //         "All dimensions must be powers of two"
-        //     );
-        // }
 
         Self {
             input_dimension_logs,
