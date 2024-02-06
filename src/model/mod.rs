@@ -50,4 +50,12 @@ where
         }
         output
     }
+
+    pub(crate) fn padded_evaluate(&self, input: QArray<QSmallType>) -> QArray<QSmallType> {
+        let mut output = input;
+        for node in &self.nodes {
+            output = node.padded_evaluate(output);
+        }
+        output
+    }
 }
