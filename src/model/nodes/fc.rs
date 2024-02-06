@@ -15,12 +15,14 @@ use super::NodeOps;
 
 /// Start with 2D matrices, and Mat-by-vector multiplication only
 pub(crate) struct FCNode<F, S, PCS> {
-    /// The row-major flattened vector of weights
+    /// The row-major flattened unpadded vector of weights
     weights: Vec<QSmallType>,
-    /// The vector of biases
+    /// The unpadded vector of biases
     bias: Vec<QLargeType>,
-    /// Dimensions (rows, columns)
+    /// Unpadded imensions (rows, columns)
     dims: (usize, usize),
+    /// The logarithm of the padded dimensions (rows, columns)
+    padded_dims_log: (usize, usize),
     /// Quantisation info used for both result computation and requantisation
     q_info: FCQInfo,
 
@@ -50,9 +52,13 @@ where
     type NodeCommitment = FCCommitment<F, S, PCS>;
     type Proof = FCProof;
 
-    fn shape(&self) -> Vec<usize>;
+    fn shape(&self) -> Vec<usize> {
+        vec![self.dims.1]
+    }
 
-    fn padded_shape_log(&self) -> Vec<usize>;
+    fn padded_shape_log(&self) -> Vec<usize> {
+        vec![self.padded_dims_log.1]
+    }
 
     fn evaluate(&self, input: QArray<QSmallType>) -> QArray<QSmallType> {
 
@@ -145,11 +151,10 @@ where
             "Bias vector length does not match the number of columns"
         );
 
-        // TODO re-introduce
-        // assert!(
-        //     dims.0.is_power_of_two() && dims.1.is_power_of_two(),
-        //     "Dimensions must be powers of two",
-        // ); 
+        let padded_dims_log: (usize, usize) = (
+            log2(dims.0.next_power_of_two()) as usize,
+            log2(dims.1.next_power_of_two()) as usize
+        );
 
         let q_info = FCQInfo {
             input_info: QInfo {
@@ -170,6 +175,7 @@ where
             weights,
             bias,
             dims,
+            padded_dims_log,
             q_info,
             phantom: PhantomData,
         }
