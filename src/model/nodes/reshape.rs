@@ -28,15 +28,13 @@ where
     PCS: PolynomialCommitment<F, Poly<F>, S>,
 {
     type NodeCommitment = ();
-    type InputData = QSmallType;
-    type OutputData = QSmallType;
     type Proof = (); // TODO to decide
 
     fn log_num_units(&self) -> usize {
         return self.output_dimension_logs.iter().sum();
     }
 
-    fn evaluate(&self, input: QArray<Self::InputData>) -> QArray<Self::OutputData> {
+    fn evaluate(&self, input: QArray<QSmallType>) -> QArray<QSmallType> {
         // Sanity checks
         // TODO systematise
         assert!(
@@ -62,9 +60,9 @@ where
 
     fn prove(
         node_com: Self::NodeCommitment,
-        input: QArray<Self::InputData>,
+        input: QArray<QSmallType>,
         input_com: PCS::Commitment,
-        output: QArray<Self::OutputData>,
+        output: QArray<QSmallType>,
         output_com: PCS::Commitment,
     ) -> Self::Proof {
         unimplemented!()

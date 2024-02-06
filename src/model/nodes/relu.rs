@@ -34,15 +34,13 @@ where
     PCS: PolynomialCommitment<F, Poly<F>, S>,
 {
     type NodeCommitment = ();
-    type InputData = QSmallType;
-    type OutputData = QSmallType;
     type Proof = ReLUProof;
 
     fn log_num_units(&self) -> usize {
         self.log_num_units
     }
 
-    fn evaluate(&self, input: QArray<Self::InputData>) -> QArray<Self::OutputData> {
+    fn evaluate(&self, input: QArray<QSmallType>) -> QArray<QSmallType> {
         // TODO sanity checks (cf. FC); systematise
         
         // TODO Can be done more elegantly, probably
@@ -61,9 +59,9 @@ where
 
     fn prove(
         node_com: Self::NodeCommitment,
-        input: QArray<Self::InputData>,
+        input: QArray<QSmallType>,
         input_com: PCS::Commitment,
-        output: QArray<Self::OutputData>,
+        output: QArray<QSmallType>,
         output_com: PCS::Commitment,
     ) -> Self::Proof {
         unimplemented!()

@@ -1,11 +1,9 @@
 use ark_ff::PrimeField;
 use ark_poly_commit::PolynomialCommitment;
 
-use crate::model::{
-    nodes::{fc::FCNode, relu::ReLUNode},
-    CryptographicSponge, Poly,
-    qarray::InnerType,
-};
+use crate::{model::{
+    nodes::{fc::FCNode, relu::ReLUNode}, qarray::InnerType, CryptographicSponge, Poly
+}, quantization::QSmallType};
 
 use self::reshape::ReshapeNode;
 
@@ -36,12 +34,6 @@ where
     /// matrix and bias for a MatMul transition.
     type NodeCommitment;
 
-    // Type of the node's input
-    type InputData: InnerType;
-
-    // Type of the node's output
-    type OutputData: InnerType;
-
     /// A proof of execution of the layer's transition function to a particular
     /// set of node values
     type Proof;
@@ -56,7 +48,7 @@ where
     }
 
     /// Evaluate the node natively
-    fn evaluate(&self, input: QArray<Self::InputData>) -> QArray<Self::OutputData>;
+    fn evaluate(&self, input: QArray<QSmallType>) -> QArray<QSmallType>;
 
     // TODO: is it okay to trim all keys from the same original PCS key?
     // (e.g. to trim the same key to for the matrix and for the bias in the
@@ -69,9 +61,9 @@ where
     /// Produce a node output proof
     fn prove(
         node_com: Self::NodeCommitment,
-        input: QArray<Self::InputData>,
+        input: QArray<QSmallType>,
         input_com: PCS::Commitment,
-        output: QArray<Self::OutputData>,
+        output: QArray<QSmallType>,
         output_com: PCS::Commitment,
     ) -> Self::Proof;
 
