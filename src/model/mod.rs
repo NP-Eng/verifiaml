@@ -1,18 +1,18 @@
-use std::marker::PhantomData;
+use ark_std::marker::PhantomData;
 
 use ark_crypto_primitives::sponge::CryptographicSponge;
 use ark_ff::PrimeField;
 use ark_poly::DenseMultilinearExtension;
 use ark_poly_commit::PolynomialCommitment;
 
-use crate::model::nodes::Node;
+use crate::{model::nodes::Node, quantization::QSmallType};
 
 use self::qarray::QArray;
 
 mod examples;
 mod nodes;
-mod reshaping;
 mod qarray;
+mod reshaping;
 
 pub(crate) type Poly<F> = DenseMultilinearExtension<F>;
 
@@ -36,7 +36,6 @@ where
     S: CryptographicSponge,
     PCS: PolynomialCommitment<F, Poly<F>, S>,
 {
-    
     pub(crate) fn new(layers: Vec<Node<F, S, PCS>>) -> Self {
         Self {
             layers,
@@ -44,7 +43,7 @@ where
         }
     }
 
-    pub(crate) fn evaluate(&self, input: QArray) -> QArray {
+    pub(crate) fn evaluate(&self, input: QArray<QSmallType>) -> QArray<QSmallType> {
         let mut output = input;
         for layer in &self.layers {
             output = layer.evaluate(output);

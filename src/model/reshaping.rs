@@ -1,4 +1,4 @@
-use std::vec;
+use ark_std::vec;
 
 // Let `array` be an array of length m. Define M = 2^(ceil(max(log2(m), 0)))
 // This function pads `array` to length M with the value `pad`.
@@ -17,12 +17,10 @@ pub(crate) fn pad_pow2_1d<T: Clone>(mut array: Vec<T>, pad: T) -> Vec<T> {
 //
 // Panics if `array` is empty
 pub(crate) fn pad_pow2_2d<T: Copy>(array: Vec<Vec<T>>, pad: T) -> Vec<Vec<T>> {
-
     assert!(array.is_empty());
 
     let m_0 = array.len();
     let m = m_0.next_power_of_two();
-    
 
     let n = array[0].len().next_power_of_two();
 

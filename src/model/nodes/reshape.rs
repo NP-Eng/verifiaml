@@ -1,4 +1,4 @@
-use std::marker::PhantomData;
+use ark_std::marker::PhantomData;
 
 use ark_crypto_primitives::sponge::CryptographicSponge;
 use ark_ff::PrimeField;
@@ -10,13 +10,16 @@ use crate::quantization::QSmallType;
 
 use super::NodeOps;
 
-pub(crate) struct ReshapeNode<F, S, PCS> where
+pub(crate) struct ReshapeNode<F, S, PCS>
+where
     F: PrimeField,
     S: CryptographicSponge,
     PCS: PolynomialCommitment<F, Poly<F>, S>,
 {
-    input_dimensions: Vec<usize>,
-    output_dimensions: Vec<usize>,
+    input_shape: Vec<usize>,
+    output_shape: Vec<usize>,
+    padded_input_shape_log: Vec<usize>,
+    padded_output_shape_log: Vec<usize>,
     phantom: PhantomData<(F, S, PCS)>,
 }
 
@@ -26,80 +29,81 @@ where
     S: CryptographicSponge,
     PCS: PolynomialCommitment<F, Poly<F>, S>,
 {
-    type Commitment = PCS::Commitment;
+    type NodeCommitment = ();
+    type Proof = (); // TODO to decide
 
-    type Proof = PCS::Proof;
-
-    fn log_num_units(&self) -> usize {
-        return self.output_dimensions.iter().product();
+    fn shape(&self) -> Vec<usize> {
+        self.output_shape.clone()
     }
 
-    /// Evaluate the layer on the given input natively.
-    fn evaluate(&self, input: QArray) -> QArray {
-        if input.check_dimensions().unwrap() != self.input_dimensions {
-            panic!(
-                "Incorrect input dimensions: found {:?}, expected {:?}",
-                input.check_dimensions().unwrap(),
-                self.input_dimensions,
-            );
-        }
-
-        if self.input_dimensions.len() == 1 {
-            return input;
-        }
-        if self.input_dimensions.len() == 2 {
-            let v: Vec<QSmallType> = input.values()[0].clone().into_iter().flatten().collect();
-            return v.into();
-        }
-        else {
-            let v: Vec<QSmallType> = input.move_values().into_iter().flatten().flatten().collect();
-            return v.into();
-        }
+    fn padded_shape_log(&self) -> Vec<usize> {
+        self.padded_output_shape_log.clone()
     }
 
-    fn commit(&self) -> PCS::Commitment {
+    fn evaluate(&self, input: QArray<QSmallType>) -> QArray<QSmallType> {
+        // Sanity checks
+        // TODO systematise
+        assert_eq!(
+            *input.shape(),
+            self.input_shape,
+            "Received input shape does not match node input shape"
+        );
+
+        let mut output = input.clone();
+        output.reshape(self.output_shape.clone());
+
+        output
+    }
+
+    fn commit(&self) -> Self::NodeCommitment {
+        // TODO assuming we want to make the reshape parameters public info,
+        // no commitment is needed
+        ()
+    }
+
+    fn prove(
+        node_com: Self::NodeCommitment,
+        input: QArray<QSmallType>,
+        input_com: PCS::Commitment,
+        output: QArray<QSmallType>,
+        output_com: PCS::Commitment,
+    ) -> Self::Proof {
         unimplemented!()
     }
 
-    fn prove(com: PCS::Commitment, input: Vec<F>) -> PCS::Proof {
-        unimplemented!()
-    }
-
-    fn check(com: PCS::Commitment, proof: PCS::Proof) -> bool {
+    fn verify(node_com: Self::NodeCommitment, proof: Self::Proof) -> bool {
         unimplemented!()
     }
 }
 
-impl<F, S, PCS> ReshapeNode<F, S, PCS> where
+impl<F, S, PCS> ReshapeNode<F, S, PCS>
+where
     F: PrimeField,
     S: CryptographicSponge,
     PCS: PolynomialCommitment<F, Poly<F>, S>,
 {
-    pub(crate) fn new(input_dimensions: Vec<usize>, output_dimensions: Vec<usize>) -> Self {
-
+    pub(crate) fn new(input_shape: Vec<usize>, output_shape: Vec<usize>) -> Self {
         assert_eq!(
-            output_dimensions.len(),
-            1,
-            "Only reshaping to 1 dimension is currently supported"  
+            input_shape.iter().product::<usize>(),
+            output_shape.iter().product::<usize>(),
+            "Input and output shapes have a different number of entries",
         );
 
-        assert_eq!(
-            input_dimensions.iter().product::<usize>(),
-            output_dimensions[0],
-            "Input and output dimensions do not match",
-        );
-
-        // TODO re-introduce
-        // for d in input_dimensions.iter().chain(output_dimensions.iter()) {
-        //     assert!(
-        //         d.is_power_of_two(),
-        //         "All dimensions must be powers of two"
-        //     );
-        // }
+        // TODO does this break the invariant that the product of I and O coincides?
+        let padded_input_shape_log = input_shape
+            .iter()
+            .map(|x| x.next_power_of_two() as usize)
+            .collect();
+        let padded_output_shape_log = output_shape
+            .iter()
+            .map(|x| x.next_power_of_two() as usize)
+            .collect();
 
         Self {
-            input_dimensions,
-            output_dimensions,
+            input_shape,
+            output_shape,
+            padded_input_shape_log,
+            padded_output_shape_log,
             phantom: PhantomData,
         }
     }

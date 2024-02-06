@@ -1,4 +1,4 @@
-pub(crate) type QSmallType = i8;  // core type for quantised arithmetic: activation, matrix weights, etc.
+pub(crate) type QSmallType = i8; // core type for quantised arithmetic: activation, matrix weights, etc.
 pub(crate) type QLargeType = i32; // larger type for quantised arithmetic, used in FC and convolutional biases
 pub(crate) type QScaleType = f32; // type for quantisation scales
                                   // TODO this one is likely exclusive to this module, reconsider visibility
@@ -93,17 +93,15 @@ fn requantise_fc_nte(output: &[QLargeType], q_info: &FCQInfo) -> Vec<QSmallType>
         .collect()
 }
 
-pub(crate) fn quantise_f32_u32_nne(values: &[f32], scale: QScaleType, zero: u8) -> Vec<u8> {
-
-    values.iter()
-        .map(|x|
-            ((((*x as QScaleType) / scale) + (zero as QScaleType))
-            .round_ties_even() as QLargeType)
-            .clamp(u8::MIN as QLargeType, u8::MAX as QLargeType) as u8
-        )
+pub(crate) fn quantise_f32_u8_nne(values: &[f32], scale: QScaleType, zero: u8) -> Vec<u8> {
+    values
+        .iter()
+        .map(|x| {
+            ((((*x as QScaleType) / scale) + (zero as QScaleType)).round_ties_even() as QLargeType)
+                .clamp(u8::MIN as QLargeType, u8::MAX as QLargeType) as u8
+        })
         .collect()
 }
-
 
 #[cfg(test)]
 mod tests {

@@ -1,5 +1,4 @@
-use core::panic;
-use std::marker::PhantomData;
+use ark_std::marker::PhantomData;
 
 use ark_crypto_primitives::sponge::CryptographicSponge;
 use ark_ff::PrimeField;
@@ -23,48 +22,57 @@ where
     phantom: PhantomData<(F, S, PCS)>,
 }
 
-// TODO: it will be more efficient to add size checks here
+pub(crate) struct ReLUProof {
+    // this will be a lookup proof
+}
+
 impl<F, S, PCS> NodeOps<F, S, PCS> for ReLUNode<F, S, PCS>
 where
     F: PrimeField,
     S: CryptographicSponge,
     PCS: PolynomialCommitment<F, Poly<F>, S>,
 {
-    type Commitment = PCS::Commitment;
+    type NodeCommitment = ();
+    type Proof = ReLUProof;
 
-    type Proof = PCS::Proof;
-
-    fn log_num_units(&self) -> usize {
-        self.log_num_units
+    fn shape(&self) -> Vec<usize> {
+        vec![1 << self.log_num_units]
     }
 
-    fn evaluate(&self, input: QArray) -> QArray {
-        if input.check_dimensions().unwrap().len() != 1 {
-            panic!("ReLU node expects a 1-dimensional array");
-        }
-        
-        let v: Vec<QSmallType> = input.values()[0][0]
+    fn padded_shape_log(&self) -> Vec<usize> {
+        vec![self.log_num_units]
+    }
+
+    fn evaluate(&self, input: QArray<QSmallType>) -> QArray<QSmallType> {
+        // TODO sanity checks (cf. FC); systematise
+
+        // TODO Can be done more elegantly, probably
+        let v: Vec<QSmallType> = input
+            .values()
             .iter()
             .map(|x| *max(x, &(0 as QSmallType)))
             .collect();
-        
+
         v.into()
     }
 
-    fn commit(&self) -> PCS::Commitment {
+    fn commit(&self) -> Self::NodeCommitment {
+        // ReLU nodes have no parameters to commit to
+        ()
+    }
+
+    fn prove(
+        node_com: Self::NodeCommitment,
+        input: QArray<QSmallType>,
+        input_com: PCS::Commitment,
+        output: QArray<QSmallType>,
+        output_com: PCS::Commitment,
+    ) -> Self::Proof {
         unimplemented!()
     }
 
-    fn prove(com: PCS::Commitment, input: Vec<F>) -> PCS::Proof {
+    fn verify(node_com: Self::NodeCommitment, proof: Self::Proof) -> bool {
         unimplemented!()
-    }
-
-    fn check(com: PCS::Commitment, proof: PCS::Proof) -> bool {
-        unimplemented!()
-    }
-
-    fn num_units(&self) -> usize {
-        todo!()
     }
 }
 
