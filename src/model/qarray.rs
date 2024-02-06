@@ -144,7 +144,8 @@ impl<T: InnerType> Div<T> for QArray<T> where T: Div<Output = T>{
 
 impl<T: InnerType> From<Vec<T>> for QArray<T> {
     fn from(values: Vec<T>) -> Self {
-        QArray::new(values, vec![values.len()])
+        let l = values.len();
+        QArray::new(values, vec![l])
     }
 }
 
