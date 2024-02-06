@@ -102,18 +102,16 @@ where
         }
     }
 
-    // /// Evaluate the node natively
-    // TODO solve typing issue; enums?
-    // pub(crate) fn evaluate(&self, input: QArray) -> QArray {
-    //     match self {
-    //         Node::FC(n) => n.evaluate(input),
-    //         Node::ReLU(r) => r.evaluate(input),
-    //         Node::Reshape(r) => r.evaluate(input),
-    //     }
-    // }
+    /// Evaluate the node natively
+    pub(crate) fn evaluate(&self, input: QArray<QSmallType>) -> QArray<QSmallType> {
+        match self {
+            Node::FC(n) => n.evaluate(input),
+            Node::ReLU(r) => r.evaluate(input),
+            Node::Reshape(r) => r.evaluate(input),
+        }
+    }
 
-    // /// Commit to the layer parameters
-    // TODO solve typing issue; enums or traits? Same for the two methods below
+    /// Commit to the layer parameters
     // pub(crate) fn commit(&self) -> PCS::Commitment {
     //     match self {
     //         Node::FC(n) => n.commit(),
@@ -122,13 +120,13 @@ where
     //     }
     // }
 
-    // /// Produce a node output proof
-    // pub(crate) fn prove(com: PCS::Commitment, input: Vec<F>) -> PCS::Proof {
-    //     unimplemented!()
-    // }
+    /// Produce a node output proof
+    pub(crate) fn prove(com: PCS::Commitment, input: Vec<F>) -> PCS::Proof {
+        unimplemented!()
+    }
 
-    // /// Verify a node output proof
-    // pub(crate) fn check(com: PCS::Commitment, proof: PCS::Proof) -> bool {
-    //     unimplemented!()
-    // }
+    /// Verify a node output proof
+    pub(crate) fn check(com: PCS::Commitment, proof: PCS::Proof) -> bool {
+        unimplemented!()
+    }
 }

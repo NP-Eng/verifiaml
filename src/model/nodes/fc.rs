@@ -90,13 +90,11 @@ where
             }
         }
 
-        accumulators.into()
-
-        // requantise_fc(
-        //     &accumulators,
-        //     &self.q_info,
-        //     RoundingScheme::NearestTiesEven,
-        // ).into()
+        requantise_fc(
+            &accumulators,
+            &self.q_info,
+            RoundingScheme::NearestTiesEven,
+        ).into()
     }
 
     fn commit(&self) -> Self::NodeCommitment {
