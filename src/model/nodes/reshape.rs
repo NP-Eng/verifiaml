@@ -55,6 +55,27 @@ where
         output
     }
 
+    // TODO I think this might be broken due to the failure of commutativity
+    // between product and and nearest-geq-power-of-two
+    fn padded_evaluate(&self, input: QArray<QSmallType>) -> QArray<QSmallType> {
+        
+        let padded_input_shape: Vec<usize> = self.input_shape.iter().map(|x| (1 << x) as usize).collect();
+        let padded_output_shape: Vec<usize> = self.output_shape.iter().map(|x| (1 << x) as usize).collect();
+
+        // Sanity checks
+        // TODO systematise
+        assert_eq!(
+            *input.shape(),
+            padded_input_shape,
+            "Received padded input shape does not match node's padded input shape"
+        );
+
+        let mut output = input.clone();
+        output.reshape(padded_output_shape);
+
+        output
+    }
+
     fn commit(&self) -> Self::NodeCommitment {
         // TODO assuming we want to make the reshape parameters public info,
         // no commitment is needed

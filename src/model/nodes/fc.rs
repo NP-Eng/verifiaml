@@ -100,6 +100,12 @@ where
         requantise_fc(&accumulators, &self.q_info, RoundingScheme::NearestTiesEven).into()
     }
 
+    // TODO this can remain unimplemented until we have models with FC nodes
+    // receiving compact input
+    fn padded_evaluate(&self, input: QArray<QSmallType>) -> QArray<QSmallType> {
+        unimplemented!()
+    }
+
     fn commit(&self) -> Self::NodeCommitment {
         unimplemented!()
     }
