@@ -18,8 +18,8 @@ pub(crate) struct ReshapeNode<F, S, PCS> where
 {
     input_shape: Vec<usize>,
     output_shape: Vec<usize>,
-    padded_input_shape_logs: Vec<usize>,
-    padded_output_shape_logs: Vec<usize>,
+    padded_input_shape_log: Vec<usize>,
+    padded_output_shape_log: Vec<usize>,
     phantom: PhantomData<(F, S, PCS)>,
 }
 
@@ -37,7 +37,7 @@ where
     }
 
     fn padded_shape_log(&self) -> Vec<usize> {
-        self.padded_output_shape_logs.clone()
+        self.padded_output_shape_log.clone()
     }
 
     fn evaluate(&self, input: QArray<QSmallType>) -> QArray<QSmallType> {
@@ -51,7 +51,8 @@ where
 
         // TODO better way than cloning? Receive mutable reference?
         let mut output = input.clone();
-        output.reshape(self.output_shape);
+        // TODO remove cloning if we switch to references
+        output.reshape(self.output_shape.clone());
 
         output
     }
@@ -82,16 +83,25 @@ impl<F, S, PCS> ReshapeNode<F, S, PCS> where
     S: CryptographicSponge,
     PCS: PolynomialCommitment<F, Poly<F>, S>,
 {
-    pub(crate) fn new(input_dimension: Vec<usize>, output_dimension_logs: Vec<usize>) -> Self {
+    pub(crate) fn new(input_shape: Vec<usize>, output_shape: Vec<usize>) -> Self {
         assert_eq!(
-            input_dimension_logs.iter().sum::<usize>(),
-            output_dimension_logs.iter().sum::<usize>(),
+            input_shape.iter().product::<usize>(),
+            output_shape.iter().product::<usize>(),
             "Input and output shapes have a different number of entries",
         );
 
+        // TODO does this break the invariant that the product of I and O coincides?
+        let padded_input_shape_log = input_shape.iter()
+            .map(|x| x.next_power_of_two() as usize).collect();
+        let padded_output_shape_log = output_shape.iter()
+            .map(|x| x.next_power_of_two() as usize).collect();
+        
+
         Self {
-            input_dimension_logs,
-            output_dimension_logs,
+            input_shape,
+            output_shape,
+            padded_input_shape_log,
+            padded_output_shape_log,
             phantom: PhantomData,
         }
     }
