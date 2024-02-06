@@ -1,4 +1,4 @@
-use std::vec;
+use ark_std::vec;
 
 // Let `array` be an array of length m. Define M = 2^(ceil(max(log2(m), 0)))
 // This function pads `array` to length M with the value `pad`.

@@ -1,9 +1,7 @@
-// TODO change to ark_std?
-use core::fmt::Debug;
-use std::{
-    ops::{Add, Div, Mul, Sub},
-    vec,
-};
+use ark_std::fmt::Debug;
+use ark_std::ops::{Add, Div, Mul, Sub};
+use ark_std::vec;
+use ark_std::vec::Vec;
 
 use crate::quantization::{QLargeType, QSmallType};
 
