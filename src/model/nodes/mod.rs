@@ -156,7 +156,7 @@ where
         self.padded_shape().iter().product()
     }
 
-    /// Evaluate the node natively (withotu padding)
+    /// Evaluate the node natively (without padding)
     pub(crate) fn evaluate(&self, input: QArray<QSmallType>) -> QArray<QSmallType> {
         match self {
             Node::FC(n) => n.evaluate(input),
