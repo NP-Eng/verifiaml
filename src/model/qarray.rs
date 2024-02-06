@@ -1,6 +1,7 @@
 
 // TODO change to ark_std?
 use std::{vec, ops::{Add, Sub, Mul, Div}};
+use core::fmt::Debug;
 
 use crate::quantization::{QSmallType, QLargeType};
 
@@ -43,8 +44,16 @@ impl<T: InnerType> QArray<T> {
         self.flattened
     }
 
-    pub(crate) fn cast<S: InnerType>(self) -> QArray<S> where S: From<T> {
-        let flattened = self.flattened.into_iter().map(|x| x.into()).collect();
+    // TODO in the future, if necessary, we can remove the bound
+    // <T as TryInto<S>>::Error: Debug
+    // and replace unwrap() by unwrap_or(), possibly panicking or propagating
+    // the error
+    pub(crate) fn cast<S: InnerType>(self) -> QArray<S> 
+    where
+        T: TryInto<S>,
+        <T as TryInto<S>>::Error: Debug
+    {
+        let flattened = self.flattened.into_iter().map(|x| x.try_into().unwrap()).collect();
         QArray::new(flattened, self.shape)
     }
 

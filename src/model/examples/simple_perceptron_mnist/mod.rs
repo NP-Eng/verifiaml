@@ -79,17 +79,12 @@ mod tests {
         
         let perceptron = build_simple_perceptron_mnist::<Fr, Sponge, Hyrax254>();
 
-        let quantised_input: Vec<Vec<u8>> = input.iter().map(|r| quantise_f32_u8_nne(r, S_INPUT, Z_INPUT)).collect();
-        // TODO re-introduce
-        // let quantised_input: QArray<u8> = quantised_input.into();
+        let quantised_input: QArray<u8> = input.iter()
+            .map(|r| quantise_f32_u8_nne(r, S_INPUT, Z_INPUT))
+            .collect::<Vec<Vec<u8>>>()
+            .into();
 
-        // TODO remove
-        let input_i8: QArray<QSmallType> = quantised_input.into_iter().map(|r|
-            r.into_iter().map(|x| ((x as i32) - 128) as i8).collect::<Vec<i8>>()
-        ).collect::<Vec<Vec<i8>>>().into();
-
-        // TODO re-introduce
-        // let input_i8 = (quantised_input.cast::<i32>() - 128).cast::<QSmallType>();
+        let input_i8 = (quantised_input.cast::<i32>() - 128).cast::<QSmallType>();
 
         let output = perceptron.evaluate(input_i8);
 
