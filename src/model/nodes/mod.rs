@@ -19,7 +19,7 @@ pub(crate) mod reshape;
 // TODO: issue: missing info about size of the next output? Or reduplicate it?
 // TODO way to handle generics more elegantly? or perhaps polynomials can be made ML directly?
 
-/// A layer of the model including its transition function to the next layer.
+/// A node of the model including its transition function to the next node(s).
 /// It stores information about the transition (such as a matrix and bias, if
 /// applicable), but not about about the specific values of its nodes: these
 /// are handled by the methods only.
@@ -29,25 +29,42 @@ where
     S: CryptographicSponge,
     PCS: PolynomialCommitment<F, Poly<F>, S>,
 {
-    /// A commitment associated to the layer's transition function. For
+    /// A commitment associated to the node's transition function. For
     /// instance, it is empty for a ReLU transition; and a commitment to the
     /// matrix and bias for a MatMul transition.
     type NodeCommitment;
 
-    /// A proof of execution of the layer's transition function to a particular
+    /// A proof of execution of the node's transition function to a particular
     /// set of node values
     type Proof;
 
-    /// Returns the base-two logarithm of the number of nodes in the layer, i.e.
-    /// the number of variables of the MLE of the node values
-    fn log_num_units(&self) -> usize;
+    /// Returns the shape of the node's output tensor
+    fn shape(&self) -> Vec<usize>;
 
-    /// The log2 of the number of output units of the node
-    fn num_units(&self) -> usize {
-        1 << self.log_num_units()
+    /// Returns the element-wise base-two logarithm of the padded node's
+    /// output shape, i.e. the list of numbers of variables of the associated
+    /// MLE
+    // TODO we could apply next_power_of_two to self.shape() elementwise, but
+    // I expect this to be less efficient since each implementor will likely
+    // internally store padded_shape_log
+    fn padded_shape_log(&self) -> Vec<usize>;
+
+    /// Returns the element-wise padded node's output shape
+    fn padded_shape(&self) -> Vec<usize> {
+        self.padded_shape_log().into_iter().map(|x| 1 << x).collect()
     }
 
-    /// Evaluate the node natively
+    /// The number of output units of the node
+    fn num_units(&self) -> usize {
+        self.shape().iter().product()
+    }
+
+    /// The number of output units of the padded node
+    fn padded_num_units(&self) -> usize {
+        self.padded_shape().iter().product()
+    }
+
+    /// Evaluate the node natively (without padding)
     fn evaluate(&self, input: QArray<QSmallType>) -> QArray<QSmallType>;
 
     // TODO: is it okay to trim all keys from the same original PCS key?
@@ -82,27 +99,51 @@ where
     Reshape(ReshapeNode<F, S, PCS>),
 }
 
+// A lot of this overlaps with the NodeOps trait and could be handled more
+// elegantly by simply implementing the trait
 impl<F, S, PCS> Node<F, S, PCS>
 where
     F: PrimeField,
     S: CryptographicSponge,
     PCS: PolynomialCommitment<F, Poly<F>, S>,
 {
-    /// The number of output units of the node
-    pub(crate) fn num_units(&self) -> usize {
-        1 << self.log_num_units()
-    }
 
-    /// The log2 of the number of output units of the node
-    pub(crate) fn log_num_units(&self) -> usize {
+    /// Returns the shape of the node's output tensor
+    fn shape(&self) -> Vec<usize> {
         match self {
-            Node::FC(n) => n.log_num_units(),
-            Node::ReLU(r) => r.log_num_units(),
-            Node::Reshape(r) => r.log_num_units(),
+            Node::FC(n) => n.shape(),
+            Node::ReLU(r) => r.shape(),
+            Node::Reshape(r) => r.shape(),
         }
     }
 
-    /// Evaluate the node natively
+    /// Returns the element-wise base-two logarithm of the padded node's
+    /// output shape, i.e. the list of numbers of variables of the associated
+    /// MLE
+    fn padded_shape_log(&self) -> Vec<usize> {
+        match self {
+            Node::FC(n) => n.padded_shape_log(),
+            Node::ReLU(r) => r.padded_shape_log(),
+            Node::Reshape(r) => r.padded_shape_log(),
+        }
+    }
+
+    /// Returns the element-wise padded node's output shape
+    fn padded_shape(&self) -> Vec<usize> {
+        self.padded_shape_log().into_iter().map(|x| 1 << x).collect()
+    }
+
+    /// The number of output units of the node
+    fn num_units(&self) -> usize {
+        self.shape().iter().product()
+    }
+
+    /// The number of output units of the padded node
+    fn padded_num_units(&self) -> usize {
+        self.padded_shape().iter().product()
+    }
+
+    /// Evaluate the node natively (withotu padding)
     pub(crate) fn evaluate(&self, input: QArray<QSmallType>) -> QArray<QSmallType> {
         match self {
             Node::FC(n) => n.evaluate(input),
@@ -111,7 +152,7 @@ where
         }
     }
 
-    /// Commit to the layer parameters
+    /// Commit to the node parameters
     // pub(crate) fn commit(&self) -> PCS::Commitment {
     //     match self {
     //         Node::FC(n) => n.commit(),

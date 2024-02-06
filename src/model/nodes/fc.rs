@@ -50,9 +50,9 @@ where
     type NodeCommitment = FCCommitment<F, S, PCS>;
     type Proof = FCProof;
 
-    fn log_num_units(&self) -> usize {
-        log2(self.dims.1) as usize
-    }
+    fn shape(&self) -> Vec<usize>;
+
+    fn padded_shape_log(&self) -> Vec<usize>;
 
     fn evaluate(&self, input: QArray<QSmallType>) -> QArray<QSmallType> {
 
