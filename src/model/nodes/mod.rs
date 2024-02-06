@@ -2,7 +2,7 @@ use ark_ff::PrimeField;
 use ark_poly_commit::PolynomialCommitment;
 
 use crate::{model::{
-    nodes::{fc::FCNode, relu::ReLUNode}, qarray::InnerType, CryptographicSponge, Poly
+    nodes::{fc::FCNode, relu::ReLUNode}, CryptographicSponge, Poly
 }, quantization::QSmallType};
 
 use self::reshape::ReshapeNode;

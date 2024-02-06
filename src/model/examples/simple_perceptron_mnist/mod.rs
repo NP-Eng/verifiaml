@@ -3,15 +3,13 @@ use ark_ff::PrimeField;
 use ark_crypto_primitives::sponge::CryptographicSponge;
 use ark_poly_commit::PolynomialCommitment;
 
-use crate::model::{
-    Model,
-    Poly,
-    nodes::{
-        Node,
-        reshape::ReshapeNode,
-        fc::FCNode,
-        relu::ReLUNode,
+use crate::{
+    model::{
+        nodes::{
+            fc::FCNode, reshape::ReshapeNode, Node
+        }, qarray::QArray, Model, Poly
     },
+    quantization::{quantise_f32_u8_nne, QSmallType}
 };
 
 mod parameters;
@@ -19,6 +17,13 @@ mod input;
 
 use parameters::*;
 use input::*;
+
+use ark_crypto_primitives::sponge::poseidon::PoseidonSponge;    
+use ark_bn254::{Fr, G1Affine};
+use ark_poly_commit::hyrax::HyraxPC;
+
+type Sponge = PoseidonSponge<Fr>;
+type Hyrax254 = HyraxPC<G1Affine, Poly<Fr>, Sponge>;
 
 const INPUT_DIMS: &[usize] = &[28, 28];
 const OUTPUT_DIMS: &[usize] = &[10];
@@ -56,41 +61,27 @@ where
     ])
 }
 
-#[cfg(test)]
-mod tests {
-    use ark_crypto_primitives::sponge::poseidon::PoseidonSponge;    
-    use ark_bn254::{Fr, G1Affine};
-    use ark_poly_commit::hyrax::HyraxPC;
+#[test]
+fn run_simple_perceptron_mnist() {
 
-    use crate::{model::{qarray::QArray, Poly}, quantization::{quantise_f32_u8_nne, QSmallType}};
+    /**** Change here ****/
+    let input = NORMALISED_INPUT_TEST_150;
+    let expected_output: Vec<u8> = vec![135, 109, 152, 161, 187, 157, 159, 151, 173, 202];
+    /**********************/
     
-    type Sponge = PoseidonSponge<Fr>;
-    type Hyrax254 = HyraxPC<G1Affine, Poly<Fr>, Sponge>;
-    
-    use super::*;
+    let perceptron = build_simple_perceptron_mnist::<Fr, Sponge, Hyrax254>();
 
-    #[test]
-    fn run_simple_perceptron_mnist() {
+    let quantised_input: QArray<u8> = input.iter()
+        .map(|r| quantise_f32_u8_nne(r, S_INPUT, Z_INPUT))
+        .collect::<Vec<Vec<u8>>>()
+        .into();
 
-        /**** Change here ****/
-        let input = NORMALISED_INPUT_TEST_150;
-        let expected_output: Vec<u8> = vec![135, 109, 152, 161, 187, 157, 159, 151, 173, 202];
-        /**********************/
-        
-        let perceptron = build_simple_perceptron_mnist::<Fr, Sponge, Hyrax254>();
+    let input_i8 = (quantised_input.cast::<i32>() - 128).cast::<QSmallType>();
 
-        let quantised_input: QArray<u8> = input.iter()
-            .map(|r| quantise_f32_u8_nne(r, S_INPUT, Z_INPUT))
-            .collect::<Vec<Vec<u8>>>()
-            .into();
+    let output = perceptron.evaluate(input_i8);
 
-        let input_i8 = (quantised_input.cast::<i32>() - 128).cast::<QSmallType>();
+    let output_u8: Vec<u8> = output.values().into_iter().map(|x| ((*x as i32) + 128) as u8).collect();
 
-        let output = perceptron.evaluate(input_i8);
-
-        let output_u8: Vec<u8> = output.values().into_iter().map(|x| ((*x as i32) + 128) as u8).collect();
-
-        println!("Output: {:?}", output_u8);
-        assert_eq!(output_u8, expected_output);
-    }
+    println!("Output: {:?}", output_u8);
+    assert_eq!(output_u8, expected_output);
 }

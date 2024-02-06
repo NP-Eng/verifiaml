@@ -1,4 +1,4 @@
-use std::iter::zip;
+
 use std::marker::PhantomData;
 
 use ark_crypto_primitives::sponge::CryptographicSponge;
