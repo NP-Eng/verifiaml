@@ -1,4 +1,3 @@
-
 use std::marker::PhantomData;
 
 use ark_crypto_primitives::sponge::CryptographicSponge;
@@ -11,7 +10,8 @@ use crate::quantization::QSmallType;
 
 use super::NodeOps;
 
-pub(crate) struct ReshapeNode<F, S, PCS> where
+pub(crate) struct ReshapeNode<F, S, PCS>
+where
     F: PrimeField,
     S: CryptographicSponge,
     PCS: PolynomialCommitment<F, Poly<F>, S>,
@@ -78,7 +78,8 @@ where
     }
 }
 
-impl<F, S, PCS> ReshapeNode<F, S, PCS> where
+impl<F, S, PCS> ReshapeNode<F, S, PCS>
+where
     F: PrimeField,
     S: CryptographicSponge,
     PCS: PolynomialCommitment<F, Poly<F>, S>,
@@ -91,11 +92,14 @@ impl<F, S, PCS> ReshapeNode<F, S, PCS> where
         );
 
         // TODO does this break the invariant that the product of I and O coincides?
-        let padded_input_shape_log = input_shape.iter()
-            .map(|x| x.next_power_of_two() as usize).collect();
-        let padded_output_shape_log = output_shape.iter()
-            .map(|x| x.next_power_of_two() as usize).collect();
-        
+        let padded_input_shape_log = input_shape
+            .iter()
+            .map(|x| x.next_power_of_two() as usize)
+            .collect();
+        let padded_output_shape_log = output_shape
+            .iter()
+            .map(|x| x.next_power_of_two() as usize)
+            .collect();
 
         Self {
             input_shape,

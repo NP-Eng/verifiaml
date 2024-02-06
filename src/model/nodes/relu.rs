@@ -1,4 +1,3 @@
-
 use std::marker::PhantomData;
 
 use ark_crypto_primitives::sponge::CryptographicSponge;
@@ -46,13 +45,14 @@ where
 
     fn evaluate(&self, input: QArray<QSmallType>) -> QArray<QSmallType> {
         // TODO sanity checks (cf. FC); systematise
-        
+
         // TODO Can be done more elegantly, probably
-        let v: Vec<QSmallType> = input.values()
+        let v: Vec<QSmallType> = input
+            .values()
             .iter()
             .map(|x| *max(x, &(0 as QSmallType)))
             .collect();
-        
+
         v.into()
     }
 

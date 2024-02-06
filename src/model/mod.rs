@@ -11,8 +11,8 @@ use self::qarray::QArray;
 
 mod examples;
 mod nodes;
-mod reshaping;
 mod qarray;
+mod reshaping;
 
 pub(crate) type Poly<F> = DenseMultilinearExtension<F>;
 
@@ -36,7 +36,6 @@ where
     S: CryptographicSponge,
     PCS: PolynomialCommitment<F, Poly<F>, S>,
 {
-    
     pub(crate) fn new(layers: Vec<Node<F, S, PCS>>) -> Self {
         Self {
             layers,

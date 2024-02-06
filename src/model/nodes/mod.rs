@@ -1,9 +1,13 @@
 use ark_ff::PrimeField;
 use ark_poly_commit::PolynomialCommitment;
 
-use crate::{model::{
-    nodes::{fc::FCNode, relu::ReLUNode}, CryptographicSponge, Poly
-}, quantization::QSmallType};
+use crate::{
+    model::{
+        nodes::{fc::FCNode, relu::ReLUNode},
+        CryptographicSponge, Poly,
+    },
+    quantization::QSmallType,
+};
 
 use self::reshape::ReshapeNode;
 
@@ -51,7 +55,10 @@ where
 
     /// Returns the element-wise padded node's output shape
     fn padded_shape(&self) -> Vec<usize> {
-        self.padded_shape_log().into_iter().map(|x| 1 << x).collect()
+        self.padded_shape_log()
+            .into_iter()
+            .map(|x| 1 << x)
+            .collect()
     }
 
     /// The number of output units of the node
@@ -107,7 +114,6 @@ where
     S: CryptographicSponge,
     PCS: PolynomialCommitment<F, Poly<F>, S>,
 {
-
     /// Returns the shape of the node's output tensor
     fn shape(&self) -> Vec<usize> {
         match self {
@@ -130,7 +136,10 @@ where
 
     /// Returns the element-wise padded node's output shape
     fn padded_shape(&self) -> Vec<usize> {
-        self.padded_shape_log().into_iter().map(|x| 1 << x).collect()
+        self.padded_shape_log()
+            .into_iter()
+            .map(|x| 1 << x)
+            .collect()
     }
 
     /// The number of output units of the node

@@ -7,7 +7,9 @@ use ark_std::log2;
 
 use crate::model::qarray::QArray;
 use crate::model::Poly;
-use crate::quantization::{requantise_fc, FCQInfo, QInfo, QLargeType, QScaleType, QSmallType, RoundingScheme};
+use crate::quantization::{
+    requantise_fc, FCQInfo, QInfo, QLargeType, QScaleType, QSmallType, RoundingScheme,
+};
 
 use super::NodeOps;
 
@@ -61,7 +63,6 @@ where
     }
 
     fn evaluate(&self, input: QArray<QSmallType>) -> QArray<QSmallType> {
-
         // Sanity checks
         // TODO systematise
         assert_eq!(
@@ -96,11 +97,7 @@ where
             }
         }
 
-        requantise_fc(
-            &accumulators,
-            &self.q_info,
-            RoundingScheme::NearestTiesEven,
-        ).into()
+        requantise_fc(&accumulators, &self.q_info, RoundingScheme::NearestTiesEven).into()
     }
 
     fn commit(&self) -> Self::NodeCommitment {
@@ -153,7 +150,7 @@ where
 
         let padded_dims_log: (usize, usize) = (
             log2(dims.0.next_power_of_two()) as usize,
-            log2(dims.1.next_power_of_two()) as usize
+            log2(dims.1.next_power_of_two()) as usize,
         );
 
         let q_info = FCQInfo {
