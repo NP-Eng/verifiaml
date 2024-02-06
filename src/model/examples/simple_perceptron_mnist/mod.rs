@@ -62,7 +62,7 @@ mod tests {
     use ark_bn254::{Fr, G1Affine};
     use ark_poly_commit::hyrax::HyraxPC;
 
-    use crate::{model::{qarray::QArray, Poly}, quantization::quantise_f32_u32_nne};
+    use crate::{model::{qarray::QArray, Poly}, quantization::{quantise_f32_u8_nne, QSmallType}};
     
     type Sponge = PoseidonSponge<Fr>;
     type Hyrax254 = HyraxPC<G1Affine, Poly<Fr>, Sponge>;
@@ -77,13 +77,19 @@ mod tests {
         let expected_output: Vec<u8> = vec![135, 109, 152, 161, 187, 157, 159, 151, 173, 202];
         /**********************/
         
-        let quantised_input: Vec<Vec<u8>> = input.iter().map(|r| quantise_f32_u32_nne(r, S_INPUT, Z_INPUT)).collect();
-
         let perceptron = build_simple_perceptron_mnist::<Fr, Sponge, Hyrax254>();
-        
-        let input_i8 = quantised_input.into_iter().map(|r|
+
+        let quantised_input: Vec<Vec<u8>> = input.iter().map(|r| quantise_f32_u8_nne(r, S_INPUT, Z_INPUT)).collect();
+        // TODO re-introduce
+        // let quantised_input: QArray<u8> = quantised_input.into();
+
+        // TODO remove
+        let input_i8: QArray<QSmallType> = quantised_input.into_iter().map(|r|
             r.into_iter().map(|x| ((x as i32) - 128) as i8).collect::<Vec<i8>>()
         ).collect::<Vec<Vec<i8>>>().into();
+
+        // TODO re-introduce
+        // let input_i8 = (quantised_input.cast::<i32>() - 128).cast::<QSmallType>();
 
         let output = perceptron.evaluate(input_i8);
 

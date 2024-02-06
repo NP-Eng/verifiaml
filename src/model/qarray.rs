@@ -7,8 +7,8 @@ use crate::quantization::{QSmallType, QLargeType};
 pub(crate) trait InnerType: Copy {}
 
 impl InnerType for QSmallType {}
-
 impl InnerType for QLargeType {}
+impl InnerType for u8 {}
 
 #[derive(Debug, Clone)]
 pub(crate) struct QArray<T: InnerType> {

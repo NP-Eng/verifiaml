@@ -93,7 +93,7 @@ fn requantise_fc_nte(output: &[QLargeType], q_info: &FCQInfo) -> Vec<QSmallType>
         .collect()
 }
 
-pub(crate) fn quantise_f32_u32_nne(values: &[f32], scale: QScaleType, zero: u8) -> Vec<u8> {
+pub(crate) fn quantise_f32_u8_nne(values: &[f32], scale: QScaleType, zero: u8) -> Vec<u8> {
 
     values.iter()
         .map(|x|
