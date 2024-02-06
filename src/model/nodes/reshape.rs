@@ -49,9 +49,7 @@ where
             "Received input shape does not match node input shape"
         );
 
-        // TODO better way than cloning? Receive mutable reference?
         let mut output = input.clone();
-        // TODO remove cloning if we switch to references
         output.reshape(self.output_shape.clone());
 
         output
