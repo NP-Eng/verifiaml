@@ -14,6 +14,7 @@ use self::reshape::ReshapeNode;
 use super::qarray::QArray;
 
 pub(crate) mod fc;
+pub(crate) mod loose_fc;
 pub(crate) mod relu;
 pub(crate) mod reshape;
 
