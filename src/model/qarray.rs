@@ -14,6 +14,7 @@ impl InnerType for QLargeType {}
 pub(crate) struct QArray<T: InnerType> {
     flattened: Vec<T>,
     shape: Vec<usize>,
+    cumulative_dimensions: Vec<usize>,
 }
 
 impl<T: InnerType> QArray<T> {
@@ -44,10 +45,7 @@ impl<T: InnerType> QArray<T> {
 
     pub(crate) fn cast<S: InnerType>(self) -> QArray<S> where S: From<T> {
         let flattened = self.flattened.into_iter().map(|x| x.into()).collect();
-        QArray {
-            flattened,
-            shape: self.shape.clone(),
-        }
+        QArray::new(flattened, self.shape)
     }
 
     // Reshapes the QArray in-place
@@ -60,6 +58,38 @@ impl<T: InnerType> QArray<T> {
         );
         
         self.shape = shape;
+    }
+
+    // Internal constructor that computes cumulative dimensions
+    fn new(flattened: Vec<T>, shape: Vec<usize>) -> Self {
+        
+        let mut cumulative_dimensions = Vec::new();
+
+        let mut acc = 1;
+
+        for dim in shape.iter().rev() {
+            cumulative_dimensions.push(acc);
+            acc *= dim;
+        }
+
+        cumulative_dimensions.reverse();
+
+        Self {
+            flattened,
+            shape,
+            cumulative_dimensions,
+        }
+    }
+
+    // TODO assert size equality here or neglect for efficiency? Probs will
+    // file if there is a size mismatch, so it would be rather a check for
+    // the programmer's convenience
+    fn flatten_index(&self, index: Vec<usize>) -> usize {
+        index.iter().zip(self.cumulative_dimensions.iter()).map(|(i, d)| i * d).sum()
+    }
+
+    fn get(&self, index: Vec<usize>) -> T {
+        self.flattened[self.flatten_index(index)]
     }
 }
 
@@ -74,10 +104,7 @@ impl<T: InnerType> Add<T> for QArray<T> where T: Add<Output = T>{
 
     fn add(self, rhs: T) -> QArray<T> {
         let flattened = self.flattened.into_iter().map(|x| x + rhs).collect();
-        QArray {
-            flattened,
-            shape: self.shape,
-        }
+        QArray::new(flattened, self.shape)
     }
 }
 
@@ -91,10 +118,7 @@ impl<T: InnerType> Sub<T> for QArray<T> where T: Sub<Output = T>{
 
     fn sub(self, rhs: T) -> QArray<T> {
         let flattened = self.flattened.into_iter().map(|x| x - rhs).collect();
-        QArray {
-            flattened,
-            shape: self.shape,
-        }
+        QArray::new(flattened, self.shape)
     }
 }
 
@@ -103,10 +127,7 @@ impl<T: InnerType> Mul<T> for QArray<T> where T: Mul<Output = T>{
 
     fn mul(self, rhs: T) -> QArray<T> {
         let flattened = self.flattened.into_iter().map(|x| x * rhs).collect();
-        QArray {
-            flattened,
-            shape: self.shape,
-        }
+        QArray::new(flattened, self.shape)
     }
 }
 
@@ -115,10 +136,7 @@ impl<T: InnerType> Div<T> for QArray<T> where T: Div<Output = T>{
 
     fn div(self, rhs: T) -> QArray<T> {
         let flattened = self.flattened.into_iter().map(|x| x / rhs).collect();
-        QArray {
-            flattened,
-            shape: self.shape,
-        }
+        QArray::new(flattened, self.shape)
     }
 }
 
@@ -126,10 +144,7 @@ impl<T: InnerType> Div<T> for QArray<T> where T: Div<Output = T>{
 
 impl<T: InnerType> From<Vec<T>> for QArray<T> {
     fn from(values: Vec<T>) -> Self {
-        Self {
-            shape: vec![values.len()],
-            flattened: values,
-        }
+        QArray::new(values, vec![values.len()])
     }
 }
 
@@ -144,7 +159,7 @@ impl<T: InnerType> From<Vec<Vec<T>>> for QArray<T> {
         let shape = vec![values.len(), values[0].len()];
         
         let flattened = values.into_iter().flatten().collect();
-        Self { flattened, shape }
+        QArray::new(flattened, shape)
     }
 }
 
