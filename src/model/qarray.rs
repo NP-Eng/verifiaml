@@ -93,10 +93,16 @@ impl<T: InnerType> QArray<T> {
         }
     }
 
-    // TODO assert size equality here or neglect for efficiency? Probs will
-    // file if there is a size mismatch, so it would be rather a check for
-    // the programmer's convenience
+    /// Takes an n-dimensional index and returns the corresponding flattened
+    /// index. E.g. for a 3x3 matrix, the index (1, 2) corresponds
+    /// to the flattened index 5.
     fn flatten_index(&self, index: Vec<usize>) -> usize {
+        debug_assert_eq!(
+            index.len(),
+            self.num_dims(),
+            "Index has the wrong number of dimensions"
+        );
+
         index
             .iter()
             .zip(self.cumulative_dimensions.iter())
@@ -202,3 +208,43 @@ impl<T: InnerType> From<Vec<Vec<T>>> for QArray<T> {
 //         }
 //     }
 // }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_flatten_index_trivial() {
+        let q = QArray::from(vec![1, 2, 3, 4, 5, 6, 7, 8, 9]);
+        for i in 0..9 {
+            assert_eq!(q.flatten_index(vec![i]), i);
+        }
+    }
+
+    #[test]
+    fn test_flatten_index_2d() {
+        let shape = vec![3, 3];
+        let flattened: Vec<i32> = (1..=9).collect();
+        let q = QArray::new(flattened, shape);
+        assert_eq!(q.flatten_index(vec![0, 0]), 0);
+        assert_eq!(q.flatten_index(vec![0, 1]), 1);
+        assert_eq!(q.flatten_index(vec![0, 2]), 2);
+        assert_eq!(q.flatten_index(vec![1, 0]), 3);
+        assert_eq!(q.flatten_index(vec![1, 2]), 5);
+        assert_eq!(q.flatten_index(vec![2, 0]), 6);
+        assert_eq!(q.flatten_index(vec![2, 2]), 8);
+    }
+
+    #[test]
+    fn test_flatten_index_3d() {
+        let shape = vec![2, 3, 4];
+        let flattened: Vec<i32> = (1..=24).collect();
+        let q = QArray::new(flattened, shape);
+        assert_eq!(q.flatten_index(vec![0, 0, 0]), 0);
+        assert_eq!(q.flatten_index(vec![0, 0, 1]), 1);
+        assert_eq!(q.flatten_index(vec![0, 0, 2]), 2);
+        assert_eq!(q.flatten_index(vec![0, 1, 0]), 4);
+        assert_eq!(q.flatten_index(vec![1, 0, 0]), 12);
+        assert_eq!(q.flatten_index(vec![1, 2, 3]), 23);
+    }
+}
