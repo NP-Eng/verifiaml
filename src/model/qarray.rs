@@ -19,7 +19,7 @@ pub(crate) struct QArray<T: InnerType> {
 impl<T: InnerType> QArray<T> {
     
     pub(crate) fn check_dimensions(&self) -> bool {
-        self.flattened.len() == self.shape.iter().product()
+        self.flattened.len() == self.shape.iter().product::<usize>()
     }
 
     pub(crate) fn shape(&self) -> &Vec<usize> {
@@ -55,7 +55,7 @@ impl<T: InnerType> QArray<T> {
         
         assert_eq!(
             self.len(),
-            shape.iter().product(),
+            shape.iter().product::<usize>(),
             "New shape must have the same number of elements as the original one"
         );
         
