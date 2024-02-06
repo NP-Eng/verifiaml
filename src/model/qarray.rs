@@ -4,7 +4,7 @@ use std::{vec, ops::{Add, Sub, Mul, Div}};
 
 use crate::quantization::{QSmallType, QLargeType};
 
-pub(crate) trait InnerType {}
+pub(crate) trait InnerType: Copy {}
 
 impl InnerType for QSmallType {}
 
@@ -127,8 +127,8 @@ impl<T: InnerType> Div<T> for QArray<T> where T: Div<Output = T>{
 impl<T: InnerType> From<Vec<T>> for QArray<T> {
     fn from(values: Vec<T>) -> Self {
         Self {
-            flattened: values,
             shape: vec![values.len()],
+            flattened: values,
         }
     }
 }

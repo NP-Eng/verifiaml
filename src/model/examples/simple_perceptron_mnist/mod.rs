@@ -87,7 +87,7 @@ mod tests {
 
         let output = perceptron.evaluate(input_i8);
 
-        let output_u8: Vec<u8> = output.values()[0][0].iter().map(|x| ((*x as i32) + 128) as u8).collect();
+        let output_u8: Vec<u8> = output.values().into_iter().map(|x| ((*x as i32) + 128) as u8).collect();
 
         println!("Output: {:?}", output_u8);
         assert_eq!(output_u8, expected_output);

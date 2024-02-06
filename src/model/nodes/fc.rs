@@ -27,7 +27,7 @@ pub(crate) struct FCNode<F, S, PCS> {
     phantom: PhantomData<(F, S, PCS)>,
 }
 
-struct FCCommitment<F, S, PCS>
+pub(crate) struct FCCommitment<F, S, PCS>
 where
     F: PrimeField,
     S: CryptographicSponge,
@@ -37,7 +37,7 @@ where
     bias_com: PCS::Commitment,
 }
 
-struct FCProof {
+pub(crate) struct FCProof {
     // this will be the sumcheck proof
 }
 
@@ -75,7 +75,7 @@ where
 
         // TODO this is a bigger question: can this overflow an i8? Supposedly the point of quantisation
         // is that input-by-weight products can be computed in i8. To be safe, let us use the large type here
-        let shifted_input = (input - self.q_info.input_info.zero_point as QLargeType).values();
+        let shifted_input = (input - self.q_info.input_info.zero_point as QLargeType).move_values();
 
         let mut accumulators = self.bias.clone();
 
