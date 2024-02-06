@@ -70,14 +70,10 @@ fn run_simple_perceptron_mnist() {
 
     let input_i8 = (quantised_input.cast::<i32>() - 128).cast::<QSmallType>();
 
-    let output = perceptron.evaluate(input_i8);
+    let output_i8 = perceptron.evaluate(input_i8);
 
-    let output_u8: Vec<u8> = output
-        .values()
-        .into_iter()
-        .map(|x| ((*x as i32) + 128) as u8)
-        .collect();
+    let output_u8 = (output_i8.cast::<i32>() + 128).cast::<u8>();
 
     println!("Output: {:?}", output_u8);
-    assert_eq!(output_u8, expected_output);
+    assert_eq!(output_u8.move_values(), expected_output);
 }

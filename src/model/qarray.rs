@@ -39,6 +39,8 @@ impl<T: InnerType> QArray<T> {
         &self.flattened
     }
 
+    // TODO it's possible this can be handled more elegantly with Deref, like
+    // the reference codebase does
     pub(crate) fn move_values(self) -> Vec<T> {
         self.flattened
     }
