@@ -24,6 +24,8 @@ pub(crate) struct LooseFCNode<F, S, PCS> {
     padded_stretched_weights: Vec<QSmallType>,
     /// The unpadded vector of biases
     bias: Vec<QLargeType>,
+    /// The padded bias vector. No stretching is necessary.
+    padded_bias: Vec<QLargeType>,
     /// Unpadded dimensions (rows, columns)
     dims: (usize, usize),
     /// The logarithm of the padded dimensions (rows, columns)
@@ -133,9 +135,6 @@ where
 
         let mut accumulators = self.bias.clone();
 
-        // Padding the bias
-        accumulators.resize(padded_dims.1, 0);
-
         // TODO this can be made more elegant (efficient?) using addition of QArrays after defining suitable operators
 
         // TODO since we have acumulators, this can be done more efficiently going row-wise to avoid re-caching the input
@@ -219,6 +218,10 @@ where
             .compact_resize(padded_array_dims, 0)
             .move_values();
 
+        // Padding the bias
+        let mut padded_bias = bias.clone();
+        padded_bias.resize(dims.1.next_power_of_two(), 0);
+
         let q_info = FCQInfo {
             input_info: QInfo {
                 scale: s_i,
@@ -238,6 +241,7 @@ where
             weights,
             padded_stretched_weights,
             bias,
+            padded_bias,
             dims,
             padded_dims_log,
             q_info,
