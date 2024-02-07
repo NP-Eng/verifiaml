@@ -58,9 +58,13 @@ where
     // TODO I think this might be broken due to the failure of commutativity
     // between product and and nearest-geq-power-of-two
     fn padded_evaluate(&self, input: QArray<QSmallType>) -> QArray<QSmallType> {
-        
-        let padded_input_shape: Vec<usize> = self.input_shape.iter().map(|x| (1 << x) as usize).collect();
-        let padded_output_shape: Vec<usize> = self.output_shape.iter().map(|x| (1 << x) as usize).collect();
+        let padded_input_shape: Vec<usize> =
+            self.input_shape.iter().map(|x| (1 << x) as usize).collect();
+        let padded_output_shape: Vec<usize> = self
+            .output_shape
+            .iter()
+            .map(|x| (1 << x) as usize)
+            .collect();
 
         // Sanity checks
         // TODO systematise

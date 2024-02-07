@@ -77,7 +77,7 @@ where
 
     /// Evaluate the padded node natively
     fn padded_evaluate(&self, input: QArray<QSmallType>) -> QArray<QSmallType>;
-    
+
     // TODO: is it okay to trim all keys from the same original PCS key?
     // (e.g. to trim the same key to for the matrix and for the bias in the
     // case of MatMul)
@@ -173,7 +173,6 @@ where
             Node::Reshape(r) => r.padded_evaluate(input),
         }
     }
-    
 
     /// Commit to the node parameters
     // pub(crate) fn commit(&self) -> PCS::Commitment {

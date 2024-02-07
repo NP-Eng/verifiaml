@@ -5,6 +5,9 @@ use ark_std::vec::Vec;
 
 use crate::quantization::{QLargeType, QSmallType};
 
+#[cfg(test)]
+mod tests;
+
 pub(crate) trait InnerType: Copy {}
 
 impl InnerType for QSmallType {}
@@ -75,7 +78,13 @@ impl<T: InnerType> QArray<T> {
 
     // Internal constructor that computes cumulative dimensions
     fn new(flattened: Vec<T>, shape: Vec<usize>) -> Self {
-        let mut cumulative_dimensions = Vec::new();
+
+        assert!(
+            shape.len() > 0,
+            "Arrays cannot be zero-dimensional"
+        );
+
+        let mut cumulative_dimensions = Vec::with_capacity(shape.len());
 
         let mut acc = 1;
 
@@ -110,9 +119,102 @@ impl<T: InnerType> QArray<T> {
             .sum()
     }
 
-    fn get(&self, index: Vec<usize>) -> T {
+    pub(crate) fn get(&self, index: Vec<usize>) -> T {
         self.flattened[self.flatten_index(index)]
     }
+
+    /// For each dimension of self.shape, either pad the QArray with `value`
+    /// (if the new size is larger than the original one) or truncate it (if
+    /// the new size is smaller than or equal to the original one).
+    pub(crate) fn compact_resize(&self, new_shape: Vec<usize>, value: T) -> QArray<T> {
+        let old_shape = &self.shape;
+
+        assert_eq!(
+            new_shape.len(),
+            old_shape.len(),
+            "New and old shape must have the same number of dimensions, but they have {} and {}, respectively",
+            new_shape.len(),
+            old_shape.len(),
+        );
+
+        // compute cumulative dimensions of the qarray
+        let mut new_cumulative_dimensions = Vec::with_capacity(new_shape.len());
+        let mut acc = 1;
+
+        for dim in new_shape.iter().rev() {
+            new_cumulative_dimensions.push(acc);
+            acc *= dim;
+        }
+
+        new_cumulative_dimensions.reverse();
+
+        let flattened = compact_reshape_internal(
+            &self.flattened,
+            &old_shape,
+            &new_shape, 
+            &self.cumulative_dimensions,
+            &new_cumulative_dimensions,
+            new_shape[new_shape.len() - 1],
+            value,
+        );
+
+        QArray::new(flattened, new_shape)
+    }
+}
+
+/************************* Padding *************************/
+// TODO this can perhaps be done more efficiently, e.g. by performing all data
+// manipulation in-place using indices rather than creating new vectors
+fn compact_reshape_internal<T: InnerType>(
+    data: &Vec<T>,
+    old_shape: &[usize],
+    new_shape: &[usize],
+    old_cumulative_dimensions: &[usize],
+    new_cumulative_dimensions: &[usize],
+    final_new_size: usize,
+    value: T,
+) -> Vec<T> {
+    
+    // Base case at length 1 (rather than 0) is slightly less elegant but more
+    // efficient
+    if new_shape.len() == 1 {
+        let mut new_data = data.clone();
+        new_data.resize(final_new_size, value);
+        return new_data;
+    }
+
+    // TODO better modify in-place with chunks_exact_mut?
+    let subarrays = data.chunks_exact(old_cumulative_dimensions[0]);
+
+    println!("Final_new_size: {final_new_size}");
+
+    let padded: Vec<T> = if new_shape[0] <= old_shape[0] {
+        subarrays.take(new_shape[0]).flat_map(|subarray|
+            compact_reshape_internal(
+                &subarray.to_vec(),
+                &old_shape[1..],
+                &new_shape[1..],
+                &old_cumulative_dimensions[1..],
+                &new_cumulative_dimensions[1..],
+                final_new_size,
+                value,
+            )
+        ).collect()
+    } else {
+        subarrays.flat_map(|subarray|
+            compact_reshape_internal(
+                &subarray.to_vec(),
+                &old_shape[1..],
+                &new_shape[1..],
+                &old_cumulative_dimensions[1..],
+                &new_cumulative_dimensions[1..],
+                final_new_size,
+                value,
+            )
+        ).chain(vec![value; (new_shape[0] - old_shape[0]) * new_cumulative_dimensions[0]].into_iter()).collect()
+    };
+
+    padded
 }
 
 /************************ Operators ************************/
@@ -208,43 +310,3 @@ impl<T: InnerType> From<Vec<Vec<T>>> for QArray<T> {
 //         }
 //     }
 // }
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_flatten_index_trivial() {
-        let q = QArray::from(vec![1, 2, 3, 4, 5, 6, 7, 8, 9]);
-        for i in 0..9 {
-            assert_eq!(q.flatten_index(vec![i]), i);
-        }
-    }
-
-    #[test]
-    fn test_flatten_index_2d() {
-        let shape = vec![3, 3];
-        let flattened: Vec<i32> = (1..=9).collect();
-        let q = QArray::new(flattened, shape);
-        assert_eq!(q.flatten_index(vec![0, 0]), 0);
-        assert_eq!(q.flatten_index(vec![0, 1]), 1);
-        assert_eq!(q.flatten_index(vec![0, 2]), 2);
-        assert_eq!(q.flatten_index(vec![1, 0]), 3);
-        assert_eq!(q.flatten_index(vec![1, 2]), 5);
-        assert_eq!(q.flatten_index(vec![2, 0]), 6);
-        assert_eq!(q.flatten_index(vec![2, 2]), 8);
-    }
-
-    #[test]
-    fn test_flatten_index_3d() {
-        let shape = vec![2, 3, 4];
-        let flattened: Vec<i32> = (1..=24).collect();
-        let q = QArray::new(flattened, shape);
-        assert_eq!(q.flatten_index(vec![0, 0, 0]), 0);
-        assert_eq!(q.flatten_index(vec![0, 0, 1]), 1);
-        assert_eq!(q.flatten_index(vec![0, 0, 2]), 2);
-        assert_eq!(q.flatten_index(vec![0, 1, 0]), 4);
-        assert_eq!(q.flatten_index(vec![1, 0, 0]), 12);
-        assert_eq!(q.flatten_index(vec![1, 2, 3]), 23);
-    }
-}
