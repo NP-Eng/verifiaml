@@ -26,9 +26,6 @@ pub(crate) struct LooseFCNode<F, S, PCS> {
     bias: Vec<QLargeType>,
     /// Unpadded dimensions (rows, columns)
     dims: (usize, usize),
-    /// Dimensions of the 2D
-    /// TODO generalise to 3D
-    reshape_input_dims: (usize, usize),
     /// The logarithm of the padded dimensions (rows, columns)
     padded_dims_log: (usize, usize),
     /// Quantisation info used for both result computation and requantisation
@@ -209,7 +206,18 @@ where
             log2(dims.1.next_power_of_two()) as usize,
         );
 
-        let padded_stretched_weights = pad_stretch_weights(&weights, dims, reshape_input_dims);
+        let array_dims = vec![reshape_input_dims.0, reshape_input_dims.1, dims.0];
+        let padded_array_dims = array_dims
+            .clone()
+            .iter()
+            .map(|x| x.next_power_of_two())
+            .collect();
+
+        let weight_array = QArray::new(weights.clone(), array_dims);
+
+        let padded_stretched_weights = weight_array
+            .compact_resize(padded_array_dims, 0)
+            .move_values();
 
         let q_info = FCQInfo {
             input_info: QInfo {
@@ -231,7 +239,6 @@ where
             padded_stretched_weights,
             bias,
             dims,
-            reshape_input_dims,
             padded_dims_log,
             q_info,
             phantom: PhantomData,
@@ -239,94 +246,5 @@ where
     }
 }
 
-// Stretch and pad the weight matrix to account for the interaction of padding
-// and flattening
-// weights: unpadded weight matrix, flattened
-fn pad_stretch_weights(
-    weights: &Vec<QSmallType>,
-    dims: (usize, usize),
-    original_dims: (usize, usize),
-) -> Vec<QSmallType> {
-    // No checks: this is an internal function
-
-    let (n_weight_rows, n_weight_cols) = dims;
-    let (n_original_rows, n_original_cols) = original_dims;
-
-    let n_padded_rows = n_original_rows.next_power_of_two();
-    let n_padded_cols = n_original_cols.next_power_of_two();
-    let n_padded_weight_cols = n_weight_cols.next_power_of_two();
-
-    let mut output = Vec::with_capacity(n_padded_rows * n_padded_cols * n_padded_weight_cols);
-
-    let mut rows = weights.chunks_exact(n_weight_cols);
-
-    let single_row_pad: Vec<QSmallType> = vec![0; n_padded_weight_cols - n_weight_cols];
-    let full_row_pad: Vec<QSmallType> = vec![0; n_padded_weight_cols];
-
-    for _ in 0..n_original_rows {
-        for _ in 0..n_original_cols {
-            output.extend(rows.next().unwrap());
-            output.extend_from_slice(&single_row_pad);
-        }
-
-        for _ in 0..(n_padded_cols - n_original_cols) {
-            output.extend_from_slice(&full_row_pad);
-        }
-    }
-
-    output.extend(vec![
-        0;
-        n_padded_weight_cols
-            * n_padded_cols
-            * (n_padded_rows - n_original_rows)
-    ]);
-
-    output
-}
-
 // TODO in constructor, add quantisation information checks? (s_bias = s_input * s_weight, z_bias = 0, z_weight = 0, etc.)
 // TODO in constructor, check bias length matches appropriate matrix dimension
-
-#[cfg(test)]
-mod tests {
-    use crate::quantization::QSmallType;
-
-    use super::pad_stretch_weights;
-
-    #[test]
-    fn weight_padding_test() {
-        // Written out for visual comparison with the padded version
-        let original_weights: Vec<QSmallType> = vec![
-            1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24,
-            25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46,
-            47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68,
-            69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 83, 84, 85, 86, 87, 88, 89, 90,
-        ];
-
-        // Dimensions of FC input before Reshape
-        let original_dimensions = (5, 3);
-        // Padded to 8 x 4
-
-        // Dimensions of original weight matrix after Reshape of the input
-        let dims = (15, 6);
-        // Padded weight matrix: 32 x 8
-
-        let expected: Vec<QSmallType> = vec![
-            1, 2, 3, 4, 5, 6, 0, 0, 7, 8, 9, 10, 11, 12, 0, 0, 13, 14, 15, 16, 17, 18, 0, 0, 0, 0,
-            0, 0, 0, 0, 0, 0, 19, 20, 21, 22, 23, 24, 0, 0, 25, 26, 27, 28, 29, 30, 0, 0, 31, 32,
-            33, 34, 35, 36, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 37, 38, 39, 40, 41, 42, 0, 0, 43, 44, 45,
-            46, 47, 48, 0, 0, 49, 50, 51, 52, 53, 54, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 55, 56, 57, 58,
-            59, 60, 0, 0, 61, 62, 63, 64, 65, 66, 0, 0, 67, 68, 69, 70, 71, 72, 0, 0, 0, 0, 0, 0,
-            0, 0, 0, 0, 73, 74, 75, 76, 77, 78, 0, 0, 79, 80, 81, 82, 83, 84, 0, 0, 85, 86, 87, 88,
-            89, 90, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-        ];
-
-        assert_eq!(
-            super::pad_stretch_weights(&original_weights, dims, original_dimensions),
-            expected
-        );
-    }
-}

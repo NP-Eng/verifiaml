@@ -77,7 +77,7 @@ impl<T: InnerType> QArray<T> {
     }
 
     // Internal constructor that computes cumulative dimensions
-    fn new(flattened: Vec<T>, shape: Vec<usize>) -> Self {
+    pub(crate) fn new(flattened: Vec<T>, shape: Vec<usize>) -> Self {
         assert!(shape.len() > 0, "Arrays cannot be zero-dimensional");
 
         let mut cumulative_dimensions = Vec::with_capacity(shape.len());
