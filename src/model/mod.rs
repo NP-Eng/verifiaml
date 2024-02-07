@@ -26,6 +26,8 @@ where
     S: CryptographicSponge,
     PCS: PolynomialCommitment<F, Poly<F>, S>,
 {
+    input_shape: Vec<usize>,
+    output_shape: Vec<usize>,
     nodes: Vec<Node<F, S, PCS>>,
     phantom: PhantomData<(F, S, PCS)>,
 }
@@ -36,8 +38,10 @@ where
     S: CryptographicSponge,
     PCS: PolynomialCommitment<F, Poly<F>, S>,
 {
-    pub(crate) fn new(nodes: Vec<Node<F, S, PCS>>) -> Self {
+    pub(crate) fn new(input_shape: Vec<usize>, nodes: Vec<Node<F, S, PCS>>) -> Self {
         Self {
+            input_shape,
+            output_shape: nodes.last().unwrap().shape(),
             nodes,
             phantom: PhantomData,
         }
@@ -52,10 +56,16 @@ where
     }
 
     pub(crate) fn padded_evaluate(&self, input: QArray<QSmallType>) -> QArray<QSmallType> {
-        let mut output = input;
+        let mut output = input.compact_resize(
+            // TODO this functionality is so common we might as well make it an #[inline] function
+            self.input_shape.iter().map(|x| 1 << *x).collect(),
+            0,
+        );
+
         for node in &self.nodes {
             output = node.padded_evaluate(output);
         }
-        output
+        // TODO switch to reference in reshape?
+        output.compact_resize(self.output_shape.clone(), 0)
     }
 }

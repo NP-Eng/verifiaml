@@ -119,7 +119,7 @@ where
     PCS: PolynomialCommitment<F, Poly<F>, S>,
 {
     /// Returns the shape of the node's output tensor
-    fn shape(&self) -> Vec<usize> {
+    pub(crate) fn shape(&self) -> Vec<usize> {
         match self {
             Node::FC(n) => n.shape(),
             Node::ReLU(r) => r.shape(),
@@ -130,7 +130,7 @@ where
     /// Returns the element-wise base-two logarithm of the padded node's
     /// output shape, i.e. the list of numbers of variables of the associated
     /// MLE
-    fn padded_shape_log(&self) -> Vec<usize> {
+    pub(crate) fn padded_shape_log(&self) -> Vec<usize> {
         match self {
             Node::FC(n) => n.padded_shape_log(),
             Node::ReLU(r) => r.padded_shape_log(),
@@ -139,7 +139,7 @@ where
     }
 
     /// Returns the element-wise padded node's output shape
-    fn padded_shape(&self) -> Vec<usize> {
+    pub(crate) fn padded_shape(&self) -> Vec<usize> {
         self.padded_shape_log()
             .into_iter()
             .map(|x| 1 << x)
@@ -147,12 +147,12 @@ where
     }
 
     /// The number of output units of the node
-    fn num_units(&self) -> usize {
+    pub(crate) fn num_units(&self) -> usize {
         self.shape().iter().product()
     }
 
     /// The number of output units of the padded node
-    fn padded_num_units(&self) -> usize {
+    pub(crate) fn padded_num_units(&self) -> usize {
         self.padded_shape().iter().product()
     }
 

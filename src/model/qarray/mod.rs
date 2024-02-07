@@ -78,11 +78,7 @@ impl<T: InnerType> QArray<T> {
 
     // Internal constructor that computes cumulative dimensions
     fn new(flattened: Vec<T>, shape: Vec<usize>) -> Self {
-
-        assert!(
-            shape.len() > 0,
-            "Arrays cannot be zero-dimensional"
-        );
+        assert!(shape.len() > 0, "Arrays cannot be zero-dimensional");
 
         let mut cumulative_dimensions = Vec::with_capacity(shape.len());
 
@@ -151,7 +147,7 @@ impl<T: InnerType> QArray<T> {
         let flattened = compact_reshape_internal(
             &self.flattened,
             &old_shape,
-            &new_shape, 
+            &new_shape,
             &self.cumulative_dimensions,
             &new_cumulative_dimensions,
             new_shape[new_shape.len() - 1],
@@ -174,7 +170,6 @@ fn compact_reshape_internal<T: InnerType>(
     final_new_size: usize,
     value: T,
 ) -> Vec<T> {
-    
     // Base case at length 1 (rather than 0) is slightly less elegant but more
     // efficient
     if new_shape.len() == 1 {
@@ -189,29 +184,38 @@ fn compact_reshape_internal<T: InnerType>(
     println!("Final_new_size: {final_new_size}");
 
     let padded: Vec<T> = if new_shape[0] <= old_shape[0] {
-        subarrays.take(new_shape[0]).flat_map(|subarray|
-            compact_reshape_internal(
-                &subarray.to_vec(),
-                &old_shape[1..],
-                &new_shape[1..],
-                &old_cumulative_dimensions[1..],
-                &new_cumulative_dimensions[1..],
-                final_new_size,
-                value,
-            )
-        ).collect()
+        subarrays
+            .take(new_shape[0])
+            .flat_map(|subarray| {
+                compact_reshape_internal(
+                    &subarray.to_vec(),
+                    &old_shape[1..],
+                    &new_shape[1..],
+                    &old_cumulative_dimensions[1..],
+                    &new_cumulative_dimensions[1..],
+                    final_new_size,
+                    value,
+                )
+            })
+            .collect()
     } else {
-        subarrays.flat_map(|subarray|
-            compact_reshape_internal(
-                &subarray.to_vec(),
-                &old_shape[1..],
-                &new_shape[1..],
-                &old_cumulative_dimensions[1..],
-                &new_cumulative_dimensions[1..],
-                final_new_size,
-                value,
+        subarrays
+            .flat_map(|subarray| {
+                compact_reshape_internal(
+                    &subarray.to_vec(),
+                    &old_shape[1..],
+                    &new_shape[1..],
+                    &old_cumulative_dimensions[1..],
+                    &new_cumulative_dimensions[1..],
+                    final_new_size,
+                    value,
+                )
+            })
+            .chain(
+                vec![value; (new_shape[0] - old_shape[0]) * new_cumulative_dimensions[0]]
+                    .into_iter(),
             )
-        ).chain(vec![value; (new_shape[0] - old_shape[0]) * new_cumulative_dimensions[0]].into_iter()).collect()
+            .collect()
     };
 
     padded
