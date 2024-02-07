@@ -71,7 +71,7 @@ fn run_simple_perceptron_mnist() {
 
     let input_i8 = (quantised_input.cast::<i32>() - 128).cast::<QSmallType>();
 
-    let output_i8 = perceptron.evaluate(input_i8);
+    let output_i8 = perceptron.padded_evaluate(input_i8);
 
     let output_u8 = (output_i8.cast::<i32>() + 128).cast::<u8>();
 
