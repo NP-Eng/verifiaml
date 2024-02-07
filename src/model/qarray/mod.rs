@@ -144,7 +144,7 @@ impl<T: InnerType> QArray<T> {
 
         new_cumulative_dimensions.reverse();
 
-        let flattened = compact_reshape_internal(
+        let flattened = compact_resize_internal(
             &self.flattened,
             &old_shape,
             &new_shape,
@@ -161,7 +161,7 @@ impl<T: InnerType> QArray<T> {
 /************************* Padding *************************/
 // TODO this can perhaps be done more efficiently, e.g. by performing all data
 // manipulation in-place using indices rather than creating new vectors
-fn compact_reshape_internal<T: InnerType>(
+fn compact_resize_internal<T: InnerType>(
     data: &Vec<T>,
     old_shape: &[usize],
     new_shape: &[usize],
@@ -181,13 +181,11 @@ fn compact_reshape_internal<T: InnerType>(
     // TODO better modify in-place with chunks_exact_mut?
     let subarrays = data.chunks_exact(old_cumulative_dimensions[0]);
 
-    println!("Final_new_size: {final_new_size}");
-
     let padded: Vec<T> = if new_shape[0] <= old_shape[0] {
         subarrays
             .take(new_shape[0])
             .flat_map(|subarray| {
-                compact_reshape_internal(
+                compact_resize_internal(
                     &subarray.to_vec(),
                     &old_shape[1..],
                     &new_shape[1..],
@@ -201,7 +199,7 @@ fn compact_reshape_internal<T: InnerType>(
     } else {
         subarrays
             .flat_map(|subarray| {
-                compact_reshape_internal(
+                compact_resize_internal(
                     &subarray.to_vec(),
                     &old_shape[1..],
                     &new_shape[1..],

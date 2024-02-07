@@ -119,8 +119,9 @@ where
             1,
             "Incorrect shape: Fully connected node expected a 1-dimensional input array"
         );
+
         assert_eq!(
-            1 << padded_dims.0,
+            padded_dims.0,
             input.len(),
             "Length mismatch: Padded fully connected node expected input with {} elements, got {} elements instead",
             padded_dims.0,

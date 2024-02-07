@@ -56,15 +56,21 @@ where
     }
 
     pub(crate) fn padded_evaluate(&self, input: QArray<QSmallType>) -> QArray<QSmallType> {
+        // TODO sanity check: input shape matches model input shape
+
         let mut output = input.compact_resize(
             // TODO this functionality is so common we might as well make it an #[inline] function
-            self.input_shape.iter().map(|x| 1 << *x).collect(),
+            self.input_shape
+                .iter()
+                .map(|x| x.next_power_of_two())
+                .collect(),
             0,
         );
 
         for node in &self.nodes {
             output = node.padded_evaluate(output);
         }
+
         // TODO switch to reference in reshape?
         output.compact_resize(self.output_shape.clone(), 0)
     }
