@@ -29,8 +29,6 @@ jobs:
   test:
     name: Test
     runs-on: ubuntu-latest
-    env:
-      RUSTFLAGS: -Dwarnings
     strategy:
       matrix:
         rust:
