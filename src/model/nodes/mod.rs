@@ -9,7 +9,7 @@ use crate::{
     quantization::QSmallType,
 };
 
-use self::reshape::ReshapeNode;
+use self::{loose_fc::LooseFCNode, reshape::ReshapeNode};
 
 use super::qarray::QArray;
 
@@ -106,6 +106,7 @@ where
     PCS: PolynomialCommitment<F, Poly<F>, S>,
 {
     FC(FCNode<F, S, PCS>),
+    LooseFC(LooseFCNode<F, S, PCS>),
     ReLU(ReLUNode<F, S, PCS>),
     Reshape(ReshapeNode<F, S, PCS>),
 }
@@ -121,7 +122,8 @@ where
     /// Returns the shape of the node's output tensor
     pub(crate) fn shape(&self) -> Vec<usize> {
         match self {
-            Node::FC(n) => n.shape(),
+            Node::FC(fc) => fc.shape(),
+            Node::LooseFC(fc) => fc.shape(),
             Node::ReLU(r) => r.shape(),
             Node::Reshape(r) => r.shape(),
         }
@@ -132,7 +134,8 @@ where
     /// MLE
     pub(crate) fn padded_shape_log(&self) -> Vec<usize> {
         match self {
-            Node::FC(n) => n.padded_shape_log(),
+            Node::FC(fc) => fc.padded_shape_log(),
+            Node::LooseFC(fc) => fc.padded_shape_log(),
             Node::ReLU(r) => r.padded_shape_log(),
             Node::Reshape(r) => r.padded_shape_log(),
         }
@@ -159,7 +162,8 @@ where
     /// Evaluate the node natively (without padding)
     pub(crate) fn evaluate(&self, input: QArray<QSmallType>) -> QArray<QSmallType> {
         match self {
-            Node::FC(n) => n.evaluate(input),
+            Node::FC(fc) => fc.evaluate(input),
+            Node::LooseFC(fc) => fc.evaluate(input),
             Node::ReLU(r) => r.evaluate(input),
             Node::Reshape(r) => r.evaluate(input),
         }
@@ -168,7 +172,8 @@ where
     /// Evaluate the padded node natively
     pub(crate) fn padded_evaluate(&self, input: QArray<QSmallType>) -> QArray<QSmallType> {
         match self {
-            Node::FC(n) => n.padded_evaluate(input),
+            Node::FC(fc) => fc.padded_evaluate(input),
+            Node::LooseFC(fc) => fc.padded_evaluate(input),
             Node::ReLU(r) => r.padded_evaluate(input),
             Node::Reshape(r) => r.padded_evaluate(input),
         }
