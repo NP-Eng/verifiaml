@@ -140,3 +140,33 @@ fn test_resize_3d_mixed() {
     assert_eq!(padded.shape, vec![3, 1, 5]);
     assert_eq!(padded.flattened, expected);
 }
+
+#[test]
+fn test_print_1d() {
+    println!("{}", QArray::from(vec![1, 2, 3, 4, 5]));
+}
+
+#[test]
+fn test_print_2d_1() {
+    println!("{}", QArray::new((1..=6).collect(), vec![2, 3]));
+}
+
+#[test]
+fn test_print_2d_2() {
+    println!("{}", QArray::new((1..=6).collect(), vec![3, 2]));
+}
+
+#[test]
+fn test_print_3d_1() {
+    println!("{}", QArray::new((1..=24).collect(), vec![2, 3, 4]));
+}
+
+#[test]
+fn test_print_3d_2() {
+    println!("{}", QArray::new((1..=24).collect(), vec![3, 2, 4]));
+}
+
+#[test]
+fn test_print_4d() {
+    println!("{}", QArray::new((1..=24).collect(), vec![2, 3, 2, 2]));
+}

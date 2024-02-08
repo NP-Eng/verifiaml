@@ -1,3 +1,5 @@
+use ark_std::any::type_name;
+use ark_std::fmt;
 use ark_std::fmt::Debug;
 use ark_std::ops::{Add, Div, Mul, Sub};
 use ark_std::vec;
@@ -5,10 +7,12 @@ use ark_std::vec::Vec;
 
 use crate::quantization::{QLargeType, QSmallType};
 
+const QARRAY_NESTED_TAB: &str = "    ";
+
 #[cfg(test)]
 mod tests;
 
-pub(crate) trait InnerType: Copy {}
+pub(crate) trait InnerType: Copy + Debug {}
 
 impl InnerType for QSmallType {}
 impl InnerType for QLargeType {}
@@ -79,6 +83,13 @@ impl<T: InnerType> QArray<T> {
     // Internal constructor that computes cumulative dimensions
     pub(crate) fn new(flattened: Vec<T>, shape: Vec<usize>) -> Self {
         assert!(shape.len() > 0, "Arrays cannot be zero-dimensional");
+        assert_eq!(
+            flattened.len(),
+            shape.iter().product::<usize>(),
+            "Incorrect shape {:?} for data of length {}",
+            shape,
+            flattened.len()
+        );
 
         let mut cumulative_dimensions = Vec::with_capacity(shape.len());
 
@@ -301,14 +312,73 @@ impl<T: InnerType> From<Vec<Vec<T>>> for QArray<T> {
     }
 }
 
-// This doesn't work, cf.
-// https://stackoverflow.com/questions/37347311/how-is-there-a-conflicting-implementation-of-from-when-using-a-generic-type
-// impl<T: InnerType, S: InnerType> From<QArray<T>> for QArray<S> where S: From<T> {
-//     fn from(input: QArray<T>) -> Self {
-//         let flattened = input.move_values().into_iter().map(|x| x as S).collect();
-//         Self {
-//             flattened,
-//             shape: input.shape,
-//         }
-//     }
-// }
+/************************* Display *************************/
+
+impl<T: InnerType> fmt::Display for QArray<T> {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(
+            f,
+            "QArray ({}). Shape: {:?}. Data:",
+            type_name::<T>(),
+            self.shape
+        )?;
+
+        if self.shape.len() == 1 {
+            return write!(f, " {:?}", self.flattened);
+        }
+
+        writeln!(f, "")?;
+
+        print_flat_data(
+            f,
+            &self.flattened,
+            &self.cumulative_dimensions,
+            self.cumulative_dimensions.len(),
+            self.cumulative_dimensions.len(),
+        )
+    }
+}
+
+fn print_flat_data<T: InnerType>(
+    f: &mut fmt::Formatter,
+    data: &[T],
+    cumulative_dimensions: &[usize],
+    len: usize,
+    original_len: usize,
+) -> fmt::Result {
+    if len == 0 {
+        return Ok(());
+    }
+
+    // Base case
+    if len == 1 {
+        return writeln!(
+            f,
+            "{}{:?}",
+            QARRAY_NESTED_TAB.repeat(original_len - 1),
+            data
+        );
+    }
+
+    if len != original_len {
+        writeln!(f, "{}[", QARRAY_NESTED_TAB.repeat(original_len - len))?;
+    }
+
+    let subarrays = data.chunks_exact(cumulative_dimensions[0]);
+
+    for subarray in subarrays {
+        print_flat_data(
+            f,
+            &subarray,
+            &cumulative_dimensions[1..],
+            len - 1,
+            original_len,
+        )?;
+    }
+
+    if len != original_len {
+        writeln!(f, "{}]", QARRAY_NESTED_TAB.repeat(original_len - len))?;
+    }
+
+    Ok(())
+}
