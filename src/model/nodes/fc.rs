@@ -97,6 +97,15 @@ where
             }
         }
 
+        // TODO remove
+        // println!("FULLY CONNECTED");
+        // println!("{} {} {}", self.q_info.input_info.scale, self.q_info.weight_info.scale, self.q_info.output_info.scale);
+        // println!("{} {} {}", self.q_info.input_info.zero_point, self.q_info.weight_info.zero_point, self.q_info.output_info.zero_point);
+        // println!("{:?}", accumulators);
+        // println!("{:?}", self.bias);
+        // println!("{:?}", output);
+        // println!("END FULLY CONNECTED");        
+
         requantise_fc(&accumulators, &self.q_info, RoundingScheme::NearestTiesEven).into()
     }
 

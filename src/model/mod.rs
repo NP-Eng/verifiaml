@@ -50,7 +50,9 @@ where
     pub(crate) fn evaluate(&self, input: QArray<QSmallType>) -> QArray<QSmallType> {
         let mut output = input;
         for node in &self.nodes {
+            println!("Evaluating {}", node.type_name());
             output = node.evaluate(output);
+            println!("Output: {:?}", output);
         }
         output
     }
@@ -68,7 +70,9 @@ where
         );
 
         for node in &self.nodes {
+            println!("Evaluating {}", node.type_name());
             output = node.padded_evaluate(output);
+            println!("Output: {:?}", output);
         }
 
         // TODO switch to reference in reshape?

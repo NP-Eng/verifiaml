@@ -4,7 +4,7 @@ use ark_poly_commit::PolynomialCommitment;
 
 use crate::{
     model::{
-        nodes::{fc::FCNode, loose_fc::LooseFCNode, reshape::ReshapeNode, Node},
+        nodes::{fc::FCNode, loose_fc::LooseFCNode, relu::ReLUNode, reshape::ReshapeNode, Node},
         qarray::QArray,
         Model, Poly,
     },
@@ -25,10 +25,11 @@ type Sponge = PoseidonSponge<Fr>;
 type Hyrax254 = HyraxPC<G1Affine, Poly<Fr>, Sponge>;
 
 const INPUT_DIMS: &[usize] = &[28, 28];
-const OUTPUT_DIMS: &[usize] = &[10];
+const INTER_DIM: usize = 28;
+const OUTPUT_DIM: usize = 10;
 
 // TODO this is incorrect now that we have switched to logs
-fn build_simple_perceptron_mnist<F, S, PCS>() -> Model<F, S, PCS>
+fn build_two_layer_perceptron_mnist<F, S, PCS>() -> Model<F, S, PCS>
 where
     F: PrimeField,
     S: CryptographicSponge,
@@ -39,30 +40,61 @@ where
 
     let reshape: ReshapeNode<F, S, PCS> = ReshapeNode::new(INPUT_DIMS.to_vec(), vec![flat_dim]);
 
-    let lfc: LooseFCNode<F, S, PCS> = LooseFCNode::new(
-        WEIGHTS.to_vec(),
-        BIAS.to_vec(),
-        (flat_dim, OUTPUT_DIMS[0]),
-        (INPUT_DIMS[0], INPUT_DIMS[1]),
-        S_I,
-        Z_I,
-        S_W,
-        Z_W,
-        S_O,
-        Z_O,
+    // let lfc: LooseFCNode<F, S, PCS> = LooseFCNode::new(
+    //     WEIGHTS_1.to_vec(),
+    //     BIAS_1.to_vec(),
+    //     (flat_dim, INTER_DIM),
+    //     (INPUT_DIMS[0], INPUT_DIMS[1]),
+    //     S_1_I,
+    //     Z_1_I,
+    //     S_1_W,
+    //     Z_1_W,
+    //     S_1_O,
+    //     Z_1_O,
+    // );
+
+    let fc1: FCNode<F, S, PCS> = FCNode::new(
+        WEIGHTS_1.to_vec(),
+        BIAS_1.to_vec(),
+        (flat_dim, INTER_DIM),
+        S_1_I,
+        Z_1_I,
+        S_1_W,
+        Z_1_W,
+        S_1_O,
+        Z_1_O,
     );
 
-    Model::new(INPUT_DIMS.to_vec(), vec![Node::Reshape(reshape), Node::LooseFC(lfc)])
+    let relu: ReLUNode<F, S, PCS> = ReLUNode::new(28);
+
+    let fc2: FCNode<F, S, PCS> = FCNode::new(
+        WEIGHTS_2.to_vec(),
+        BIAS_2.to_vec(),
+        (INTER_DIM, OUTPUT_DIM),
+        S_2_I,
+        Z_2_I,
+        S_2_W,
+        Z_2_W,
+        S_2_O,
+        Z_2_O,
+    );
+
+    Model::new(INPUT_DIMS.to_vec(), vec![
+        Node::Reshape(reshape),
+        Node::FC(fc1),
+        Node::ReLU(relu),
+        Node::FC(fc2),
+    ])
 }
 
 #[test]
-fn run_simple_perceptron_mnist() {
+fn run_two_layer_perceptron_mnist() {
     /**** Change here ****/
     let input = NORMALISED_INPUT_TEST_150;
-    let expected_output: Vec<u8> = vec![135, 109, 152, 161, 187, 157, 159, 151, 173, 202];
+    let expected_output: Vec<u8> = vec![133, 102, 134, 158, 129, 148, 98, 164, 72, 116];
     /**********************/
 
-    let perceptron = build_simple_perceptron_mnist::<Fr, Sponge, Hyrax254>();
+    let perceptron = build_two_layer_perceptron_mnist::<Fr, Sponge, Hyrax254>();
 
     let quantised_input: QArray<u8> = input
         .iter()
@@ -72,7 +104,7 @@ fn run_simple_perceptron_mnist() {
 
     let input_i8 = (quantised_input.cast::<i32>() - 128).cast::<QSmallType>();
 
-    let output_i8 = perceptron.padded_evaluate(input_i8);
+    let output_i8 = perceptron.evaluate(input_i8);
 
     let output_u8 = (output_i8.cast::<i32>() + 128).cast::<u8>();
 
