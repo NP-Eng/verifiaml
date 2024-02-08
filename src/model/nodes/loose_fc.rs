@@ -206,12 +206,14 @@ where
             log2(dims.1.next_power_of_two()) as usize,
         );
 
-        let array_dims = vec![reshape_input_dims.0, reshape_input_dims.1, dims.0];
+        let array_dims = vec![reshape_input_dims.0, reshape_input_dims.1, dims.1];
         let padded_array_dims = array_dims
             .clone()
             .iter()
             .map(|x| x.next_power_of_two())
             .collect();
+
+        println!("THERE 3");
 
         let weight_array = QArray::new(weights.clone(), array_dims);
 
