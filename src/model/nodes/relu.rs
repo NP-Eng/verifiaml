@@ -1,3 +1,4 @@
+use ark_std::log2;
 use ark_std::marker::PhantomData;
 
 use ark_crypto_primitives::sponge::CryptographicSponge;
@@ -18,6 +19,7 @@ where
     S: CryptographicSponge,
     PCS: PolynomialCommitment<F, Poly<F>, S>,
 {
+    num_units: usize,
     log_num_units: usize,
     phantom: PhantomData<(F, S, PCS)>,
 }
@@ -36,7 +38,7 @@ where
     type Proof = ReLUProof;
 
     fn shape(&self) -> Vec<usize> {
-        vec![1 << self.log_num_units]
+        vec![self.num_units]
     }
 
     fn padded_shape_log(&self) -> Vec<usize> {
@@ -97,8 +99,11 @@ where
     S: CryptographicSponge,
     PCS: PolynomialCommitment<F, Poly<F>, S>,
 {
-    pub(crate) fn new(log_num_units: usize) -> Self {
+    pub(crate) fn new(num_units: usize) -> Self {
+        let log_num_units = log2(num_units.next_power_of_two()) as usize;
+
         Self {
+            num_units,
             log_num_units,
             phantom: PhantomData,
         }
