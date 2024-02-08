@@ -1,3 +1,5 @@
+use ark_std::ops::Index;
+
 use ark_std::any::type_name;
 use ark_std::fmt;
 use ark_std::fmt::Debug;
@@ -23,6 +25,15 @@ pub(crate) struct QArray<T: InnerType> {
     flattened: Vec<T>,
     shape: Vec<usize>,
     cumulative_dimensions: Vec<usize>,
+}
+
+// impl indexing into the QArray
+impl<T: InnerType> Index<usize> for QArray<T> {
+    type Output = T;
+
+    fn index(&self, index: usize) -> &Self::Output {
+        &self.flattened[index]
+    }
 }
 
 impl<T: InnerType> QArray<T> {

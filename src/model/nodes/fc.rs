@@ -82,7 +82,7 @@ where
 
         // TODO this is a bigger question: can this overflow an i8? Supposedly the point of quantisation
         // is that input-by-weight products can be computed in i8. To be safe, let us use the large type here
-        let shifted_input = (input - self.q_info.input_info.zero_point as QLargeType).move_values();
+        let shifted_input = input - self.q_info.input_info.zero_point as QLargeType;
 
         let mut accumulators = self.bias.clone();
 
