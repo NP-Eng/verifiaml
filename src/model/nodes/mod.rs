@@ -119,6 +119,17 @@ where
     S: CryptographicSponge,
     PCS: PolynomialCommitment<F, Poly<F>, S>,
 {
+    // Print the type of the node. This cannot be cleantly achieved by deriving
+    // Debug
+    pub(crate) fn type_name(&self) -> &'static str {
+        match self {
+            Node::FC(_) => "FC",
+            Node::LooseFC(_) => "LooseFC",
+            Node::ReLU(_) => "ReLU",
+            Node::Reshape(_) => "Reshape",
+        }
+    }
+
     /// Returns the shape of the node's output tensor
     pub(crate) fn shape(&self) -> Vec<usize> {
         match self {
