@@ -19,8 +19,12 @@ use super::NodeOps;
 pub(crate) struct FCNode<F, S, PCS> {
     /// The row-major flattened unpadded vector of weights
     weights: Vec<QSmallType>,
+    /// The padded weight vector
+    padded_weights: Vec<QSmallType>,
     /// The unpadded vector of biases
     bias: Vec<QLargeType>,
+    /// The padded bias vector
+    padded_bias: Vec<QLargeType>,
     /// Unpadded imensions (rows, columns)
     dims: (usize, usize),
     /// The logarithm of the padded dimensions (rows, columns)
@@ -104,7 +108,7 @@ where
         // println!("{:?}", accumulators);
         // println!("{:?}", self.bias);
         // println!("{:?}", output);
-        // println!("END FULLY CONNECTED");        
+        // println!("END FULLY CONNECTED");
 
         requantise_fc(&accumulators, &self.q_info, RoundingScheme::NearestTiesEven).into()
     }
@@ -168,6 +172,20 @@ where
             log2(dims.1.next_power_of_two()) as usize,
         );
 
+        // Padding the weights
+        let weight_array = QArray::new(weights.clone(), vec![dims.0, dims.1]);
+
+        let padded_weights = weight_array
+            .compact_resize(
+                vec![dims.0.next_power_of_two(), dims.1.next_power_of_two()],
+                0,
+            )
+            .move_values();
+
+        // Padding the bias
+        let mut padded_bias = bias.clone();
+        padded_bias.resize(dims.1.next_power_of_two(), 0);
+
         let q_info = FCQInfo {
             input_info: QInfo {
                 scale: s_i,
@@ -185,7 +203,9 @@ where
 
         Self {
             weights,
+            padded_weights,
             bias,
+            padded_bias,
             dims,
             padded_dims_log,
             q_info,
