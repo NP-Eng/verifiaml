@@ -81,14 +81,14 @@ impl<T: InnerType> QArray<T> {
     }
 
     // Reshapes the QArray in-place
-    pub(crate) fn reshape(&mut self, shape: Vec<usize>) {
+    pub(crate) fn reshape(&mut self, new_shape: Vec<usize>) {
         assert_eq!(
             self.len(),
-            shape.iter().product::<usize>(),
+            new_shape.iter().product::<usize>(),
             "New shape must have the same number of elements as the original one"
         );
 
-        self.shape = shape;
+        self.shape = new_shape;
     }
 
     // Internal constructor that computes cumulative dimensions
