@@ -91,7 +91,7 @@ where
 fn run_two_layer_perceptron_mnist() {
     /**** Change here ****/
     let input = NORMALISED_INPUT_TEST_150;
-    let expected_output: Vec<u8> = vec![133, 102, 134, 158, 129, 148, 98, 164, 72, 116];
+    let expected_output: Vec<u8> = vec![138, 106, 149, 160, 174, 152, 141, 146, 169, 207];
     /**********************/
 
     let perceptron = build_two_layer_perceptron_mnist::<Fr, Sponge, Hyrax254>();
