@@ -40,23 +40,11 @@ where
 
     let reshape: ReshapeNode<F, S, PCS> = ReshapeNode::new(INPUT_DIMS.to_vec(), vec![flat_dim]);
 
-    // let lfc: LooseFCNode<F, S, PCS> = LooseFCNode::new(
-    //     WEIGHTS_1.to_vec(),
-    //     BIAS_1.to_vec(),
-    //     (flat_dim, INTER_DIM),
-    //     (INPUT_DIMS[0], INPUT_DIMS[1]),
-    //     S_1_I,
-    //     Z_1_I,
-    //     S_1_W,
-    //     Z_1_W,
-    //     S_1_O,
-    //     Z_1_O,
-    // );
-
-    let fc1: FCNode<F, S, PCS> = FCNode::new(
+    let lfc: LooseFCNode<F, S, PCS> = LooseFCNode::new(
         WEIGHTS_1.to_vec(),
         BIAS_1.to_vec(),
         (flat_dim, INTER_DIM),
+        (INPUT_DIMS[0], INPUT_DIMS[1]),
         S_1_I,
         Z_1_I,
         S_1_W,
@@ -65,7 +53,19 @@ where
         Z_1_O,
     );
 
-    let relu: ReLUNode<F, S, PCS> = ReLUNode::new(28);
+    // let fc1: FCNode<F, S, PCS> = FCNode::new(
+    //     WEIGHTS_1.to_vec(),
+    //     BIAS_1.to_vec(),
+    //     (flat_dim, INTER_DIM),
+    //     S_1_I,
+    //     Z_1_I,
+    //     S_1_W,
+    //     Z_1_W,
+    //     S_1_O,
+    //     Z_1_O,
+    // );
+
+    let relu: ReLUNode<F, S, PCS> = ReLUNode::new(28, Z_1_O);
 
     let fc2: FCNode<F, S, PCS> = FCNode::new(
         WEIGHTS_2.to_vec(),
@@ -81,7 +81,7 @@ where
 
     Model::new(INPUT_DIMS.to_vec(), vec![
         Node::Reshape(reshape),
-        Node::FC(fc1),
+        Node::LooseFC(lfc),
         Node::ReLU(relu),
         Node::FC(fc2),
     ])
