@@ -170,3 +170,21 @@ fn test_print_3d_2() {
 fn test_print_4d() {
     println!("{}", QArray::new((1..=24).collect(), vec![2, 3, 2, 2]));
 }
+
+#[test]
+fn test_maximum() {
+    let qarray: QArray<i32> = QArray::new(vec![-1, 2, 3, 4, -5, 6], vec![2, 3]);
+
+    // TODO the call to move_values will change once other branches are merged
+    // Do it here and elsewhere
+    assert_eq!(qarray.maximum(3).move_values(), vec![3, 3, 3, 4, 3, 6]);
+}
+
+#[test]
+fn test_minimum() {
+    let qarray: QArray<i32> = QArray::new(vec![-1, 2, 3, 4, -5, 6], vec![2, 3]);
+
+    // TODO the call to move_values will change once other branches are merged
+    // Do it here and elsewhere
+    assert_eq!(qarray.minimum(3).move_values(), vec![-1, 2, 3, 3, -5, 3]);
+}
