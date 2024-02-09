@@ -219,7 +219,7 @@ fn compact_resize_internal<T: InnerType>(
             })
             .collect()
     } else {
-        subarrays
+        let mut recursed: Vec<T> = subarrays
             .flat_map(|subarray| {
                 compact_resize_internal(
                     &subarray.to_vec(),
@@ -231,11 +231,14 @@ fn compact_resize_internal<T: InnerType>(
                     value,
                 )
             })
-            .chain(
-                vec![value; (new_shape[0] - old_shape[0]) * new_cumulative_dimensions[0]]
-                    .into_iter(),
-            )
-            .collect()
+            .collect();
+
+        recursed.resize(
+            recursed.len() + (new_shape[0] - old_shape[0]) * new_cumulative_dimensions[0],
+            value,
+        );
+
+        recursed
     };
 
     padded
