@@ -53,18 +53,6 @@ where
         Z_1_O,
     );
 
-    // let fc1: FCNode<F, S, PCS> = FCNode::new(
-    //     WEIGHTS_1.to_vec(),
-    //     BIAS_1.to_vec(),
-    //     (flat_dim, INTER_DIM),
-    //     S_1_I,
-    //     Z_1_I,
-    //     S_1_W,
-    //     Z_1_W,
-    //     S_1_O,
-    //     Z_1_O,
-    // );
-
     let relu: ReLUNode<F, S, PCS> = ReLUNode::new(28, Z_1_O);
 
     let fc2: FCNode<F, S, PCS> = FCNode::new(

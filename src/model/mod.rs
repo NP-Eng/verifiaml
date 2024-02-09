@@ -50,12 +50,7 @@ where
     pub(crate) fn evaluate(&self, input: QArray<QSmallType>) -> QArray<QSmallType> {
         let mut output = input;
         for node in &self.nodes {
-            println!(
-                "****************** Evaluating {} ******************",
-                node.type_name()
-            );
             output = node.evaluate(output);
-            println!("Output: {}", output);
         }
         output
     }
