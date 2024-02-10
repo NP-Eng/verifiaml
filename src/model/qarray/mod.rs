@@ -183,7 +183,7 @@ impl<T: InnerType> QArray<T> {
 /************************* Padding *************************/
 // TODO this can perhaps be done more efficiently, e.g. by performing all data
 // manipulation in-place using indices rather than creating new vectors
-fn compact_resize_internal<T: InnerType>(
+fn compact_resize_internal<T: Copy>(
     data: &Vec<T>,
     old_shape: &[usize],
     new_shape: &[usize],
