@@ -9,11 +9,12 @@ use crate::{
     quantization::QSmallType,
 };
 
-use self::reshape::ReshapeNode;
+use self::{loose_fc::LooseFCNode, reshape::ReshapeNode};
 
 use super::qarray::QArray;
 
 pub(crate) mod fc;
+pub(crate) mod loose_fc;
 pub(crate) mod relu;
 pub(crate) mod reshape;
 
@@ -74,6 +75,9 @@ where
     /// Evaluate the node natively (without padding)
     fn evaluate(&self, input: QArray<QSmallType>) -> QArray<QSmallType>;
 
+    /// Evaluate the padded node natively
+    fn padded_evaluate(&self, input: QArray<QSmallType>) -> QArray<QSmallType>;
+
     // TODO: is it okay to trim all keys from the same original PCS key?
     // (e.g. to trim the same key to for the matrix and for the bias in the
     // case of MatMul)
@@ -102,6 +106,7 @@ where
     PCS: PolynomialCommitment<F, Poly<F>, S>,
 {
     FC(FCNode<F, S, PCS>),
+    LooseFC(LooseFCNode<F, S, PCS>),
     ReLU(ReLUNode<F, S, PCS>),
     Reshape(ReshapeNode<F, S, PCS>),
 }
@@ -114,10 +119,22 @@ where
     S: CryptographicSponge,
     PCS: PolynomialCommitment<F, Poly<F>, S>,
 {
-    /// Returns the shape of the node's output tensor
-    fn shape(&self) -> Vec<usize> {
+    // Print the type of the node. This cannot be cleantly achieved by deriving
+    // Debug
+    pub(crate) fn type_name(&self) -> &'static str {
         match self {
-            Node::FC(n) => n.shape(),
+            Node::FC(_) => "FC",
+            Node::LooseFC(_) => "LooseFC",
+            Node::ReLU(_) => "ReLU",
+            Node::Reshape(_) => "Reshape",
+        }
+    }
+
+    /// Returns the shape of the node's output tensor
+    pub(crate) fn shape(&self) -> Vec<usize> {
+        match self {
+            Node::FC(fc) => fc.shape(),
+            Node::LooseFC(fc) => fc.shape(),
             Node::ReLU(r) => r.shape(),
             Node::Reshape(r) => r.shape(),
         }
@@ -126,16 +143,17 @@ where
     /// Returns the element-wise base-two logarithm of the padded node's
     /// output shape, i.e. the list of numbers of variables of the associated
     /// MLE
-    fn padded_shape_log(&self) -> Vec<usize> {
+    pub(crate) fn padded_shape_log(&self) -> Vec<usize> {
         match self {
-            Node::FC(n) => n.padded_shape_log(),
+            Node::FC(fc) => fc.padded_shape_log(),
+            Node::LooseFC(fc) => fc.padded_shape_log(),
             Node::ReLU(r) => r.padded_shape_log(),
             Node::Reshape(r) => r.padded_shape_log(),
         }
     }
 
     /// Returns the element-wise padded node's output shape
-    fn padded_shape(&self) -> Vec<usize> {
+    pub(crate) fn padded_shape(&self) -> Vec<usize> {
         self.padded_shape_log()
             .into_iter()
             .map(|x| 1 << x)
@@ -143,21 +161,32 @@ where
     }
 
     /// The number of output units of the node
-    fn num_units(&self) -> usize {
+    pub(crate) fn num_units(&self) -> usize {
         self.shape().iter().product()
     }
 
     /// The number of output units of the padded node
-    fn padded_num_units(&self) -> usize {
+    pub(crate) fn padded_num_units(&self) -> usize {
         self.padded_shape().iter().product()
     }
 
-    /// Evaluate the node natively (withotu padding)
+    /// Evaluate the node natively (without padding)
     pub(crate) fn evaluate(&self, input: QArray<QSmallType>) -> QArray<QSmallType> {
         match self {
-            Node::FC(n) => n.evaluate(input),
+            Node::FC(fc) => fc.evaluate(input),
+            Node::LooseFC(fc) => fc.evaluate(input),
             Node::ReLU(r) => r.evaluate(input),
             Node::Reshape(r) => r.evaluate(input),
+        }
+    }
+
+    /// Evaluate the padded node natively
+    pub(crate) fn padded_evaluate(&self, input: QArray<QSmallType>) -> QArray<QSmallType> {
+        match self {
+            Node::FC(fc) => fc.padded_evaluate(input),
+            Node::LooseFC(fc) => fc.padded_evaluate(input),
+            Node::ReLU(r) => r.padded_evaluate(input),
+            Node::Reshape(r) => r.padded_evaluate(input),
         }
     }
 

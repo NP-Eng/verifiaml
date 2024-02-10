@@ -1,4 +1,4 @@
-use ark_std::marker::PhantomData;
+use std::marker::PhantomData;
 
 use ark_crypto_primitives::sponge::CryptographicSponge;
 use ark_ff::PrimeField;
@@ -15,13 +15,18 @@ use super::NodeOps;
 
 // TODO convention: input, bias and output are rows, the op is vec-by-mat (in that order)
 
-/// Start with 2D matrices, and Mat-by-vector multiplication only
-pub(crate) struct FCNode<F, S, PCS> {
+/// Temporary Fully Connected node which also compactifies the non-compact
+/// input received from a Reshape node.
+pub(crate) struct LooseFCNode<F, S, PCS> {
     /// The row-major flattened unpadded vector of weights
     weights: Vec<QSmallType>,
+    /// The padded and stretched weight vector
+    padded_stretched_weights: Vec<QSmallType>,
     /// The unpadded vector of biases
     bias: Vec<QLargeType>,
-    /// Unpadded imensions (rows, columns)
+    /// The padded bias vector. No stretching is necessary.
+    padded_bias: Vec<QLargeType>,
+    /// Unpadded dimensions (rows, columns)
     dims: (usize, usize),
     /// The logarithm of the padded dimensions (rows, columns)
     padded_dims_log: (usize, usize),
@@ -31,7 +36,7 @@ pub(crate) struct FCNode<F, S, PCS> {
     phantom: PhantomData<(F, S, PCS)>,
 }
 
-pub(crate) struct FCCommitment<F, S, PCS>
+pub(crate) struct LooseFCCommitment<F, S, PCS>
 where
     F: PrimeField,
     S: CryptographicSponge,
@@ -41,18 +46,18 @@ where
     bias_com: PCS::Commitment,
 }
 
-pub(crate) struct FCProof {
+pub(crate) struct LooseFCProof {
     // this will be the sumcheck proof
 }
 
-impl<F, S, PCS> NodeOps<F, S, PCS> for FCNode<F, S, PCS>
+impl<F, S, PCS> NodeOps<F, S, PCS> for LooseFCNode<F, S, PCS>
 where
     F: PrimeField,
     S: CryptographicSponge,
     PCS: PolynomialCommitment<F, Poly<F>, S>,
 {
-    type NodeCommitment = FCCommitment<F, S, PCS>;
-    type Proof = FCProof;
+    type NodeCommitment = LooseFCCommitment<F, S, PCS>;
+    type Proof = LooseFCProof;
 
     fn shape(&self) -> Vec<usize> {
         vec![self.dims.1]
@@ -100,10 +105,49 @@ where
         requantise_fc(&accumulators, &self.q_info, RoundingScheme::NearestTiesEven).into()
     }
 
-    // TODO this can remain unimplemented until we have models with FC nodes
-    // receiving compact input
+    // This function naively computes entries which are known to be zero. It is
+    // meant to exactly mirror the proof-system multiplication proved by the
+    // sumcheck argument. Requantisation and shifting are also applied to these
+    // trivial entries, as the proof system does.
     fn padded_evaluate(&self, input: QArray<QSmallType>) -> QArray<QSmallType> {
-        unimplemented!()
+        let padded_dims = (1 << self.padded_dims_log.0, 1 << self.padded_dims_log.1);
+
+        // Sanity checks
+        // TODO systematise
+        assert_eq!(
+            input.num_dims(),
+            1,
+            "Incorrect shape: Fully connected node expected a 1-dimensional input array"
+        );
+
+        assert_eq!(
+            padded_dims.0,
+            input.len(),
+            "Length mismatch: Padded fully connected node expected input with {} elements, got {} elements instead",
+            padded_dims.0,
+            input.len()
+        );
+
+        let input: QArray<QLargeType> = input.cast();
+
+        // TODO this is a bigger question: can this overflow an i8? Supposedly the point of quantisation
+        // is that input-by-weight products can be computed in i8. To be safe, let us use the large type here
+        let shifted_input = input - self.q_info.input_info.zero_point as QLargeType;
+
+        let mut accumulators = self.padded_bias.clone();
+
+        // TODO this can be made more elegant (efficient?) using addition of QArrays after defining suitable operators
+
+        // TODO since we have acumulators, this can be done more efficiently going row-wise to avoid re-caching the input
+        for col in 0..padded_dims.1 {
+            // TODO does the compiler realise it doesn't need to access accumulators[col] on every iteration of the inner loop? ow change
+            for row in 0..padded_dims.0 {
+                accumulators[col] += shifted_input[row]
+                    * (self.padded_stretched_weights[row * padded_dims.1 + col] as QLargeType)
+            }
+        }
+
+        requantise_fc(&accumulators, &self.q_info, RoundingScheme::NearestTiesEven).into()
     }
 
     fn commit(&self) -> Self::NodeCommitment {
@@ -125,7 +169,7 @@ where
     }
 }
 
-impl<F, S, PCS> FCNode<F, S, PCS>
+impl<F, S, PCS> LooseFCNode<F, S, PCS>
 where
     F: PrimeField,
     S: CryptographicSponge,
@@ -135,6 +179,7 @@ where
         weights: Vec<QSmallType>,
         bias: Vec<QLargeType>,
         dims: (usize, usize),
+        reshape_input_dims: (usize, usize),
         s_i: QScaleType,
         z_i: QSmallType,
         s_w: QScaleType,
@@ -154,10 +199,29 @@ where
             "Bias vector length does not match the number of columns"
         );
 
+        // TODO reshape-related sanity checks
+
         let padded_dims_log: (usize, usize) = (
             log2(dims.0.next_power_of_two()) as usize,
             log2(dims.1.next_power_of_two()) as usize,
         );
+
+        let array_dims = vec![reshape_input_dims.0, reshape_input_dims.1, dims.1];
+        let padded_array_dims = array_dims
+            .clone()
+            .iter()
+            .map(|x| x.next_power_of_two())
+            .collect();
+
+        let weight_array = QArray::new(weights.clone(), array_dims);
+
+        let padded_stretched_weights = weight_array
+            .compact_resize(padded_array_dims, 0)
+            .move_values();
+
+        // Padding the bias
+        let mut padded_bias = bias.clone();
+        padded_bias.resize(dims.1.next_power_of_two(), 0);
 
         let q_info = FCQInfo {
             input_info: QInfo {
@@ -176,7 +240,9 @@ where
 
         Self {
             weights,
+            padded_stretched_weights,
             bias,
+            padded_bias,
             dims,
             padded_dims_log,
             q_info,

@@ -56,6 +56,21 @@ where
         v.into()
     }
 
+    // TODO this is the same as evaluate() for now; the two will likely differ
+    // if/when we introduce input size checks
+    fn padded_evaluate(&self, input: QArray<QSmallType>) -> QArray<QSmallType> {
+        // TODO sanity checks (cf. FC); systematise
+
+        // TODO Can be done more elegantly, probably
+        let v: Vec<QSmallType> = input
+            .values()
+            .iter()
+            .map(|x| *max(x, &(0 as QSmallType)))
+            .collect();
+
+        v.into()
+    }
+
     fn commit(&self) -> Self::NodeCommitment {
         // ReLU nodes have no parameters to commit to
         ()
