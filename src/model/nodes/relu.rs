@@ -1,3 +1,4 @@
+use ark_std::cmp::max;
 use ark_std::log2;
 use ark_std::marker::PhantomData;
 
@@ -55,21 +56,6 @@ where
     fn padded_evaluate(&self, input: QArray<QSmallType>) -> QArray<QSmallType> {
         // TODO sanity checks (cf. FC); systematise
         input.maximum(self.zero_point)
-    }
-
-    // TODO this is the same as evaluate() for now; the two will likely differ
-    // if/when we introduce input size checks
-    fn padded_evaluate(&self, input: QArray<QSmallType>) -> QArray<QSmallType> {
-        // TODO sanity checks (cf. FC); systematise
-
-        // TODO Can be done more elegantly, probably
-        let v: Vec<QSmallType> = input
-            .values()
-            .iter()
-            .map(|x| *max(x, &(0 as QSmallType)))
-            .collect();
-
-        v.into()
     }
 
     fn commit(&self) -> Self::NodeCommitment {
