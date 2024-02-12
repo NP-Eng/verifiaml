@@ -58,7 +58,7 @@ where
         input.maximum(self.zero_point)
     }
 
-    fn commit(&self) -> Self::NodeCommitment {
+    fn commit(&self, ck: PCS::CommitterKey) -> Self::NodeCommitment {
         // ReLU nodes have no parameters to commit to
         ()
     }

@@ -84,7 +84,7 @@ where
         output
     }
 
-    fn commit(&self) -> Self::NodeCommitment {
+    fn commit(&self, ck: PCS::CommitterKey) -> Self::NodeCommitment {
         // TODO assuming we want to make the reshape parameters public info,
         // no commitment is needed
         ()
