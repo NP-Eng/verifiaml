@@ -79,6 +79,11 @@ where
         self.shape().iter().product()
     }
 
+    /// The log of the number of output units of the padded node
+    fn padded_num_units_log(&self) -> usize {
+        self.padded_shape_log().iter().sum()
+    }
+
     /// The number of output units of the padded node
     fn padded_num_units(&self) -> usize {
         self.padded_shape().iter().product()
@@ -211,6 +216,11 @@ where
     /// The number of output units of the node
     pub(crate) fn num_units(&self) -> usize {
         self.shape().iter().product()
+    }
+
+    /// The log of the number of output units of the padded node
+    pub(crate) fn padded_num_units_log(&self) -> usize {
+        self.padded_shape_log().iter().sum()
     }
 
     /// The number of output units of the padded node
