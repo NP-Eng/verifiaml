@@ -114,6 +114,7 @@ where
         &self,
         ck: &PCS::CommitterKey,
         rng: Option<&mut dyn RngCore>,
+        node_commitments: Vec<NodeCommitment<F, S, PCS>>,
         input: QArray<QSmallType>,
     ) -> InferenceProof<F, S, PCS> {
         let mut output = input.compact_resize(
@@ -164,22 +165,20 @@ where
             PCS::commit(ck, &labeled_node_values, rng).unwrap();
 
         // Second pass: proving
-        for (n, (i_value, o_value), (i_com, o_com), (i_com_state, o_com_state)) in self
+        for ((((n, n_com), values), v_coms), v_coms_states) in self
             .nodes
             .iter()
+            .zip(node_commitments.iter())
             .zip(node_values.windows(2))
             .zip(node_value_coms.windows(2))
             .zip(node_value_coms_states.windows(2))
         {
-            // TODO
+            let a = n.prove(n_com, values[0], v_coms[0], values[1], v_coms[1]);
         }
 
-        for node in &self.nodes {
-            output = node.padded_evaluate(output);
-        }
+        // TODO open output nodes
 
-        // TODO switch to reference in reshape?
-        output.compact_resize(self.output_shape.clone(), 0)
+        unimplemented!();
     }
 
     pub(crate) fn commit(
