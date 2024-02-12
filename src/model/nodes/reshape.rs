@@ -106,6 +106,7 @@ where
     }
 
     fn prove(
+        &self,
         node_com: Self::NodeCommitment,
         input: QArray<QSmallType>,
         input_com: PCS::Commitment,
