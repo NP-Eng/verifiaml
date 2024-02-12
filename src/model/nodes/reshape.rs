@@ -4,6 +4,7 @@ use ark_std::marker::PhantomData;
 use ark_crypto_primitives::sponge::CryptographicSponge;
 use ark_ff::PrimeField;
 use ark_poly_commit::PolynomialCommitment;
+use ark_std::rand::RngCore;
 
 use crate::model::qarray::QArray;
 use crate::model::Poly;
@@ -84,7 +85,7 @@ where
         output
     }
 
-    fn commit(&self, ck: PCS::CommitterKey) -> Self::NodeCommitment {
+    fn commit(&self, ck: PCS::CommitterKey, rng: Option<&mut dyn RngCore>) -> Self::NodeCommitment {
         // TODO assuming we want to make the reshape parameters public info,
         // no commitment is needed
         ()
