@@ -19,8 +19,12 @@ use super::NodeOpsNative;
 pub(crate) struct FCNode<F, S, PCS> {
     /// The row-major flattened unpadded vector of weights
     weights: Vec<QSmallType>,
+    /// The padded weight vector
+    padded_weights: Vec<QSmallType>,
     /// The unpadded vector of biases
     bias: Vec<QLargeType>,
+    /// The padded bias vector
+    padded_bias: Vec<QLargeType>,
     /// Unpadded imensions (rows, columns)
     dims: (usize, usize),
     /// The logarithm of the padded dimensions (rows, columns)
@@ -97,10 +101,49 @@ where
         requantise_fc(&accumulators, &self.q_info, RoundingScheme::NearestTiesEven).into()
     }
 
-    // TODO this can remain unimplemented until we have models with FC nodes
-    // receiving compact input
+    // This function naively computes entries which are known to be zero. It is
+    // meant to exactly mirror the proof-system multiplication proved by the
+    // sumcheck argument. Requantisation and shifting are also applied to these
+    // trivial entries, as the proof system does.
     fn padded_evaluate(&self, input: QArray<QSmallType>) -> QArray<QSmallType> {
-        unimplemented!()
+        let padded_dims = (1 << self.padded_dims_log.0, 1 << self.padded_dims_log.1);
+
+        // Sanity checks
+        // TODO systematise
+        assert_eq!(
+            input.num_dims(),
+            1,
+            "Incorrect shape: Fully connected node expected a 1-dimensional input array"
+        );
+
+        assert_eq!(
+            padded_dims.0,
+            input.len(),
+            "Length mismatch: Padded fully connected node expected input with {} elements, got {} elements instead",
+            padded_dims.0,
+            input.len()
+        );
+
+        let input: QArray<QLargeType> = input.cast();
+
+        // TODO this is a bigger question: can this overflow an i8? Supposedly the point of quantisation
+        // is that input-by-weight products can be computed in i8. To be safe, let us use the large type here
+        let shifted_input = input - self.q_info.input_info.zero_point as QLargeType;
+
+        let mut accumulators = self.padded_bias.clone();
+
+        // TODO this can be made more elegant (efficient?) using addition of QArrays after defining suitable operators
+
+        // TODO since we have acumulators, this can be done more efficiently going row-wise to avoid re-caching the input
+        for col in 0..padded_dims.1 {
+            // TODO does the compiler realise it doesn't need to access accumulators[col] on every iteration of the inner loop? ow change
+            for row in 0..padded_dims.0 {
+                accumulators[col] += shifted_input[row]
+                    * (self.padded_weights[row * padded_dims.1 + col] as QLargeType)
+            }
+        }
+
+        requantise_fc(&accumulators, &self.q_info, RoundingScheme::NearestTiesEven).into()
     }
 }
 
@@ -138,6 +181,20 @@ where
             log2(dims.1.next_power_of_two()) as usize,
         );
 
+        // Padding the weights
+        let weight_array = QArray::new(weights.clone(), vec![dims.0, dims.1]);
+
+        let padded_weights = weight_array
+            .compact_resize(
+                vec![dims.0.next_power_of_two(), dims.1.next_power_of_two()],
+                0,
+            )
+            .move_values();
+
+        // Padding the bias
+        let mut padded_bias = bias.clone();
+        padded_bias.resize(dims.1.next_power_of_two(), 0);
+
         let q_info = FCQInfo {
             input_info: QInfo {
                 scale: s_i,
@@ -155,7 +212,9 @@ where
 
         Self {
             weights,
+            padded_weights,
             bias,
+            padded_bias,
             dims,
             padded_dims_log,
             q_info,

@@ -1,6 +1,7 @@
 use ark_std::ops::Index;
 
 use ark_std::any::type_name;
+use ark_std::cmp::PartialOrd;
 use ark_std::fmt;
 use ark_std::fmt::Debug;
 use ark_std::ops::{Add, Div, Mul, Sub};
@@ -395,4 +396,43 @@ fn print_flat_data<T: InnerType>(
     }
 
     Ok(())
+}
+
+/*********************** Comparisons ***********************/
+
+// We follow the convention (e.g. in numpy) that `maximum` and `minimum`
+// compare an array to a single element (element-wise); whereas `max` and `min`
+// (not implemented) compare two equally sized arrays element-wise.
+impl<T: InnerType + PartialOrd> QArray<T> {
+    pub(crate) fn maximum(&self, x: T) -> QArray<T> {
+        let flattened_max: Vec<T> = self
+            .flattened
+            .iter()
+            .map(|y| if *y >= x { *y } else { x })
+            .collect();
+
+        // Construct the new QArray directly to avoid recomputation of
+        // cumulative dimensions
+        QArray {
+            flattened: flattened_max,
+            shape: self.shape.clone(),
+            cumulative_dimensions: self.cumulative_dimensions.clone(),
+        }
+    }
+
+    pub(crate) fn minimum(&self, x: T) -> QArray<T> {
+        let flattened_min: Vec<T> = self
+            .flattened
+            .iter()
+            .map(|y| if *y <= x { *y } else { x })
+            .collect();
+
+        // Construct the new QArray directly to avoid recomputation of
+        // cumulative dimensions
+        QArray {
+            flattened: flattened_min,
+            shape: self.shape.clone(),
+            cumulative_dimensions: self.cumulative_dimensions.clone(),
+        }
+    }
 }
