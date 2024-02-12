@@ -24,15 +24,12 @@ where
     phantom: PhantomData<(F, S, PCS)>,
 }
 
-impl<F, S, PCS> NodeOps<F, S, PCS> for ReshapeNode<F, S, PCS>
+impl<F, S, PCS> NodeOps for ReshapeNode<F, S, PCS>
 where
     F: PrimeField,
     S: CryptographicSponge,
     PCS: PolynomialCommitment<F, Poly<F>, S>,
 {
-    type NodeCommitment = ();
-    type Proof = (); // TODO to decide
-
     fn shape(&self) -> Vec<usize> {
         self.output_shape.clone()
     }
@@ -82,26 +79,6 @@ where
         output.reshape(padded_output_shape);
 
         output
-    }
-
-    fn commit(&self) -> Self::NodeCommitment {
-        // TODO assuming we want to make the reshape parameters public info,
-        // no commitment is needed
-        ()
-    }
-
-    fn prove(
-        node_com: Self::NodeCommitment,
-        input: QArray<QSmallType>,
-        input_com: PCS::Commitment,
-        output: QArray<QSmallType>,
-        output_com: PCS::Commitment,
-    ) -> Self::Proof {
-        unimplemented!()
-    }
-
-    fn verify(node_com: Self::NodeCommitment, proof: Self::Proof) -> bool {
-        unimplemented!()
     }
 }
 

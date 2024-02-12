@@ -7,7 +7,7 @@ use ark_poly_commit::PolynomialCommitment;
 
 use crate::{model::nodes::Node, quantization::QSmallType};
 
-use self::qarray::QArray;
+use self::{nodes::NodeOps, qarray::QArray};
 
 mod examples;
 mod nodes;

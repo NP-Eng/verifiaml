@@ -50,15 +50,12 @@ pub(crate) struct LooseFCProof {
     // this will be the sumcheck proof
 }
 
-impl<F, S, PCS> NodeOps<F, S, PCS> for LooseFCNode<F, S, PCS>
+impl<F, S, PCS> NodeOps for LooseFCNode<F, S, PCS>
 where
     F: PrimeField,
     S: CryptographicSponge,
     PCS: PolynomialCommitment<F, Poly<F>, S>,
 {
-    type NodeCommitment = LooseFCCommitment<F, S, PCS>;
-    type Proof = LooseFCProof;
-
     fn shape(&self) -> Vec<usize> {
         vec![self.dims.1]
     }
@@ -148,24 +145,6 @@ where
         }
 
         requantise_fc(&accumulators, &self.q_info, RoundingScheme::NearestTiesEven).into()
-    }
-
-    fn commit(&self) -> Self::NodeCommitment {
-        unimplemented!()
-    }
-
-    fn prove(
-        node_com: Self::NodeCommitment,
-        input: QArray<QSmallType>,
-        input_com: PCS::Commitment,
-        output: QArray<QSmallType>,
-        output_com: PCS::Commitment,
-    ) -> Self::Proof {
-        unimplemented!()
-    }
-
-    fn verify(com: Self::NodeCommitment, proof: Self::Proof) -> bool {
-        unimplemented!()
     }
 }
 

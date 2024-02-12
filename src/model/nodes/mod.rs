@@ -28,21 +28,7 @@ pub(crate) mod reshape;
 /// It stores information about the transition (such as a matrix and bias, if
 /// applicable), but not about about the specific values of its nodes: these
 /// are handled by the methods only.
-pub(crate) trait NodeOps<F, S, PCS>
-where
-    F: PrimeField,
-    S: CryptographicSponge,
-    PCS: PolynomialCommitment<F, Poly<F>, S>,
-{
-    /// A commitment associated to the node's transition function. For
-    /// instance, it is empty for a ReLU transition; and a commitment to the
-    /// matrix and bias for a MatMul transition.
-    type NodeCommitment;
-
-    /// A proof of execution of the node's transition function to a particular
-    /// set of node values
-    type Proof;
-
+pub(crate) trait NodeOps {
     /// Returns the shape of the node's output tensor
     fn shape(&self) -> Vec<usize>;
 
@@ -82,22 +68,29 @@ where
     // (e.g. to trim the same key to for the matrix and for the bias in the
     // case of MatMul)
     // fn setup(&self, params: PCS::UniversalParams) -> (, Self::VerifierKey);
-
-    /// Commit to the node parameters
-    fn commit(&self) -> Self::NodeCommitment;
-
-    /// Produce a node output proof
-    fn prove(
-        node_com: Self::NodeCommitment,
-        input: QArray<QSmallType>,
-        input_com: PCS::Commitment,
-        output: QArray<QSmallType>,
-        output_com: PCS::Commitment,
-    ) -> Self::Proof;
-
-    /// Verify a node output proof
-    fn verify(node_com: Self::NodeCommitment, proof: Self::Proof) -> bool;
 }
+
+// pub(crate) trait NodeOpsSNARK<F, S, PCS>
+// where
+//     F: PrimeField,
+//     S: CryptographicSponge,
+//     PCS: PolynomialCommitment<F, Poly<F>, S>,
+// {
+//     /// Commit to the node parameters
+//     fn commit(&self) -> Self::NodeCommitment;
+
+//     /// Produce a node output proof
+//     fn prove(
+//         node_com: Self::NodeCommitment,
+//         input: QArray<QSmallType>,
+//         input_com: PCS::Commitment,
+//         output: QArray<QSmallType>,
+//         output_com: PCS::Commitment,
+//     ) -> Self::Proof;
+
+//     /// Verify a node output proof
+//     fn verify(node_com: Self::NodeCommitment, proof: Self::Proof) -> bool;
+// }
 
 pub(crate) enum Node<F, S, PCS>
 where
@@ -111,17 +104,24 @@ where
     Reshape(ReshapeNode<F, S, PCS>),
 }
 
-// A lot of this overlaps with the NodeOps trait and could be handled more
-// elegantly by simply implementing the trait
 impl<F, S, PCS> Node<F, S, PCS>
 where
     F: PrimeField,
     S: CryptographicSponge,
     PCS: PolynomialCommitment<F, Poly<F>, S>,
 {
+    fn as_node_ops(&self) -> &dyn NodeOps {
+        match self {
+            Node::FC(fc) => fc,
+            Node::LooseFC(fc) => fc,
+            Node::ReLU(r) => r,
+            Node::Reshape(r) => r,
+        }
+    }
+
     // Print the type of the node. This cannot be cleantly achieved by deriving
     // Debug
-    pub(crate) fn type_name(&self) -> &'static str {
+    fn type_name(&self) -> &'static str {
         match self {
             Node::FC(_) => "FC",
             Node::LooseFC(_) => "LooseFC",
@@ -129,83 +129,49 @@ where
             Node::Reshape(_) => "Reshape",
         }
     }
-
+}
+// A lot of this overlaps with the NodeOps trait and could be handled more
+// elegantly by simply implementing the trait
+impl<F, S, PCS> NodeOps for Node<F, S, PCS>
+where
+    F: PrimeField,
+    S: CryptographicSponge,
+    PCS: PolynomialCommitment<F, Poly<F>, S>,
+{
     /// Returns the shape of the node's output tensor
-    pub(crate) fn shape(&self) -> Vec<usize> {
-        match self {
-            Node::FC(fc) => fc.shape(),
-            Node::LooseFC(fc) => fc.shape(),
-            Node::ReLU(r) => r.shape(),
-            Node::Reshape(r) => r.shape(),
-        }
+    fn shape(&self) -> Vec<usize> {
+        self.as_node_ops().shape()
     }
 
     /// Returns the element-wise base-two logarithm of the padded node's
     /// output shape, i.e. the list of numbers of variables of the associated
     /// MLE
-    pub(crate) fn padded_shape_log(&self) -> Vec<usize> {
-        match self {
-            Node::FC(fc) => fc.padded_shape_log(),
-            Node::LooseFC(fc) => fc.padded_shape_log(),
-            Node::ReLU(r) => r.padded_shape_log(),
-            Node::Reshape(r) => r.padded_shape_log(),
-        }
+    fn padded_shape_log(&self) -> Vec<usize> {
+        self.as_node_ops().padded_shape_log()
     }
 
     /// Returns the element-wise padded node's output shape
-    pub(crate) fn padded_shape(&self) -> Vec<usize> {
-        self.padded_shape_log()
-            .into_iter()
-            .map(|x| 1 << x)
-            .collect()
+    fn padded_shape(&self) -> Vec<usize> {
+        self.as_node_ops().padded_shape()
     }
 
     /// The number of output units of the node
-    pub(crate) fn num_units(&self) -> usize {
-        self.shape().iter().product()
+    fn num_units(&self) -> usize {
+        self.as_node_ops().num_units()
     }
 
     /// The number of output units of the padded node
-    pub(crate) fn padded_num_units(&self) -> usize {
-        self.padded_shape().iter().product()
+    fn padded_num_units(&self) -> usize {
+        self.as_node_ops().padded_num_units()
     }
 
     /// Evaluate the node natively (without padding)
-    pub(crate) fn evaluate(&self, input: QArray<QSmallType>) -> QArray<QSmallType> {
-        match self {
-            Node::FC(fc) => fc.evaluate(input),
-            Node::LooseFC(fc) => fc.evaluate(input),
-            Node::ReLU(r) => r.evaluate(input),
-            Node::Reshape(r) => r.evaluate(input),
-        }
+    fn evaluate(&self, input: QArray<QSmallType>) -> QArray<QSmallType> {
+        self.as_node_ops().evaluate(input)
     }
 
     /// Evaluate the padded node natively
-    pub(crate) fn padded_evaluate(&self, input: QArray<QSmallType>) -> QArray<QSmallType> {
-        match self {
-            Node::FC(fc) => fc.padded_evaluate(input),
-            Node::LooseFC(fc) => fc.padded_evaluate(input),
-            Node::ReLU(r) => r.padded_evaluate(input),
-            Node::Reshape(r) => r.padded_evaluate(input),
-        }
-    }
-
-    /// Commit to the node parameters
-    // pub(crate) fn commit(&self) -> PCS::Commitment {
-    //     match self {
-    //         Node::FC(n) => n.commit(),
-    //         Node::ReLU(r) => r.commit(),
-    //         Node::Reshape(r) => r.commit(),
-    //     }
-    // }
-
-    /// Produce a node output proof
-    pub(crate) fn prove(com: PCS::Commitment, input: Vec<F>) -> PCS::Proof {
-        unimplemented!()
-    }
-
-    /// Verify a node output proof
-    pub(crate) fn check(com: PCS::Commitment, proof: PCS::Proof) -> bool {
-        unimplemented!()
+    fn padded_evaluate(&self, input: QArray<QSmallType>) -> QArray<QSmallType> {
+        self.as_node_ops().padded_evaluate(input)
     }
 }

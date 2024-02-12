@@ -45,15 +45,12 @@ pub(crate) struct FCProof {
     // this will be the sumcheck proof
 }
 
-impl<F, S, PCS> NodeOps<F, S, PCS> for FCNode<F, S, PCS>
+impl<F, S, PCS> NodeOps for FCNode<F, S, PCS>
 where
     F: PrimeField,
     S: CryptographicSponge,
     PCS: PolynomialCommitment<F, Poly<F>, S>,
 {
-    type NodeCommitment = FCCommitment<F, S, PCS>;
-    type Proof = FCProof;
-
     fn shape(&self) -> Vec<usize> {
         vec![self.dims.1]
     }
@@ -103,24 +100,6 @@ where
     // TODO this can remain unimplemented until we have models with FC nodes
     // receiving compact input
     fn padded_evaluate(&self, input: QArray<QSmallType>) -> QArray<QSmallType> {
-        unimplemented!()
-    }
-
-    fn commit(&self) -> Self::NodeCommitment {
-        unimplemented!()
-    }
-
-    fn prove(
-        node_com: Self::NodeCommitment,
-        input: QArray<QSmallType>,
-        input_com: PCS::Commitment,
-        output: QArray<QSmallType>,
-        output_com: PCS::Commitment,
-    ) -> Self::Proof {
-        unimplemented!()
-    }
-
-    fn verify(com: Self::NodeCommitment, proof: Self::Proof) -> bool {
         unimplemented!()
     }
 }
