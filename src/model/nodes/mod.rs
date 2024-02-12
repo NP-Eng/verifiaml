@@ -5,13 +5,9 @@ use ark_std::rand::RngCore;
 use crate::{
     model::{
         nodes::{fc::FCNode, relu::ReLUNode},
-        CryptographicSponge,
-        Node::*,
-        NodeCommitment::*,
-        Poly,
+        CryptographicSponge, Poly,
     },
     quantization::QSmallType,
-    Commitment, CommitmentState, Proof,
 };
 
 use self::{
