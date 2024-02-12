@@ -9,7 +9,7 @@ use crate::model::qarray::QArray;
 use crate::model::Poly;
 use crate::quantization::QSmallType;
 
-use super::NodeOps;
+use super::NodeOpsNative;
 
 // Rectified linear unit node performing x |-> max(0, x).
 pub(crate) struct ReLUNode<F, S, PCS>
@@ -26,7 +26,7 @@ pub(crate) struct ReLUProof {
     // this will be a lookup proof
 }
 
-impl<F, S, PCS> NodeOps for ReLUNode<F, S, PCS>
+impl<F, S, PCS> NodeOpsNative for ReLUNode<F, S, PCS>
 where
     F: PrimeField,
     S: CryptographicSponge,

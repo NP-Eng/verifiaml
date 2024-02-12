@@ -28,7 +28,7 @@ pub(crate) mod reshape;
 /// It stores information about the transition (such as a matrix and bias, if
 /// applicable), but not about about the specific values of its nodes: these
 /// are handled by the methods only.
-pub(crate) trait NodeOps {
+pub(crate) trait NodeOpsNative {
     /// Returns the shape of the node's output tensor
     fn shape(&self) -> Vec<usize>;
 
@@ -110,7 +110,7 @@ where
     S: CryptographicSponge,
     PCS: PolynomialCommitment<F, Poly<F>, S>,
 {
-    fn as_node_ops(&self) -> &dyn NodeOps {
+    fn as_node_ops(&self) -> &dyn NodeOpsNative {
         match self {
             Node::FC(fc) => fc,
             Node::LooseFC(fc) => fc,
@@ -132,7 +132,7 @@ where
 }
 // A lot of this overlaps with the NodeOps trait and could be handled more
 // elegantly by simply implementing the trait
-impl<F, S, PCS> NodeOps for Node<F, S, PCS>
+impl<F, S, PCS> NodeOpsNative for Node<F, S, PCS>
 where
     F: PrimeField,
     S: CryptographicSponge,

@@ -9,7 +9,7 @@ use crate::model::qarray::QArray;
 use crate::model::Poly;
 use crate::quantization::QSmallType;
 
-use super::NodeOps;
+use super::NodeOpsNative;
 
 pub(crate) struct ReshapeNode<F, S, PCS>
 where
@@ -24,7 +24,7 @@ where
     phantom: PhantomData<(F, S, PCS)>,
 }
 
-impl<F, S, PCS> NodeOps for ReshapeNode<F, S, PCS>
+impl<F, S, PCS> NodeOpsNative for ReshapeNode<F, S, PCS>
 where
     F: PrimeField,
     S: CryptographicSponge,

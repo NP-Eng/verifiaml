@@ -11,7 +11,7 @@ use crate::quantization::{
     requantise_fc, FCQInfo, QInfo, QLargeType, QScaleType, QSmallType, RoundingScheme,
 };
 
-use super::NodeOps;
+use super::NodeOpsNative;
 
 // TODO convention: input, bias and output are rows, the op is vec-by-mat (in that order)
 
@@ -45,7 +45,7 @@ pub(crate) struct FCProof {
     // this will be the sumcheck proof
 }
 
-impl<F, S, PCS> NodeOps for FCNode<F, S, PCS>
+impl<F, S, PCS> NodeOpsNative for FCNode<F, S, PCS>
 where
     F: PrimeField,
     S: CryptographicSponge,
