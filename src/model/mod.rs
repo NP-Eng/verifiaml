@@ -1,4 +1,4 @@
-use ark_std::{log2, marker::PhantomData, rand::RngCore};
+use ark_std::{log2, rand::RngCore};
 
 use ark_crypto_primitives::sponge::CryptographicSponge;
 use ark_ff::PrimeField;
