@@ -179,7 +179,7 @@ where
             "weight_poly".to_string(),
             Poly::from_evaluations_vec(num_vars_weights, padded_weights_f),
             None,
-            None, // TODO decide!
+            None,
         );
 
         let padded_bias_f: Vec<F> = self.padded_bias.iter().map(|b| F::from(*b)).collect();
@@ -187,8 +187,8 @@ where
         let bias_poly = LabeledPolynomial::new(
             "bias_poly".to_string(),
             Poly::from_evaluations_vec(self.padded_dims_log.1, padded_bias_f),
-            Some(self.padded_dims_log.1), // TODO or Some(1)!!
-            None,                         // TODO decide!
+            None,
+            None,
         );
 
         let coms = PCS::commit(ck, vec![&weight_poly, &bias_poly], rng).unwrap();
@@ -206,6 +206,7 @@ where
     }
 
     fn prove(
+        &self,
         node_com: Self::NodeCommitment,
         input: QArray<QSmallType>,
         input_com: PCS::Commitment,

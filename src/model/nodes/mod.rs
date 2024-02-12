@@ -5,7 +5,10 @@ use ark_std::rand::RngCore;
 use crate::{
     model::{
         nodes::{fc::FCNode, relu::ReLUNode},
-        CryptographicSponge, Poly,
+        CryptographicSponge,
+        Node::*,
+        NodeCommitment::*,
+        Poly,
     },
     quantization::QSmallType,
 };
@@ -99,7 +102,9 @@ where
     ) -> (Self::NodeCommitment, Self::NodeCommitmentState);
 
     /// Produce a node output proof
+    // TODO, now that this also receives self, a check might be in order that node_com matches self
     fn prove(
+        &self,
         node_com: Self::NodeCommitment,
         input: QArray<QSmallType>,
         input_com: PCS::Commitment,
@@ -282,8 +287,50 @@ where
     }
 
     /// Produce a node output proof
-    pub(crate) fn prove(com: PCS::Commitment, input: Vec<F>) -> PCS::Proof {
-        unimplemented!()
+    // TODO like before, this is getting too cumbersome and the trait object
+    // switch seems more and more appealing
+    fn prove(
+        &self,
+        node_com: NodeCommitment<F, S, PCS>,
+        input: QArray<QSmallType>,
+        input_com: PCS::Commitment,
+        output: QArray<QSmallType>,
+        output_com: PCS::Commitment,
+    ) -> NodeProof {
+        match self {
+            FC(fc) => {
+                if let FCCommitment(fc_com) = node_com {
+                    NodeProof::FCProof(fc.prove(fc_com, input, input_com, output, output_com))
+                } else {
+                    panic!(
+                        "Error: received commitment of type other than FC to prove execution of FC"
+                    );
+                }
+            }
+            LooseFC(lfc) => {
+                if let LooseFCCommitment(lfc_com) = node_com {
+                    NodeProof::LooseFCProof(
+                        lfc.prove(lfc_com, input, input_com, output, output_com),
+                    )
+                } else {
+                    panic!("Error: received commitment of type other than LooseFC to prove execution of LooseFC");
+                }
+            }
+            ReLU(r) => {
+                if let ReLUCommitment(r_com) = node_com {
+                    NodeProof::ReLUProof(r.prove(r_com, input, input_com, output, output_com))
+                } else {
+                    panic!("Error: received commitment of type other than ReLU to prove execution of ReLU");
+                }
+            }
+            Reshape(r) => {
+                if let ReshapeCommitment(r_com) = node_com {
+                    NodeProof::ReshapeProof(r.prove(r_com, input, input_com, output, output_com))
+                } else {
+                    panic!("Error: received commitment of type other than Reshape to prove execution of Reshape");
+                }
+            }
+        }
     }
 
     /// Verify a node output proof
