@@ -4,6 +4,7 @@ use ark_crypto_primitives::sponge::CryptographicSponge;
 use ark_ff::PrimeField;
 use ark_poly_commit::PolynomialCommitment;
 use ark_std::log2;
+use ark_std::rand::RngCore;
 
 use crate::model::qarray::QArray;
 use crate::model::Poly;
@@ -150,7 +151,7 @@ where
         requantise_fc(&accumulators, &self.q_info, RoundingScheme::NearestTiesEven).into()
     }
 
-    fn commit(&self, ck: PCS::CommitterKey) -> Self::NodeCommitment {
+    fn commit(&self, ck: PCS::CommitterKey, rng: Option<&mut dyn RngCore>) -> Self::NodeCommitment {
         unimplemented!()
     }
 

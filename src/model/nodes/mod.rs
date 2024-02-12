@@ -1,5 +1,6 @@
 use ark_ff::PrimeField;
 use ark_poly_commit::PolynomialCommitment;
+use ark_std::rand::RngCore;
 
 use crate::{
     model::{
@@ -84,7 +85,7 @@ where
     // fn setup(&self, params: PCS::UniversalParams) -> (, Self::VerifierKey);
 
     /// Commit to the node parameters
-    fn commit(&self, ck: PCS::CommitterKey) -> Self::NodeCommitment;
+    fn commit(&self, ck: PCS::CommitterKey, rng: Option<&mut dyn RngCore>) -> Self::NodeCommitment;
 
     /// Produce a node output proof
     fn prove(
