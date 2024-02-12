@@ -94,7 +94,7 @@ where
     /// Commit to the node parameters
     fn commit(
         &self,
-        ck: PCS::CommitterKey,
+        ck: &PCS::CommitterKey,
         rng: Option<&mut dyn RngCore>,
     ) -> (Self::NodeCommitment, Self::NodeCommitmentState);
 
@@ -148,10 +148,10 @@ where
     S: CryptographicSponge,
     PCS: PolynomialCommitment<F, Poly<F>, S>,
 {
-    FCCommitment(FCNodeCommitmentState<F, S, PCS>),
-    LooseFCCommitment(LooseFCNodeCommitmentState<F, S, PCS>),
-    ReLUCommitment(ReLUNodeCommitmentState),
-    ReshapeCommitment(ReshapeNodeCommitmentState),
+    FCCommitmentState(FCNodeCommitmentState<F, S, PCS>),
+    LooseFCCommitmentState(LooseFCNodeCommitmentState<F, S, PCS>),
+    ReLUCommitmentState(ReLUNodeCommitmentState),
+    ReshapeCommitmentState(ReshapeNodeCommitmentState),
 }
 
 // A lot of this overlaps with the NodeOps trait and could be handled more
@@ -243,11 +243,41 @@ where
     }
 
     /// Commit to the node parameters
-    pub(crate) fn commit(&self) -> PCS::Commitment {
+    pub(crate) fn commit(
+        &self,
+        ck: &PCS::CommitterKey,
+        rng: Option<&mut dyn RngCore>,
+    ) -> (NodeCommitment<F, S, PCS>, NodeCommitmentState<F, S, PCS>) {
+        // TODO this is very ugly, should start thinking about using trait objects
         match self {
-            Node::FC(n) => n.commit(),
-            Node::ReLU(r) => r.commit(),
-            Node::Reshape(r) => r.commit(),
+            Node::FC(fc) => {
+                let (com, state) = fc.commit(ck, rng);
+                (
+                    NodeCommitment::FCCommitment(com),
+                    NodeCommitmentState::FCCommitmentState(state),
+                )
+            }
+            Node::LooseFC(fc) => {
+                let (com, state) = fc.commit(ck, rng);
+                (
+                    NodeCommitment::LooseFCCommitment(com),
+                    NodeCommitmentState::LooseFCCommitmentState(state),
+                )
+            }
+            Node::ReLU(r) => {
+                let (com, state) = r.commit(ck, rng);
+                (
+                    NodeCommitment::ReLUCommitment(com),
+                    NodeCommitmentState::ReLUCommitmentState(state),
+                )
+            }
+            Node::Reshape(r) => {
+                let (com, state) = r.commit(ck, rng);
+                (
+                    NodeCommitment::ReshapeCommitment(com),
+                    NodeCommitmentState::ReshapeCommitmentState(state),
+                )
+            }
         }
     }
 

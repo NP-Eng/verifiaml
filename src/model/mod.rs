@@ -7,7 +7,10 @@ use ark_poly_commit::PolynomialCommitment;
 
 use crate::{model::nodes::Node, quantization::QSmallType};
 
-use self::qarray::QArray;
+use self::{
+    nodes::{NodeCommitment, NodeCommitmentState},
+    qarray::QArray,
+};
 
 mod examples;
 mod nodes;
@@ -109,5 +112,13 @@ where
 
         // TODO switch to reference in reshape?
         output.compact_resize(self.output_shape.clone(), 0)
+    }
+
+    pub(crate) fn commit(
+        &self,
+        ck: &PCS::CommitterKey,
+        rng: Option<&mut dyn RngCore>,
+    ) -> Vec<(NodeCommitment<F, S, PCS>, NodeCommitmentState<F, S, PCS>)> {
+        self.nodes.iter().map(|n| n.commit(ck, rng)).collect()
     }
 }
