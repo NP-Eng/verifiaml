@@ -60,16 +60,12 @@ pub(crate) struct FCNodeProof {
     // this will be the sumcheck proof
 }
 
-impl<F, S, PCS> NodeOps<F, S, PCS> for FCNode<F, S, PCS>
+impl<F, S, PCS> NodeOps for FCNode<F, S, PCS>
 where
     F: PrimeField,
     S: CryptographicSponge,
     PCS: PolynomialCommitment<F, Poly<F>, S>,
 {
-    type NodeCommitment = FCNodeCommitment<F, S, PCS>;
-    type NodeCommitmentState = FCNodeCommitmentState<F, S, PCS>;
-    type Proof = FCNodeProof;
-
     fn shape(&self) -> Vec<usize> {
         vec![self.dims.1]
     }
@@ -164,61 +160,61 @@ where
 
         requantise_fc(&accumulators, &self.q_info, RoundingScheme::NearestTiesEven).into()
     }
+}
 
-    fn commit(
-        &self,
-        ck: &PCS::CommitterKey,
-        rng: Option<&mut dyn RngCore>,
-    ) -> (Self::NodeCommitment, Self::NodeCommitmentState) {
-        // TODO should we separate the associated commitment type into one with state and one without?
+fn commit(
+    &self,
+    ck: &PCS::CommitterKey,
+    rng: Option<&mut dyn RngCore>,
+) -> (Self::NodeCommitment, Self::NodeCommitmentState) {
+    // TODO should we separate the associated commitment type into one with state and one without?
 
-        let num_vars_weights = self.padded_dims_log.0 + self.padded_dims_log.1;
-        let padded_weights_f: Vec<F> = self.padded_weights.iter().map(|w| F::from(*w)).collect();
+    let num_vars_weights = self.padded_dims_log.0 + self.padded_dims_log.1;
+    let padded_weights_f: Vec<F> = self.padded_weights.iter().map(|w| F::from(*w)).collect();
 
-        let weight_poly = LabeledPolynomial::new(
-            "weight_poly".to_string(),
-            Poly::from_evaluations_vec(num_vars_weights, padded_weights_f),
-            None,
-            None,
-        );
+    let weight_poly = LabeledPolynomial::new(
+        "weight_poly".to_string(),
+        Poly::from_evaluations_vec(num_vars_weights, padded_weights_f),
+        None,
+        None,
+    );
 
-        let padded_bias_f: Vec<F> = self.padded_bias.iter().map(|b| F::from(*b)).collect();
+    let padded_bias_f: Vec<F> = self.padded_bias.iter().map(|b| F::from(*b)).collect();
 
-        let bias_poly = LabeledPolynomial::new(
-            "bias_poly".to_string(),
-            Poly::from_evaluations_vec(self.padded_dims_log.1, padded_bias_f),
-            None,
-            None,
-        );
+    let bias_poly = LabeledPolynomial::new(
+        "bias_poly".to_string(),
+        Poly::from_evaluations_vec(self.padded_dims_log.1, padded_bias_f),
+        None,
+        None,
+    );
 
-        let coms = PCS::commit(ck, vec![&weight_poly, &bias_poly], rng).unwrap();
+    let coms = PCS::commit(ck, vec![&weight_poly, &bias_poly], rng).unwrap();
 
-        (
-            Self::NodeCommitment {
-                weight_com: coms.0[0].commitment().clone(),
-                bias_com: coms.0[1].commitment().clone(),
-            },
-            Self::NodeCommitmentState {
-                weight_com_state: coms.1[0].clone(),
-                bias_com_state: coms.1[1].clone(),
-            },
-        )
-    }
+    (
+        Self::NodeCommitment {
+            weight_com: coms.0[0].commitment().clone(),
+            bias_com: coms.0[1].commitment().clone(),
+        },
+        Self::NodeCommitmentState {
+            weight_com_state: coms.1[0].clone(),
+            bias_com_state: coms.1[1].clone(),
+        },
+    )
+}
 
-    fn prove(
-        &self,
-        node_com: Self::NodeCommitment,
-        input: QArray<QSmallType>,
-        input_com: PCS::Commitment,
-        output: QArray<QSmallType>,
-        output_com: PCS::Commitment,
-    ) -> Self::Proof {
-        unimplemented!()
-    }
+fn prove(
+    &self,
+    node_com: Self::NodeCommitment,
+    input: QArray<QSmallType>,
+    input_com: PCS::Commitment,
+    output: QArray<QSmallType>,
+    output_com: PCS::Commitment,
+) -> Self::Proof {
+    unimplemented!()
+}
 
-    fn verify(com: Self::NodeCommitment, proof: Self::Proof) -> bool {
-        unimplemented!()
-    }
+fn verify(com: Self::NodeCommitment, proof: Self::Proof) -> bool {
+    unimplemented!()
 }
 
 impl<F, S, PCS> FCNode<F, S, PCS>

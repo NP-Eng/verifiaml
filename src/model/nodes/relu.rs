@@ -32,17 +32,12 @@ pub(crate) struct ReLUNodeProof {
 
 pub(crate) type ReLUNodeCommitment = ();
 pub(crate) type ReLUNodeCommitmentState = ();
-
-impl<F, S, PCS> NodeOps<F, S, PCS> for ReLUNode<F, S, PCS>
+impl<F, S, PCS> NodeOps for ReLUNode<F, S, PCS>
 where
     F: PrimeField,
     S: CryptographicSponge,
     PCS: PolynomialCommitment<F, Poly<F>, S>,
 {
-    type NodeCommitment = ReLUNodeCommitment;
-    type NodeCommitmentState = ReLUNodeCommitmentState;
-    type Proof = ReLUNodeProof;
-
     fn shape(&self) -> Vec<usize> {
         vec![self.num_units]
     }
@@ -65,30 +60,6 @@ where
     fn padded_evaluate(&self, input: QArray<QSmallType>) -> QArray<QSmallType> {
         // TODO sanity checks (cf. FC); systematise
         input.maximum(self.zero_point)
-    }
-
-    fn commit(
-        &self,
-        ck: &PCS::CommitterKey,
-        rng: Option<&mut dyn RngCore>,
-    ) -> (Self::NodeCommitment, Self::NodeCommitmentState) {
-        // ReLU nodes have no parameters to commit to
-        ((), ())
-    }
-
-    fn prove(
-        &self,
-        node_com: Self::NodeCommitment,
-        input: QArray<QSmallType>,
-        input_com: PCS::Commitment,
-        output: QArray<QSmallType>,
-        output_com: PCS::Commitment,
-    ) -> Self::Proof {
-        unimplemented!()
-    }
-
-    fn verify(node_com: Self::NodeCommitment, proof: Self::Proof) -> bool {
-        unimplemented!()
     }
 }
 
