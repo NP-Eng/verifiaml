@@ -1,4 +1,3 @@
-use ark_poly::DenseMultilinearExtension;
 use ark_std::marker::PhantomData;
 
 use ark_crypto_primitives::sponge::CryptographicSponge;
@@ -183,7 +182,7 @@ where
 
         let bias_poly = LabeledPolynomial::new(
             "bias_poly".to_string(),
-            DenseMultilinearExtension::from_evaluations_vec(self.padded_dims_log.1, padded_bias_f),
+            Poly::from_evaluations_vec(self.padded_dims_log.1, padded_bias_f),
             Some(self.padded_dims_log.1), // TODO or Some(1)!!
             None,                         // TODO decide!
         );
