@@ -25,6 +25,8 @@ where
     phantom: PhantomData<(F, S, PCS)>,
 }
 
+pub(crate) type ReshapeNodeProof = ();
+
 impl<F, S, PCS> NodeOps<F, S, PCS> for ReshapeNode<F, S, PCS>
 where
     F: PrimeField,
@@ -33,7 +35,7 @@ where
 {
     type NodeCommitment = ();
     type NodeCommitmentState = ();
-    type Proof = (); // TODO to decide
+    type Proof = ReshapeNodeProof;
 
     fn shape(&self) -> Vec<usize> {
         self.output_shape.clone()

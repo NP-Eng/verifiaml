@@ -26,7 +26,7 @@ where
     phantom: PhantomData<(F, S, PCS)>,
 }
 
-pub(crate) struct ReLUProof {
+pub(crate) struct ReLUNodeProof {
     // this will be a lookup proof
 }
 
@@ -38,7 +38,7 @@ where
 {
     type NodeCommitment = ();
     type NodeCommitmentState = ();
-    type Proof = ReLUProof;
+    type Proof = ReLUNodeProof;
 
     fn shape(&self) -> Vec<usize> {
         vec![self.num_units]

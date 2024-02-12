@@ -10,7 +10,12 @@ use crate::{
     quantization::QSmallType,
 };
 
-use self::{loose_fc::LooseFCNode, reshape::ReshapeNode};
+use self::{
+    fc::FCNodeProof,
+    loose_fc::{LooseFCNode, LooseFCNodeProof},
+    relu::ReLUNodeProof,
+    reshape::{ReshapeNode, ReshapeNodeProof},
+};
 
 use super::qarray::QArray;
 
@@ -116,6 +121,13 @@ where
     LooseFC(LooseFCNode<F, S, PCS>),
     ReLU(ReLUNode<F, S, PCS>),
     Reshape(ReshapeNode<F, S, PCS>),
+}
+
+pub(crate) enum NodeProof {
+    FCProof(FCNodeProof),
+    LooseFCProof(LooseFCNodeProof),
+    ReLUProof(ReLUNodeProof),
+    ReshapeProof(ReshapeNodeProof),
 }
 
 // A lot of this overlaps with the NodeOps trait and could be handled more

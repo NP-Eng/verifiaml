@@ -56,7 +56,7 @@ where
     bias_com_state: PCS::CommitmentState,
 }
 
-pub(crate) struct FCProof {
+pub(crate) struct FCNodeProof {
     // this will be the sumcheck proof
 }
 
@@ -68,7 +68,7 @@ where
 {
     type NodeCommitment = FCCommitment<F, S, PCS>;
     type NodeCommitmentState = FCCommitmentState<F, S, PCS>;
-    type Proof = FCProof;
+    type Proof = FCNodeProof;
 
     fn shape(&self) -> Vec<usize> {
         vec![self.dims.1]
