@@ -29,7 +29,6 @@ where
     input_shape: Vec<usize>,
     output_shape: Vec<usize>,
     nodes: Vec<Node<F, S, PCS>>,
-    phantom: PhantomData<(F, S, PCS)>,
 }
 
 impl<F, S, PCS> Model<F, S, PCS>
@@ -47,7 +46,6 @@ where
             input_shape,
             output_shape: nodes.last().unwrap().shape(),
             nodes,
-            phantom: PhantomData,
         }
     }
 
@@ -74,6 +72,26 @@ where
     }
 
     pub(crate) fn padded_evaluate(&self, input: QArray<QSmallType>) -> QArray<QSmallType> {
+        // TODO sanity check: input shape matches model input shape
+
+        let mut output = input.compact_resize(
+            // TODO this functionality is so common we might as well make it an #[inline] function
+            self.input_shape
+                .iter()
+                .map(|x| x.next_power_of_two())
+                .collect(),
+            0,
+        );
+
+        for node in &self.nodes {
+            output = node.padded_evaluate(output);
+        }
+
+        // TODO switch to reference in reshape?
+        output.compact_resize(self.output_shape.clone(), 0)
+    }
+
+    pub(crate) fn prove_evaluation(&self, input: QArray<QSmallType>) -> QArray<QSmallType> {
         // TODO sanity check: input shape matches model input shape
 
         let mut output = input.compact_resize(
