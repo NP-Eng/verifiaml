@@ -84,7 +84,7 @@ where
     // fn setup(&self, params: PCS::UniversalParams) -> (, Self::VerifierKey);
 
     /// Commit to the node parameters
-    fn commit(&self) -> Self::NodeCommitment;
+    fn commit(&self, ck: PCS::CommitterKey) -> Self::NodeCommitment;
 
     /// Produce a node output proof
     fn prove(

@@ -150,7 +150,7 @@ where
         requantise_fc(&accumulators, &self.q_info, RoundingScheme::NearestTiesEven).into()
     }
 
-    fn commit(&self) -> Self::NodeCommitment {
+    fn commit(&self, ck: PCS::CommitterKey) -> Self::NodeCommitment {
         unimplemented!()
     }
 
