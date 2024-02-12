@@ -1,4 +1,4 @@
-use ark_std::marker::PhantomData;
+use ark_std::{marker::PhantomData, rand::RngCore};
 
 use ark_crypto_primitives::sponge::CryptographicSponge;
 use ark_ff::PrimeField;
@@ -39,12 +39,30 @@ where
     PCS: PolynomialCommitment<F, Poly<F>, S>,
 {
     pub(crate) fn new(input_shape: Vec<usize>, nodes: Vec<Node<F, S, PCS>>) -> Self {
+        // An empty model would cause panics later down the line e.g. when
+        // determining the number of variables needed to commit to it.
+        assert!(!nodes.is_empty(), "A model cannot have no nodes",);
+
         Self {
             input_shape,
             output_shape: nodes.last().unwrap().shape(),
             nodes,
             phantom: PhantomData,
         }
+    }
+
+    pub(crate) fn setup_keys<R: RngCore>(
+        &self,
+        rng: &mut R,
+    ) -> Result<(PCS::CommitterKey, PCS::VerifierKey), PCS::Error> {
+        let num_vars = self.nodes.iter().map(|n| n.com_num_vars()).max().unwrap();
+
+        let pp = PCS::setup(1, Some(num_vars), rng).unwrap();
+
+        // Make sure supported_degree, supported_hiding_bound and
+        // enforced_degree_bounds have a consistent meaning across ML PCSs and
+        // we are using them securely.
+        PCS::trim(&pp, 0, 0, None)
     }
 
     pub(crate) fn evaluate(&self, input: QArray<QSmallType>) -> QArray<QSmallType> {

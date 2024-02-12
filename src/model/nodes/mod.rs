@@ -66,10 +66,6 @@ where
             .collect()
     }
 
-    /// Returns the maximum number of variables of the MLEs committed to as part of
-    /// this nodes's commitment.
-    fn com_num_vars(&self) -> usize;
-
     /// The number of output units of the node
     fn num_units(&self) -> usize {
         self.shape().iter().product()
@@ -80,16 +76,15 @@ where
         self.padded_shape().iter().product()
     }
 
+    /// Returns the maximum number of variables of the MLEs committed to as part of
+    /// this nodes's commitment.
+    fn com_num_vars(&self) -> usize;
+
     /// Evaluate the node natively (without padding)
     fn evaluate(&self, input: QArray<QSmallType>) -> QArray<QSmallType>;
 
     /// Evaluate the padded node natively
     fn padded_evaluate(&self, input: QArray<QSmallType>) -> QArray<QSmallType>;
-
-    // TODO: is it okay to trim all keys from the same original PCS key?
-    // (e.g. to trim the same key to for the matrix and for the bias in the
-    // case of MatMul)
-    // fn setup(&self, params: PCS::UniversalParams) -> (, Self::VerifierKey);
 
     /// Commit to the node parameters
     fn commit(
@@ -180,6 +175,15 @@ where
     /// The number of output units of the padded node
     pub(crate) fn padded_num_units(&self) -> usize {
         self.padded_shape().iter().product()
+    }
+
+    pub(crate) fn com_num_vars(&self) -> usize {
+        match self {
+            Node::FC(fc) => fc.com_num_vars(),
+            Node::LooseFC(fc) => fc.com_num_vars(),
+            Node::ReLU(r) => r.com_num_vars(),
+            Node::Reshape(r) => r.com_num_vars(),
+        }
     }
 
     /// Evaluate the node natively (without padding)
