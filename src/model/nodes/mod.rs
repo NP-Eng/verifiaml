@@ -299,7 +299,7 @@ where
     /// Produce a node output proof
     // TODO like before, this is getting too cumbersome and the trait object
     // switch seems more and more appealing
-    fn prove(
+    pub(crate) fn prove(
         &self,
         node_com: NodeCommitment<F, S, PCS>,
         input: QArray<QSmallType>,
