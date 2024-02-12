@@ -167,7 +167,6 @@ where
         ck: PCS::CommitterKey,
         rng: Option<&mut dyn RngCore>,
     ) -> (Self::NodeCommitment, Self::NodeCommitmentState) {
-        // TODO should we make the structure contain labeled commitments instead of stripping the labels?
         // TODO should we separate the associated commitment type into one with state and one without?
 
         let num_vars_weights = self.padded_dims_log.0 + self.padded_dims_log.1;
@@ -191,12 +190,16 @@ where
 
         let coms = PCS::commit(&ck, vec![&weight_poly, &bias_poly], rng).unwrap();
 
-        Self::NodeCommitment {
-            weight_com: coms.0[0].commitment().clone(),
-            weight_com_state: coms.1[0].clone(),
-            bias_com: coms.0[1].commitment().clone(),
-            bias_com_state: coms.1[1].clone(),
-        }
+        (
+            Self::NodeCommitment {
+                weight_com: coms.0[0].commitment().clone(),
+                bias_com: coms.0[1].commitment().clone(),
+            },
+            Self::NodeCommitmentState {
+                weight_com_state: coms.1[0].clone(),
+                bias_com_state: coms.1[1].clone(),
+            },
+        )
     }
 
     fn prove(
