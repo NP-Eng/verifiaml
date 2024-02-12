@@ -2,7 +2,7 @@ use std::marker::PhantomData;
 
 use ark_crypto_primitives::sponge::CryptographicSponge;
 use ark_ff::PrimeField;
-use ark_poly_commit::PolynomialCommitment;
+use ark_poly_commit::{LabeledPolynomial, PolynomialCommitment};
 use ark_std::log2;
 use ark_std::rand::RngCore;
 
@@ -167,7 +167,41 @@ where
         ck: PCS::CommitterKey,
         rng: Option<&mut dyn RngCore>,
     ) -> (Self::NodeCommitment, Self::NodeCommitmentState) {
-        unimplemented!()
+        let num_vars_weights = self.padded_dims_log.0 + self.padded_dims_log.1;
+        let padded_weights_f: Vec<F> = self
+            .padded_stretched_weights
+            .iter()
+            .map(|w| F::from(*w))
+            .collect();
+
+        let weight_poly = LabeledPolynomial::new(
+            "weight_poly".to_string(),
+            Poly::from_evaluations_vec(num_vars_weights, padded_weights_f),
+            None,
+            None, // TODO decide!
+        );
+
+        let padded_bias_f: Vec<F> = self.padded_bias.iter().map(|b| F::from(*b)).collect();
+
+        let bias_poly = LabeledPolynomial::new(
+            "bias_poly".to_string(),
+            Poly::from_evaluations_vec(self.padded_dims_log.1, padded_bias_f),
+            Some(self.padded_dims_log.1), // TODO or Some(1)!!
+            None,                         // TODO decide!
+        );
+
+        let coms = PCS::commit(&ck, vec![&weight_poly, &bias_poly], rng).unwrap();
+
+        (
+            Self::NodeCommitment {
+                weight_com: coms.0[0].commitment().clone(),
+                bias_com: coms.0[1].commitment().clone(),
+            },
+            Self::NodeCommitmentState {
+                weight_com_state: coms.1[0].clone(),
+                bias_com_state: coms.1[1].clone(),
+            },
+        )
     }
 
     fn prove(
