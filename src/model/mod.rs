@@ -1,4 +1,4 @@
-use ark_std::{marker::PhantomData, rand::RngCore};
+use ark_std::{log2, marker::PhantomData, rand::RngCore};
 
 use ark_crypto_primitives::sponge::CryptographicSponge;
 use ark_ff::PrimeField;
@@ -110,7 +110,12 @@ where
         output.compact_resize(self.output_shape.clone(), 0)
     }
 
-    pub(crate) fn prove_inference(&self, input: QArray<QSmallType>) -> InferenceProof<F, S, PCS> {
+    pub(crate) fn prove_inference(
+        &self,
+        ck: &PCS::CommitterKey,
+        rng: Option<&mut dyn RngCore>,
+        input: QArray<QSmallType>,
+    ) -> InferenceProof<F, S, PCS> {
         let mut output = input.compact_resize(
             self.input_shape
                 .iter()
@@ -118,6 +123,9 @@ where
                 .collect(),
             0,
         );
+
+        let input_num_vars = log2(output.len()) as usize;
+
         let mut output_f = output.values().iter().map(|x| F::from(*x)).collect();
 
         // First pass: computing node values
@@ -130,20 +138,41 @@ where
         }
 
         // Committing to node values
+        // TODO this doesn't change with every iteration, should be precomputed
+        let num_vars = vec![input_num_vars];
+
+        for node in self.nodes.iter() {
+            num_vars.push(node.padded_num_units_log());
+        }
+
         let labeled_node_values: Vec<LabeledPolynomial<F, Poly<F>>> = node_values
             .into_iter()
-            .map(|nv|
+            .zip(num_vars)
+            .into_iter()
+            .map(|(values, n)|
             // TODO change dummy label once we e.g. have given numbers to the
             // nodes in the model: fc_1, fc_2, relu_1, etc.
             LabeledPolynomial::new(
                 "dummy".to_string(),
-                Poly::from_evaluations_vec(num_vars, nv.move_values()),
+                Poly::from_evaluations_vec(n, values),
                 None,
                 None,
             ))
             .collect();
 
-        output_com = PCS::commit(ck, polynomials, rng);
+        let (node_value_coms, node_value_coms_states) =
+            PCS::commit(ck, &labeled_node_values, rng).unwrap();
+
+        // Second pass: proving
+        for (n, (i_value, o_value), (i_com, o_com), (i_com_state, o_com_state)) in self
+            .nodes
+            .iter()
+            .zip(node_values.windows(2))
+            .zip(node_value_coms.windows(2))
+            .zip(node_value_coms_states.windows(2))
+        {
+            // TODO
+        }
 
         for node in &self.nodes {
             output = node.padded_evaluate(output);
