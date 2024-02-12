@@ -11,13 +11,13 @@ use crate::{
         Poly,
     },
     quantization::QSmallType,
+    Commitment, CommitmentState, Proof,
 };
 
 use self::{
     fc::{FCNodeCommitment, FCNodeCommitmentState, FCNodeProof},
     loose_fc::{LooseFCNode, LooseFCNodeCommitment, LooseFCNodeCommitmentState, LooseFCNodeProof},
-    relu::{ReLUNodeCommitment, ReLUNodeCommitmentState, ReLUNodeProof},
-    reshape::{ReshapeNode, ReshapeNodeCommitment, ReshapeNodeCommitmentState, ReshapeNodeProof},
+    reshape::ReshapeNode,
 };
 
 use super::qarray::QArray;
@@ -83,6 +83,30 @@ pub(crate) trait NodeOps {
     fn padded_evaluate(&self, input: QArray<QSmallType>) -> QArray<QSmallType>;
 }
 
+pub(crate) trait NodeOpsSNARK<F, S, PCS>
+where
+    F: PrimeField,
+    S: CryptographicSponge,
+    PCS: PolynomialCommitment<F, Poly<F>, S>,
+{
+    /// Commit to the node parameters
+    fn commit(
+        &self,
+        ck: &PCS::CommitterKey,
+        rng: Option<&mut dyn RngCore>,
+    ) -> (NodeCommitment<F, S, PCS>, NodeCommitmentState<F, S, PCS>);
+
+    /// Produce a node output proof
+    fn prove(
+        &self,
+        node_com: NodeCommitment<F, S, PCS>,
+        input: QArray<QSmallType>,
+        input_com: PCS::Commitment,
+        output: QArray<QSmallType>,
+        output_com: PCS::Commitment,
+    ) -> NodeProof;
+}
+
 pub(crate) enum Node<F, S, PCS>
 where
     F: PrimeField,
@@ -96,10 +120,10 @@ where
 }
 
 pub(crate) enum NodeProof {
-    FCProof(FCNodeProof),
-    LooseFCProof(LooseFCNodeProof),
-    ReLUProof(ReLUNodeProof),
-    ReshapeProof(ReshapeNodeProof),
+    FC(FCNodeProof),
+    LooseFC(LooseFCNodeProof),
+    ReLU(()),
+    Reshape(()),
 }
 
 pub(crate) enum NodeCommitment<F, S, PCS>
@@ -108,10 +132,10 @@ where
     S: CryptographicSponge,
     PCS: PolynomialCommitment<F, Poly<F>, S>,
 {
-    FCCommitment(FCNodeCommitment<F, S, PCS>),
-    LooseFCCommitment(LooseFCNodeCommitment<F, S, PCS>),
-    ReLUCommitment(ReLUNodeCommitment),
-    ReshapeCommitment(ReshapeNodeCommitment),
+    FC(FCNodeCommitment<F, S, PCS>),
+    LooseFC(LooseFCNodeCommitment<F, S, PCS>),
+    ReLU(()),
+    Reshape(()),
 }
 
 pub(crate) enum NodeCommitmentState<F, S, PCS>
@@ -120,10 +144,10 @@ where
     S: CryptographicSponge,
     PCS: PolynomialCommitment<F, Poly<F>, S>,
 {
-    FCCommitmentState(FCNodeCommitmentState<F, S, PCS>),
-    LooseFCCommitmentState(LooseFCNodeCommitmentState<F, S, PCS>),
-    ReLUCommitmentState(ReLUNodeCommitmentState),
-    ReshapeCommitmentState(ReshapeNodeCommitmentState),
+    FC(FCNodeCommitmentState<F, S, PCS>),
+    LooseFC(LooseFCNodeCommitmentState<F, S, PCS>),
+    ReLU(()),
+    Reshape(()),
 }
 
 // A lot of this overlaps with the NodeOps trait and could be handled more
@@ -135,6 +159,15 @@ where
     PCS: PolynomialCommitment<F, Poly<F>, S>,
 {
     fn as_node_ops(&self) -> &dyn NodeOps {
+        match self {
+            Node::FC(fc) => fc,
+            Node::LooseFC(fc) => fc,
+            Node::ReLU(r) => r,
+            Node::Reshape(r) => r,
+        }
+    }
+
+    fn as_node_ops_snark(&self) -> &dyn NodeOpsSNARK<F, S, PCS> {
         match self {
             Node::FC(fc) => fc,
             Node::LooseFC(fc) => fc,
@@ -195,12 +228,7 @@ where
     }
 
     fn com_num_vars(&self) -> usize {
-        match self {
-            Node::FC(fc) => fc.com_num_vars(),
-            Node::LooseFC(fc) => fc.com_num_vars(),
-            Node::ReLU(r) => r.com_num_vars(),
-            Node::Reshape(r) => r.com_num_vars(),
-        }
+        self.as_node_ops().com_num_vars()
     }
 
     /// Evaluate the node natively (without padding)
@@ -214,91 +242,30 @@ where
     }
 }
 
-/// Commit to the node parameters
-pub(crate) fn commit(
-    &self,
-    ck: &PCS::CommitterKey,
-    rng: Option<&mut dyn RngCore>,
-) -> (NodeCommitment<F, S, PCS>, NodeCommitmentState<F, S, PCS>) {
-    // TODO this is very ugly, should start thinking about using trait objects
-    match self {
-        Node::FC(fc) => {
-            let (com, state) = fc.commit(ck, rng);
-            (
-                NodeCommitment::FCCommitment(com),
-                NodeCommitmentState::FCCommitmentState(state),
-            )
-        }
-        Node::LooseFC(fc) => {
-            let (com, state) = fc.commit(ck, rng);
-            (
-                NodeCommitment::LooseFCCommitment(com),
-                NodeCommitmentState::LooseFCCommitmentState(state),
-            )
-        }
-        Node::ReLU(r) => {
-            let (com, state) = r.commit(ck, rng);
-            (
-                NodeCommitment::ReLUCommitment(com),
-                NodeCommitmentState::ReLUCommitmentState(state),
-            )
-        }
-        Node::Reshape(r) => {
-            let (com, state) = r.commit(ck, rng);
-            (
-                NodeCommitment::ReshapeCommitment(com),
-                NodeCommitmentState::ReshapeCommitmentState(state),
-            )
-        }
+impl<F, S, PCS> NodeOpsSNARK<F, S, PCS> for Node<F, S, PCS>
+where
+    F: PrimeField,
+    S: CryptographicSponge,
+    PCS: PolynomialCommitment<F, Poly<F>, S>,
+{
+    /// Commit to the node parameters
+    fn commit(
+        &self,
+        ck: &PCS::CommitterKey,
+        rng: Option<&mut dyn RngCore>,
+    ) -> (NodeCommitment<F, S, PCS>, NodeCommitmentState<F, S, PCS>) {
+        self.as_node_ops_snark().commit(ck, rng)
     }
-}
 
-/// Produce a node output proof
-// TODO like before, this is getting too cumbersome and the trait object
-// switch seems more and more appealing
-pub(crate) fn prove(
-    &self,
-    node_com: NodeCommitment<F, S, PCS>,
-    input: QArray<QSmallType>,
-    input_com: PCS::Commitment,
-    output: QArray<QSmallType>,
-    output_com: PCS::Commitment,
-) -> NodeProof {
-    match self {
-        FC(fc) => {
-            if let FCCommitment(fc_com) = node_com {
-                NodeProof::FCProof(fc.prove(fc_com, input, input_com, output, output_com))
-            } else {
-                panic!("Error: received commitment of type other than FC to prove execution of FC");
-            }
-        }
-        LooseFC(lfc) => {
-            if let LooseFCCommitment(lfc_com) = node_com {
-                NodeProof::LooseFCProof(lfc.prove(lfc_com, input, input_com, output, output_com))
-            } else {
-                panic!("Error: received commitment of type other than LooseFC to prove execution of LooseFC");
-            }
-        }
-        ReLU(r) => {
-            if let ReLUCommitment(r_com) = node_com {
-                NodeProof::ReLUProof(r.prove(r_com, input, input_com, output, output_com))
-            } else {
-                panic!(
-                    "Error: received commitment of type other than ReLU to prove execution of ReLU"
-                );
-            }
-        }
-        Reshape(r) => {
-            if let ReshapeCommitment(r_com) = node_com {
-                NodeProof::ReshapeProof(r.prove(r_com, input, input_com, output, output_com))
-            } else {
-                panic!("Error: received commitment of type other than Reshape to prove execution of Reshape");
-            }
-        }
+    fn prove(
+        &self,
+        node_com: NodeCommitment<F, S, PCS>,
+        input: QArray<QSmallType>,
+        input_com: PCS::Commitment,
+        output: QArray<QSmallType>,
+        output_com: PCS::Commitment,
+    ) -> NodeProof {
+        self.as_node_ops_snark()
+            .prove(node_com, input, input_com, output, output_com)
     }
-}
-
-/// Verify a node output proof
-pub(crate) fn check(com: PCS::Commitment, proof: PCS::Proof) -> bool {
-    unimplemented!()
 }

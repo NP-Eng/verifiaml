@@ -10,7 +10,7 @@ use crate::model::qarray::QArray;
 use crate::model::Poly;
 use crate::quantization::QSmallType;
 
-use super::NodeOps;
+use super::{NodeOps, NodeOpsSNARK, NodeProof};
 
 pub(crate) struct ReshapeNode<F, S, PCS>
 where
@@ -24,10 +24,6 @@ where
     padded_output_shape_log: Vec<usize>,
     phantom: PhantomData<(F, S, PCS)>,
 }
-
-pub(crate) type ReshapeNodeProof = ();
-pub(crate) type ReshapeNodeCommitment = ();
-pub(crate) type ReshapeNodeCommitmentState = ();
 
 impl<F, S, PCS> NodeOps for ReshapeNode<F, S, PCS>
 where
@@ -88,6 +84,35 @@ where
         output.reshape(padded_output_shape);
 
         output
+    }
+}
+
+impl<F, S, PCS> NodeOpsSNARK<F, S, PCS> for ReshapeNode<F, S, PCS>
+where
+    F: PrimeField,
+    S: CryptographicSponge,
+    PCS: PolynomialCommitment<F, Poly<F>, S>,
+{
+    fn commit(
+        &self,
+        ck: &PCS::CommitterKey,
+        rng: Option<&mut dyn RngCore>,
+    ) -> (
+        super::NodeCommitment<F, S, PCS>,
+        super::NodeCommitmentState<F, S, PCS>,
+    ) {
+        todo!()
+    }
+
+    fn prove(
+        &self,
+        node_com: super::NodeCommitment<F, S, PCS>,
+        input: QArray<QSmallType>,
+        input_com: PCS::Commitment,
+        output: QArray<QSmallType>,
+        output_com: PCS::Commitment,
+    ) -> NodeProof {
+        unimplemented!()
     }
 }
 

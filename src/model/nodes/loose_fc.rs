@@ -11,8 +11,9 @@ use crate::model::Poly;
 use crate::quantization::{
     requantise_fc, FCQInfo, QInfo, QLargeType, QScaleType, QSmallType, RoundingScheme,
 };
+use crate::{Commitment, CommitmentState};
 
-use super::NodeOps;
+use super::{NodeCommitment, NodeCommitmentState, NodeOps, NodeOpsSNARK};
 
 // TODO convention: input, bias and output are rows, the op is vec-by-mat (in that order)
 
@@ -47,6 +48,14 @@ where
     bias_com: PCS::Commitment,
 }
 
+impl<F, S, PCS> Commitment for LooseFCNodeCommitment<F, S, PCS>
+where
+    F: PrimeField,
+    S: CryptographicSponge,
+    PCS: PolynomialCommitment<F, Poly<F>, S>,
+{
+}
+
 pub(crate) struct LooseFCNodeCommitmentState<F, S, PCS>
 where
     F: PrimeField,
@@ -55,6 +64,14 @@ where
 {
     weight_com_state: PCS::CommitmentState,
     bias_com_state: PCS::CommitmentState,
+}
+
+impl<F, S, PCS> CommitmentState for LooseFCNodeCommitmentState<F, S, PCS>
+where
+    F: PrimeField,
+    S: CryptographicSponge,
+    PCS: PolynomialCommitment<F, Poly<F>, S>,
+{
 }
 
 pub(crate) struct LooseFCNodeProof {
@@ -163,63 +180,65 @@ where
     }
 }
 
-fn commit(
-    &self,
-    ck: &PCS::CommitterKey,
-    rng: Option<&mut dyn RngCore>,
-) -> (Self::NodeCommitment, Self::NodeCommitmentState) {
-    let num_vars_weights = self.padded_dims_log.0 + self.padded_dims_log.1;
-    let padded_weights_f: Vec<F> = self
-        .padded_stretched_weights
-        .iter()
-        .map(|w| F::from(*w))
-        .collect();
+impl<F, S, PCS> NodeOpsSNARK<F, S, PCS> for LooseFCNode<F, S, PCS>
+where
+    F: PrimeField,
+    S: CryptographicSponge,
+    PCS: PolynomialCommitment<F, Poly<F>, S>,
+{
+    fn commit(
+        &self,
+        ck: &PCS::CommitterKey,
+        rng: Option<&mut dyn RngCore>,
+    ) -> (NodeCommitment<F, S, PCS>, NodeCommitmentState<F, S, PCS>) {
+        let num_vars_weights = self.padded_dims_log.0 + self.padded_dims_log.1;
+        let padded_weights_f: Vec<F> = self
+            .padded_stretched_weights
+            .iter()
+            .map(|w| F::from(*w))
+            .collect();
 
-    let weight_poly = LabeledPolynomial::new(
-        "weight_poly".to_string(),
-        Poly::from_evaluations_vec(num_vars_weights, padded_weights_f),
-        None,
-        None, // TODO decide!
-    );
+        let weight_poly = LabeledPolynomial::new(
+            "weight_poly".to_string(),
+            Poly::from_evaluations_vec(num_vars_weights, padded_weights_f),
+            None,
+            None, // TODO decide!
+        );
 
-    let padded_bias_f: Vec<F> = self.padded_bias.iter().map(|b| F::from(*b)).collect();
+        let padded_bias_f: Vec<F> = self.padded_bias.iter().map(|b| F::from(*b)).collect();
 
-    let bias_poly = LabeledPolynomial::new(
-        "bias_poly".to_string(),
-        Poly::from_evaluations_vec(self.padded_dims_log.1, padded_bias_f),
-        Some(self.padded_dims_log.1), // TODO or Some(1)!!
-        None,                         // TODO decide!
-    );
+        let bias_poly = LabeledPolynomial::new(
+            "bias_poly".to_string(),
+            Poly::from_evaluations_vec(self.padded_dims_log.1, padded_bias_f),
+            Some(self.padded_dims_log.1), // TODO or Some(1)!!
+            None,                         // TODO decide!
+        );
 
-    let coms = PCS::commit(&ck, vec![&weight_poly, &bias_poly], rng).unwrap();
+        let coms = PCS::commit(&ck, vec![&weight_poly, &bias_poly], rng).unwrap();
 
-    (
-        Self::NodeCommitment {
-            weight_com: coms.0[0].commitment().clone(),
-            bias_com: coms.0[1].commitment().clone(),
-        },
-        Self::NodeCommitmentState {
-            weight_com_state: coms.1[0].clone(),
-            bias_com_state: coms.1[1].clone(),
-        },
-    )
+        (
+            NodeCommitment::LooseFC(LooseFCNodeCommitment {
+                weight_com: coms.0[0].commitment().clone(),
+                bias_com: coms.0[1].commitment().clone(),
+            }),
+            NodeCommitmentState::LooseFC(LooseFCNodeCommitmentState {
+                weight_com_state: coms.1[0].clone(),
+                bias_com_state: coms.1[1].clone(),
+            }),
+        )
+    }
+
+    fn prove(
+        &self,
+        node_com: NodeCommitment<F, S, PCS>,
+        input: QArray<QSmallType>,
+        input_com: PCS::Commitment,
+        output: QArray<QSmallType>,
+        output_com: PCS::Commitment,
+    ) -> super::NodeProof {
+        todo!()
+    }
 }
-
-fn prove(
-    &self,
-    node_com: Self::NodeCommitment,
-    input: QArray<QSmallType>,
-    input_com: PCS::Commitment,
-    output: QArray<QSmallType>,
-    output_com: PCS::Commitment,
-) -> Self::Proof {
-    unimplemented!()
-}
-
-fn verify(com: Self::NodeCommitment, proof: Self::Proof) -> bool {
-    unimplemented!()
-}
-
 impl<F, S, PCS> LooseFCNode<F, S, PCS>
 where
     F: PrimeField,
