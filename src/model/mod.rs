@@ -3,12 +3,12 @@ use ark_std::{marker::PhantomData, rand::RngCore};
 use ark_crypto_primitives::sponge::CryptographicSponge;
 use ark_ff::PrimeField;
 use ark_poly::DenseMultilinearExtension;
-use ark_poly_commit::PolynomialCommitment;
+use ark_poly_commit::{LabeledPolynomial, PolynomialCommitment};
 
 use crate::{model::nodes::Node, quantization::QSmallType};
 
 use self::{
-    nodes::{NodeCommitment, NodeCommitmentState},
+    nodes::{NodeCommitment, NodeCommitmentState, NodeProof},
     qarray::QArray,
 };
 
@@ -19,11 +19,27 @@ mod reshaping;
 
 pub(crate) type Poly<F> = DenseMultilinearExtension<F>;
 
+pub(crate) struct InferenceProof<F, S, PCS>
+where
+    F: PrimeField,
+    S: CryptographicSponge,
+    PCS: PolynomialCommitment<F, Poly<F>, S>,
+{
+    // Model output tensors
+    outputs: Vec<QArray<QSmallType>>,
+
+    // Proofs of evaluation of each of the model's nodes
+    node_proofs: Vec<NodeProof>,
+
+    // Proofs of opening of each of the models output
+    opening_proofs: PCS::Proof,
+}
+
 // TODO change the functions that receive vectors to receive slices instead whenever it makes sense
 
 // TODO: for now, we require all nodes to use the same PCS; this might change
 // in the future
-pub struct Model<F, S, PCS>
+pub(crate) struct Model<F, S, PCS>
 where
     F: PrimeField,
     S: CryptographicSponge,
@@ -94,17 +110,40 @@ where
         output.compact_resize(self.output_shape.clone(), 0)
     }
 
-    pub(crate) fn prove_evaluation(&self, input: QArray<QSmallType>) -> QArray<QSmallType> {
-        // TODO sanity check: input shape matches model input shape
-
+    pub(crate) fn prove_inference(&self, input: QArray<QSmallType>) -> InferenceProof<F, S, PCS> {
         let mut output = input.compact_resize(
-            // TODO this functionality is so common we might as well make it an #[inline] function
             self.input_shape
                 .iter()
                 .map(|x| x.next_power_of_two())
                 .collect(),
             0,
         );
+        let mut output_f = output.values().iter().map(|x| F::from(*x)).collect();
+
+        // First pass: computing node values
+        let mut node_values = vec![output_f];
+
+        for node in &self.nodes {
+            output = node.padded_evaluate(output);
+            let output_f: Vec<F> = output.values().iter().map(|x| F::from(*x)).collect();
+            node_values.push(output_f);
+        }
+
+        // Committing to node values
+        let labeled_node_values: Vec<LabeledPolynomial<F, Poly<F>>> = node_values
+            .into_iter()
+            .map(|nv|
+            // TODO change dummy label once we e.g. have given numbers to the
+            // nodes in the model: fc_1, fc_2, relu_1, etc.
+            LabeledPolynomial::new(
+                "dummy".to_string(),
+                Poly::from_evaluations_vec(num_vars, nv.move_values()),
+                None,
+                None,
+            ))
+            .collect();
+
+        output_com = PCS::commit(ck, polynomials, rng);
 
         for node in &self.nodes {
             output = node.padded_evaluate(output);
