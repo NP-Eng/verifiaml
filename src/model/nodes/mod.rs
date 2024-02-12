@@ -66,6 +66,10 @@ where
             .collect()
     }
 
+    /// Returns the maximum number of variables of the MLEs committed to as part of
+    /// this nodes's commitment.
+    fn com_num_vars(&self) -> usize;
+
     /// The number of output units of the node
     fn num_units(&self) -> usize {
         self.shape().iter().product()

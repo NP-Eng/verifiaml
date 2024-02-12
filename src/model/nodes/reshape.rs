@@ -43,6 +43,10 @@ where
         self.padded_output_shape_log.clone()
     }
 
+    fn com_num_vars(&self) -> usize {
+        0
+    }
+
     fn evaluate(&self, input: QArray<QSmallType>) -> QArray<QSmallType> {
         // Sanity checks
         // TODO systematise

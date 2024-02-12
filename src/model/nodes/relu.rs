@@ -48,6 +48,10 @@ where
         vec![self.log_num_units]
     }
 
+    fn com_num_vars(&self) -> usize {
+        0
+    }
+
     fn evaluate(&self, input: QArray<QSmallType>) -> QArray<QSmallType> {
         // TODO sanity checks (cf. FC); systematise
         input.maximum(self.zero_point)
