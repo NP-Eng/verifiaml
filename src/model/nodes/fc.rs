@@ -36,7 +36,7 @@ pub(crate) struct FCNode<F, S, PCS> {
     phantom: PhantomData<(F, S, PCS)>,
 }
 
-pub(crate) struct FCCommitment<F, S, PCS>
+pub(crate) struct FCNodeCommitment<F, S, PCS>
 where
     F: PrimeField,
     S: CryptographicSponge,
@@ -46,7 +46,7 @@ where
     bias_com: PCS::Commitment,
 }
 
-pub(crate) struct FCCommitmentState<F, S, PCS>
+pub(crate) struct FCNodeCommitmentState<F, S, PCS>
 where
     F: PrimeField,
     S: CryptographicSponge,
@@ -66,8 +66,8 @@ where
     S: CryptographicSponge,
     PCS: PolynomialCommitment<F, Poly<F>, S>,
 {
-    type NodeCommitment = FCCommitment<F, S, PCS>;
-    type NodeCommitmentState = FCCommitmentState<F, S, PCS>;
+    type NodeCommitment = FCNodeCommitment<F, S, PCS>;
+    type NodeCommitmentState = FCNodeCommitmentState<F, S, PCS>;
     type Proof = FCNodeProof;
 
     fn shape(&self) -> Vec<usize> {
