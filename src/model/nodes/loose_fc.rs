@@ -79,6 +79,10 @@ where
         vec![self.padded_dims_log.1]
     }
 
+    fn com_num_vars(&self) -> usize {
+        self.padded_dims_log.0 + self.padded_dims_log.1
+    }
+
     fn evaluate(&self, input: QArray<QSmallType>) -> QArray<QSmallType> {
         // Sanity checks
         // TODO systematise
