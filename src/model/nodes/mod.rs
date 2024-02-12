@@ -40,6 +40,9 @@ where
     /// matrix and bias for a MatMul transition.
     type NodeCommitment;
 
+    /// The state (for instance, randomness) associated to the NodeCommitment
+    type NodeCommitmentState;
+
     /// A proof of execution of the node's transition function to a particular
     /// set of node values
     type Proof;
@@ -85,7 +88,11 @@ where
     // fn setup(&self, params: PCS::UniversalParams) -> (, Self::VerifierKey);
 
     /// Commit to the node parameters
-    fn commit(&self, ck: PCS::CommitterKey, rng: Option<&mut dyn RngCore>) -> Self::NodeCommitment;
+    fn commit(
+        &self,
+        ck: PCS::CommitterKey,
+        rng: Option<&mut dyn RngCore>,
+    ) -> (Self::NodeCommitment, Self::NodeCommitmentState);
 
     /// Produce a node output proof
     fn prove(

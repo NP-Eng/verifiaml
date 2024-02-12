@@ -37,6 +37,7 @@ where
     PCS: PolynomialCommitment<F, Poly<F>, S>,
 {
     type NodeCommitment = ();
+    type NodeCommitmentState = ();
     type Proof = ReLUProof;
 
     fn shape(&self) -> Vec<usize> {
@@ -59,9 +60,13 @@ where
         input.maximum(self.zero_point)
     }
 
-    fn commit(&self, ck: PCS::CommitterKey, rng: Option<&mut dyn RngCore>) -> Self::NodeCommitment {
+    fn commit(
+        &self,
+        ck: PCS::CommitterKey,
+        rng: Option<&mut dyn RngCore>,
+    ) -> (Self::NodeCommitment, Self::NodeCommitmentState) {
         // ReLU nodes have no parameters to commit to
-        ()
+        ((), ())
     }
 
     fn prove(
