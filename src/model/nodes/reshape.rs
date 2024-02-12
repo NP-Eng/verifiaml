@@ -32,6 +32,7 @@ where
     PCS: PolynomialCommitment<F, Poly<F>, S>,
 {
     type NodeCommitment = ();
+    type NodeCommitmentState = ();
     type Proof = (); // TODO to decide
 
     fn shape(&self) -> Vec<usize> {
@@ -85,10 +86,14 @@ where
         output
     }
 
-    fn commit(&self, ck: PCS::CommitterKey, rng: Option<&mut dyn RngCore>) -> Self::NodeCommitment {
+    fn commit(
+        &self,
+        ck: PCS::CommitterKey,
+        rng: Option<&mut dyn RngCore>,
+    ) -> (Self::NodeCommitment, Self::NodeCommitmentState) {
         // TODO assuming we want to make the reshape parameters public info,
         // no commitment is needed
-        ()
+        ((), ())
     }
 
     fn prove(

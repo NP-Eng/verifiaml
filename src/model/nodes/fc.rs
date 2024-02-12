@@ -44,8 +44,16 @@ where
     PCS: PolynomialCommitment<F, Poly<F>, S>,
 {
     weight_com: PCS::Commitment,
-    weight_com_state: PCS::CommitmentState,
     bias_com: PCS::Commitment,
+}
+
+pub(crate) struct FCCommitmentState<F, S, PCS>
+where
+    F: PrimeField,
+    S: CryptographicSponge,
+    PCS: PolynomialCommitment<F, Poly<F>, S>,
+{
+    weight_com_state: PCS::CommitmentState,
     bias_com_state: PCS::CommitmentState,
 }
 
@@ -60,6 +68,7 @@ where
     PCS: PolynomialCommitment<F, Poly<F>, S>,
 {
     type NodeCommitment = FCCommitment<F, S, PCS>;
+    type NodeCommitmentState = FCCommitmentState<F, S, PCS>;
     type Proof = FCProof;
 
     fn shape(&self) -> Vec<usize> {
@@ -153,10 +162,11 @@ where
         requantise_fc(&accumulators, &self.q_info, RoundingScheme::NearestTiesEven).into()
     }
 
-    fn commit(&self, ck: PCS::CommitterKey, rng: Option<&mut dyn RngCore>) -> Self::NodeCommitment {
-        // TODO has the key been trimmed to the right size? and/or should we be using the same key for everything?
-        // TODO was degree bound the number of variables or really the degree bound for ML PCS?
-        // TODO we are converting naively, must prove elems are really in i8
+    fn commit(
+        &self,
+        ck: PCS::CommitterKey,
+        rng: Option<&mut dyn RngCore>,
+    ) -> (Self::NodeCommitment, Self::NodeCommitmentState) {
         // TODO should we make the structure contain labeled commitments instead of stripping the labels?
         // TODO should we separate the associated commitment type into one with state and one without?
 
@@ -165,12 +175,10 @@ where
 
         let weight_poly = LabeledPolynomial::new(
             "weight_poly".to_string(),
-            DenseMultilinearExtension::from_evaluations_vec(num_vars_weights, padded_weights_f),
-            Some(num_vars_weights), // TODO or Some(1)!!
-            None,                   // TODO decide!
+            Poly::from_evaluations_vec(num_vars_weights, padded_weights_f),
+            None,
+            None, // TODO decide!
         );
-
-        let weight_com = PCS::commit(&ck, vec![&weight_poly], rng).unwrap();
 
         let padded_bias_f: Vec<F> = self.padded_bias.iter().map(|b| F::from(*b)).collect();
 
@@ -181,13 +189,13 @@ where
             None,                         // TODO decide!
         );
 
-        let bias_com = PCS::commit(&ck, vec![&bias_poly], rng).unwrap();
+        let coms = PCS::commit(&ck, vec![&weight_poly, &bias_poly], rng).unwrap();
 
         Self::NodeCommitment {
-            weight_com: weight_com.0[0].commitment().clone(),
-            weight_com_state: weight_com.1[0].clone(),
-            bias_com: bias_com.0[0].commitment().clone(),
-            bias_com_state: bias_com.1[0].clone(),
+            weight_com: coms.0[0].commitment().clone(),
+            weight_com_state: coms.1[0].clone(),
+            bias_com: coms.0[1].commitment().clone(),
+            bias_com_state: coms.1[1].clone(),
         }
     }
 

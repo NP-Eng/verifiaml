@@ -47,6 +47,16 @@ where
     bias_com: PCS::Commitment,
 }
 
+pub(crate) struct LooseFCCommitmentState<F, S, PCS>
+where
+    F: PrimeField,
+    S: CryptographicSponge,
+    PCS: PolynomialCommitment<F, Poly<F>, S>,
+{
+    weight_com_state: PCS::CommitmentState,
+    bias_com_state: PCS::CommitmentState,
+}
+
 pub(crate) struct LooseFCProof {
     // this will be the sumcheck proof
 }
@@ -58,6 +68,7 @@ where
     PCS: PolynomialCommitment<F, Poly<F>, S>,
 {
     type NodeCommitment = LooseFCCommitment<F, S, PCS>;
+    type NodeCommitmentState = LooseFCCommitmentState<F, S, PCS>;
     type Proof = LooseFCProof;
 
     fn shape(&self) -> Vec<usize> {
@@ -151,7 +162,11 @@ where
         requantise_fc(&accumulators, &self.q_info, RoundingScheme::NearestTiesEven).into()
     }
 
-    fn commit(&self, ck: PCS::CommitterKey, rng: Option<&mut dyn RngCore>) -> Self::NodeCommitment {
+    fn commit(
+        &self,
+        ck: PCS::CommitterKey,
+        rng: Option<&mut dyn RngCore>,
+    ) -> (Self::NodeCommitment, Self::NodeCommitmentState) {
         unimplemented!()
     }
 
