@@ -184,7 +184,7 @@ impl<T: InnerType> QArray<T> {
 /************************* Padding *************************/
 // TODO this can perhaps be done more efficiently, e.g. by performing all data
 // manipulation in-place using indices rather than creating new vectors
-fn compact_resize_internal<T: InnerType>(
+fn compact_resize_internal<T: Copy>(
     data: &Vec<T>,
     old_shape: &[usize],
     new_shape: &[usize],
@@ -404,7 +404,6 @@ fn print_flat_data<T: InnerType>(
 // compare an array to a single element (element-wise); whereas `max` and `min`
 // (not implemented) compare two equally sized arrays element-wise.
 impl<T: InnerType + PartialOrd> QArray<T> {
-    // TODO consider rayon parallelisation
     pub(crate) fn maximum(&self, x: T) -> QArray<T> {
         let flattened_max: Vec<T> = self
             .flattened
@@ -421,7 +420,6 @@ impl<T: InnerType + PartialOrd> QArray<T> {
         }
     }
 
-    // TODO consider rayon parallelisation
     pub(crate) fn minimum(&self, x: T) -> QArray<T> {
         let flattened_min: Vec<T> = self
             .flattened
