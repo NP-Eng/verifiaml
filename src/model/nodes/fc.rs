@@ -44,7 +44,9 @@ where
     PCS: PolynomialCommitment<F, Poly<F>, S>,
 {
     weight_com: PCS::Commitment,
+    weight_com_state: PCS::CommitmentState,
     bias_com: PCS::Commitment,
+    bias_com_state: PCS::CommitmentState,
 }
 
 pub(crate) struct FCProof {
@@ -152,7 +154,41 @@ where
     }
 
     fn commit(&self, ck: PCS::CommitterKey, rng: Option<&mut dyn RngCore>) -> Self::NodeCommitment {
-        unimplemented!()
+        // TODO has the key been trimmed to the right size? and/or should we be using the same key for everything?
+        // TODO was degree bound the number of variables or really the degree bound for ML PCS?
+        // TODO we are converting naively, must prove elems are really in i8
+        // TODO should we make the structure contain labeled commitments instead of stripping the labels?
+        // TODO should we separate the associated commitment type into one with state and one without?
+
+        let num_vars_weights = self.padded_dims_log.0 + self.padded_dims_log.1;
+        let padded_weights_f: Vec<F> = self.padded_weights.iter().map(|w| F::from(*w)).collect();
+
+        let weight_poly = LabeledPolynomial::new(
+            "weight_poly".to_string(),
+            DenseMultilinearExtension::from_evaluations_vec(num_vars_weights, padded_weights_f),
+            Some(num_vars_weights), // TODO or Some(1)!!
+            None,                   // TODO decide!
+        );
+
+        let weight_com = PCS::commit(&ck, vec![&weight_poly], rng).unwrap();
+
+        let padded_bias_f: Vec<F> = self.padded_bias.iter().map(|b| F::from(*b)).collect();
+
+        let bias_poly = LabeledPolynomial::new(
+            "bias_poly".to_string(),
+            DenseMultilinearExtension::from_evaluations_vec(self.padded_dims_log.1, padded_bias_f),
+            Some(self.padded_dims_log.1), // TODO or Some(1)!!
+            None,                         // TODO decide!
+        );
+
+        let bias_com = PCS::commit(&ck, vec![&bias_poly], rng).unwrap();
+
+        Self::NodeCommitment {
+            weight_com: weight_com.0[0].commitment().clone(),
+            weight_com_state: weight_com.1[0].clone(),
+            bias_com: bias_com.0[0].commitment().clone(),
+            bias_com_state: bias_com.1[0].clone(),
+        }
     }
 
     fn prove(
