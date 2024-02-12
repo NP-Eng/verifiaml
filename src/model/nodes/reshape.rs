@@ -27,14 +27,17 @@ where
 
 pub(crate) type ReshapeNodeProof = ();
 
+pub(crate) type ReshapeNodeCommitment = ();
+pub(crate) type ReshapeNodeCommitmentState = ();
+
 impl<F, S, PCS> NodeOps<F, S, PCS> for ReshapeNode<F, S, PCS>
 where
     F: PrimeField,
     S: CryptographicSponge,
     PCS: PolynomialCommitment<F, Poly<F>, S>,
 {
-    type NodeCommitment = ();
-    type NodeCommitmentState = ();
+    type NodeCommitment = ReshapeNodeCommitment;
+    type NodeCommitmentState = ReshapeNodeCommitmentState;
     type Proof = ReshapeNodeProof;
 
     fn shape(&self) -> Vec<usize> {

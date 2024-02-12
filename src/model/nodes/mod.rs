@@ -11,10 +11,10 @@ use crate::{
 };
 
 use self::{
-    fc::FCNodeProof,
-    loose_fc::{LooseFCNode, LooseFCNodeProof},
-    relu::ReLUNodeProof,
-    reshape::{ReshapeNode, ReshapeNodeProof},
+    fc::{FCNodeCommitment, FCNodeCommitmentState, FCNodeProof},
+    loose_fc::{LooseFCNode, LooseFCNodeCommitment, LooseFCNodeCommitmentState, LooseFCNodeProof},
+    relu::{ReLUNodeCommitment, ReLUNodeCommitmentState, ReLUNodeProof},
+    reshape::{ReshapeNode, ReshapeNodeCommitment, ReshapeNodeCommitmentState, ReshapeNodeProof},
 };
 
 use super::qarray::QArray;
@@ -130,6 +130,30 @@ pub(crate) enum NodeProof {
     ReshapeProof(ReshapeNodeProof),
 }
 
+pub(crate) enum NodeCommitment<F, S, PCS>
+where
+    F: PrimeField,
+    S: CryptographicSponge,
+    PCS: PolynomialCommitment<F, Poly<F>, S>,
+{
+    FCCommitment(FCNodeCommitment<F, S, PCS>),
+    LooseFCCommitment(LooseFCNodeCommitment<F, S, PCS>),
+    ReLUCommitment(ReLUNodeCommitment),
+    ReshapeCommitment(ReshapeNodeCommitment),
+}
+
+pub(crate) enum NodeCommitmentState<F, S, PCS>
+where
+    F: PrimeField,
+    S: CryptographicSponge,
+    PCS: PolynomialCommitment<F, Poly<F>, S>,
+{
+    FCCommitment(FCNodeCommitmentState<F, S, PCS>),
+    LooseFCCommitment(LooseFCNodeCommitmentState<F, S, PCS>),
+    ReLUCommitment(ReLUNodeCommitmentState),
+    ReshapeCommitment(ReshapeNodeCommitmentState),
+}
+
 // A lot of this overlaps with the NodeOps trait and could be handled more
 // elegantly by simply implementing the trait
 impl<F, S, PCS> Node<F, S, PCS>
@@ -219,13 +243,13 @@ where
     }
 
     /// Commit to the node parameters
-    // pub(crate) fn commit(&self) -> PCS::Commitment {
-    //     match self {
-    //         Node::FC(n) => n.commit(),
-    //         Node::ReLU(r) => r.commit(),
-    //         Node::Reshape(r) => r.commit(),
-    //     }
-    // }
+    pub(crate) fn commit(&self) -> PCS::Commitment {
+        match self {
+            Node::FC(n) => n.commit(),
+            Node::ReLU(r) => r.commit(),
+            Node::Reshape(r) => r.commit(),
+        }
+    }
 
     /// Produce a node output proof
     pub(crate) fn prove(com: PCS::Commitment, input: Vec<F>) -> PCS::Proof {

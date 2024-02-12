@@ -30,14 +30,17 @@ pub(crate) struct ReLUNodeProof {
     // this will be a lookup proof
 }
 
+pub(crate) type ReLUNodeCommitment = ();
+pub(crate) type ReLUNodeCommitmentState = ();
+
 impl<F, S, PCS> NodeOps<F, S, PCS> for ReLUNode<F, S, PCS>
 where
     F: PrimeField,
     S: CryptographicSponge,
     PCS: PolynomialCommitment<F, Poly<F>, S>,
 {
-    type NodeCommitment = ();
-    type NodeCommitmentState = ();
+    type NodeCommitment = ReLUNodeCommitment;
+    type NodeCommitmentState = ReLUNodeCommitmentState;
     type Proof = ReLUNodeProof;
 
     fn shape(&self) -> Vec<usize> {
