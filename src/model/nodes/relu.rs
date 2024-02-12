@@ -1,4 +1,3 @@
-use ark_std::cmp::max;
 use ark_std::log2;
 use ark_std::marker::PhantomData;
 
@@ -11,7 +10,7 @@ use crate::model::qarray::QArray;
 use crate::model::Poly;
 use crate::quantization::QSmallType;
 
-use super::NodeOps;
+use super::{NodeCommitment, NodeCommitmentState, NodeOps, NodeOpsSNARK};
 
 // Rectified linear unit node performing x |-> max(0, x).
 pub(crate) struct ReLUNode<F, S, PCS>
@@ -26,12 +25,6 @@ where
     phantom: PhantomData<(F, S, PCS)>,
 }
 
-pub(crate) struct ReLUNodeProof {
-    // this will be a lookup proof
-}
-
-pub(crate) type ReLUNodeCommitment = ();
-pub(crate) type ReLUNodeCommitmentState = ();
 impl<F, S, PCS> NodeOps for ReLUNode<F, S, PCS>
 where
     F: PrimeField,
@@ -60,6 +53,33 @@ where
     fn padded_evaluate(&self, input: QArray<QSmallType>) -> QArray<QSmallType> {
         // TODO sanity checks (cf. FC); systematise
         input.maximum(self.zero_point)
+    }
+}
+
+// impl NodeOpsSnark
+impl<F, S, PCS> NodeOpsSNARK<F, S, PCS> for ReLUNode<F, S, PCS>
+where
+    F: PrimeField,
+    S: CryptographicSponge,
+    PCS: PolynomialCommitment<F, Poly<F>, S>,
+{
+    fn commit(
+        &self,
+        ck: &PCS::CommitterKey,
+        rng: Option<&mut dyn RngCore>,
+    ) -> (NodeCommitment<F, S, PCS>, NodeCommitmentState<F, S, PCS>) {
+        todo!()
+    }
+
+    fn prove(
+        &self,
+        node_com: NodeCommitment<F, S, PCS>,
+        input: QArray<QSmallType>,
+        input_com: PCS::Commitment,
+        output: QArray<QSmallType>,
+        output_com: PCS::Commitment,
+    ) -> super::NodeProof {
+        todo!()
     }
 }
 

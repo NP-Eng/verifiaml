@@ -11,8 +11,9 @@ use crate::model::Poly;
 use crate::quantization::{
     requantise_fc, FCQInfo, QInfo, QLargeType, QScaleType, QSmallType, RoundingScheme,
 };
+use crate::{Commitment, CommitmentState};
 
-use super::NodeOps;
+use super::{NodeCommitment, NodeCommitmentState, NodeOps, NodeOpsSNARK, NodeProof};
 
 // TODO convention: input, bias and output are rows, the op is vec-by-mat (in that order)
 
@@ -46,6 +47,14 @@ where
     bias_com: PCS::Commitment,
 }
 
+impl<F, S, PCS> Commitment for FCNodeCommitment<F, S, PCS>
+where
+    F: PrimeField,
+    S: CryptographicSponge,
+    PCS: PolynomialCommitment<F, Poly<F>, S>,
+{
+}
+
 pub(crate) struct FCNodeCommitmentState<F, S, PCS>
 where
     F: PrimeField,
@@ -54,6 +63,14 @@ where
 {
     weight_com_state: PCS::CommitmentState,
     bias_com_state: PCS::CommitmentState,
+}
+
+impl<F, S, PCS> CommitmentState for FCNodeCommitmentState<F, S, PCS>
+where
+    F: PrimeField,
+    S: CryptographicSponge,
+    PCS: PolynomialCommitment<F, Poly<F>, S>,
+{
 }
 
 pub(crate) struct FCNodeProof {
@@ -162,59 +179,62 @@ where
     }
 }
 
-fn commit(
-    &self,
-    ck: &PCS::CommitterKey,
-    rng: Option<&mut dyn RngCore>,
-) -> (Self::NodeCommitment, Self::NodeCommitmentState) {
-    // TODO should we separate the associated commitment type into one with state and one without?
+impl<F, S, PCS> NodeOpsSNARK<F, S, PCS> for FCNode<F, S, PCS>
+where
+    F: PrimeField,
+    S: CryptographicSponge,
+    PCS: PolynomialCommitment<F, Poly<F>, S>,
+{
+    fn commit(
+        &self,
+        ck: &PCS::CommitterKey,
+        rng: Option<&mut dyn RngCore>,
+    ) -> (NodeCommitment<F, S, PCS>, NodeCommitmentState<F, S, PCS>) {
+        // TODO should we separate the associated commitment type into one with state and one without?
 
-    let num_vars_weights = self.padded_dims_log.0 + self.padded_dims_log.1;
-    let padded_weights_f: Vec<F> = self.padded_weights.iter().map(|w| F::from(*w)).collect();
+        let num_vars_weights = self.padded_dims_log.0 + self.padded_dims_log.1;
+        let padded_weights_f: Vec<F> = self.padded_weights.iter().map(|w| F::from(*w)).collect();
 
-    let weight_poly = LabeledPolynomial::new(
-        "weight_poly".to_string(),
-        Poly::from_evaluations_vec(num_vars_weights, padded_weights_f),
-        None,
-        None,
-    );
+        let weight_poly = LabeledPolynomial::new(
+            "weight_poly".to_string(),
+            Poly::from_evaluations_vec(num_vars_weights, padded_weights_f),
+            None,
+            None,
+        );
 
-    let padded_bias_f: Vec<F> = self.padded_bias.iter().map(|b| F::from(*b)).collect();
+        let padded_bias_f: Vec<F> = self.padded_bias.iter().map(|b| F::from(*b)).collect();
 
-    let bias_poly = LabeledPolynomial::new(
-        "bias_poly".to_string(),
-        Poly::from_evaluations_vec(self.padded_dims_log.1, padded_bias_f),
-        None,
-        None,
-    );
+        let bias_poly = LabeledPolynomial::new(
+            "bias_poly".to_string(),
+            Poly::from_evaluations_vec(self.padded_dims_log.1, padded_bias_f),
+            None,
+            None,
+        );
 
-    let coms = PCS::commit(ck, vec![&weight_poly, &bias_poly], rng).unwrap();
+        let coms = PCS::commit(ck, vec![&weight_poly, &bias_poly], rng).unwrap();
 
-    (
-        Self::NodeCommitment {
-            weight_com: coms.0[0].commitment().clone(),
-            bias_com: coms.0[1].commitment().clone(),
-        },
-        Self::NodeCommitmentState {
-            weight_com_state: coms.1[0].clone(),
-            bias_com_state: coms.1[1].clone(),
-        },
-    )
-}
+        (
+            NodeCommitment::FC(FCNodeCommitment {
+                weight_com: coms.0[0].commitment().clone(),
+                bias_com: coms.0[1].commitment().clone(),
+            }),
+            NodeCommitmentState::FC(FCNodeCommitmentState {
+                weight_com_state: coms.1[0].clone(),
+                bias_com_state: coms.1[1].clone(),
+            }),
+        )
+    }
 
-fn prove(
-    &self,
-    node_com: Self::NodeCommitment,
-    input: QArray<QSmallType>,
-    input_com: PCS::Commitment,
-    output: QArray<QSmallType>,
-    output_com: PCS::Commitment,
-) -> Self::Proof {
-    unimplemented!()
-}
-
-fn verify(com: Self::NodeCommitment, proof: Self::Proof) -> bool {
-    unimplemented!()
+    fn prove(
+        &self,
+        node_com: NodeCommitment<F, S, PCS>,
+        input: QArray<QSmallType>,
+        input_com: PCS::Commitment,
+        output: QArray<QSmallType>,
+        output_com: PCS::Commitment,
+    ) -> NodeProof {
+        unimplemented!()
+    }
 }
 
 impl<F, S, PCS> FCNode<F, S, PCS>
@@ -292,6 +312,5 @@ where
         }
     }
 }
-
 // TODO in constructor, add quantisation information checks? (s_bias = s_input * s_weight, z_bias = 0, z_weight = 0, etc.)
 // TODO in constructor, check bias length matches appropriate matrix dimension

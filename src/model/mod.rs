@@ -5,6 +5,7 @@ use ark_ff::PrimeField;
 use ark_poly::DenseMultilinearExtension;
 use ark_poly_commit::{LabeledPolynomial, PolynomialCommitment};
 
+use crate::model::nodes::{NodeOps, NodeOpsSNARK};
 use crate::{model::nodes::Node, quantization::QSmallType};
 
 use self::{
@@ -140,14 +141,14 @@ where
 
         // Committing to node values
         // TODO this doesn't change with every iteration, should be precomputed
-        let num_vars = vec![input_num_vars];
+        let mut num_vars = vec![input_num_vars];
 
         for node in self.nodes.iter() {
             num_vars.push(node.padded_num_units_log());
         }
 
         let labeled_node_values: Vec<LabeledPolynomial<F, Poly<F>>> = node_values
-            .into_iter()
+            .iter()
             .zip(num_vars)
             .into_iter()
             .map(|(values, n)|
@@ -155,7 +156,7 @@ where
             // nodes in the model: fc_1, fc_2, relu_1, etc.
             LabeledPolynomial::new(
                 "dummy".to_string(),
-                Poly::from_evaluations_vec(n, values),
+                Poly::from_evaluations_vec(n, values.clone()),
                 None,
                 None,
             ))
@@ -173,12 +174,11 @@ where
             .zip(node_value_coms.windows(2))
             .zip(node_value_coms_states.windows(2))
         {
-            let a = n.prove(n_com, values[0], v_coms[0], values[1], v_coms[1]);
+            // let a = n.prove(n_com, values[0], v_coms[0], values[1], v_coms[1]);
         }
 
-        // TODO open output nodes
-
         unimplemented!();
+        // TODO open output nodes
     }
 
     pub(crate) fn commit(
@@ -186,6 +186,7 @@ where
         ck: &PCS::CommitterKey,
         rng: Option<&mut dyn RngCore>,
     ) -> Vec<(NodeCommitment<F, S, PCS>, NodeCommitmentState<F, S, PCS>)> {
-        self.nodes.iter().map(|n| n.commit(ck, rng)).collect()
+        // TODO here we are ignoring the rng parameter
+        self.nodes.iter().map(|n| n.commit(ck, None)).collect()
     }
 }
