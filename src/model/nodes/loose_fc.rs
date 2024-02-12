@@ -213,6 +213,7 @@ where
             .map(|x| x.next_power_of_two())
             .collect();
 
+        // Padding and stretching the weights
         let weight_array = QArray::new(weights.clone(), array_dims);
 
         let padded_stretched_weights = weight_array

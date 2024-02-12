@@ -1,9 +1,10 @@
+use ark_std::cmp::max;
+use ark_std::log2;
 use ark_std::marker::PhantomData;
 
 use ark_crypto_primitives::sponge::CryptographicSponge;
 use ark_ff::PrimeField;
 use ark_poly_commit::PolynomialCommitment;
-use ark_std::cmp::max;
 
 use crate::model::qarray::QArray;
 use crate::model::Poly;
@@ -18,7 +19,9 @@ where
     S: CryptographicSponge,
     PCS: PolynomialCommitment<F, Poly<F>, S>,
 {
+    num_units: usize,
     log_num_units: usize,
+    zero_point: QSmallType,
     phantom: PhantomData<(F, S, PCS)>,
 }
 
@@ -36,7 +39,7 @@ where
     type Proof = ReLUProof;
 
     fn shape(&self) -> Vec<usize> {
-        vec![1 << self.log_num_units]
+        vec![self.num_units]
     }
 
     fn padded_shape_log(&self) -> Vec<usize> {
@@ -45,30 +48,14 @@ where
 
     fn evaluate(&self, input: QArray<QSmallType>) -> QArray<QSmallType> {
         // TODO sanity checks (cf. FC); systematise
-
-        // TODO Can be done more elegantly, probably
-        let v: Vec<QSmallType> = input
-            .values()
-            .iter()
-            .map(|x| *max(x, &(0 as QSmallType)))
-            .collect();
-
-        v.into()
+        input.maximum(self.zero_point)
     }
 
     // TODO this is the same as evaluate() for now; the two will likely differ
     // if/when we introduce input size checks
     fn padded_evaluate(&self, input: QArray<QSmallType>) -> QArray<QSmallType> {
         // TODO sanity checks (cf. FC); systematise
-
-        // TODO Can be done more elegantly, probably
-        let v: Vec<QSmallType> = input
-            .values()
-            .iter()
-            .map(|x| *max(x, &(0 as QSmallType)))
-            .collect();
-
-        v.into()
+        input.maximum(self.zero_point)
     }
 
     fn commit(&self) -> Self::NodeCommitment {
@@ -97,9 +84,13 @@ where
     S: CryptographicSponge,
     PCS: PolynomialCommitment<F, Poly<F>, S>,
 {
-    pub(crate) fn new(log_num_units: usize) -> Self {
+    pub(crate) fn new(num_units: usize, zero_point: QSmallType) -> Self {
+        let log_num_units = log2(num_units.next_power_of_two()) as usize;
+
         Self {
+            num_units,
             log_num_units,
+            zero_point,
             phantom: PhantomData,
         }
     }
