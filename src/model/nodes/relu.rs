@@ -69,7 +69,7 @@ where
 
     fn commit(
         &self,
-        ck: PCS::CommitterKey,
+        ck: &PCS::CommitterKey,
         rng: Option<&mut dyn RngCore>,
     ) -> (Self::NodeCommitment, Self::NodeCommitmentState) {
         // ReLU nodes have no parameters to commit to

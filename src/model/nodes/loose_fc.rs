@@ -168,7 +168,7 @@ where
 
     fn commit(
         &self,
-        ck: PCS::CommitterKey,
+        ck: &PCS::CommitterKey,
         rng: Option<&mut dyn RngCore>,
     ) -> (Self::NodeCommitment, Self::NodeCommitmentState) {
         let num_vars_weights = self.padded_dims_log.0 + self.padded_dims_log.1;

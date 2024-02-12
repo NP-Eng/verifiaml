@@ -167,7 +167,7 @@ where
 
     fn commit(
         &self,
-        ck: PCS::CommitterKey,
+        ck: &PCS::CommitterKey,
         rng: Option<&mut dyn RngCore>,
     ) -> (Self::NodeCommitment, Self::NodeCommitmentState) {
         // TODO should we separate the associated commitment type into one with state and one without?
@@ -191,7 +191,7 @@ where
             None,                         // TODO decide!
         );
 
-        let coms = PCS::commit(&ck, vec![&weight_poly, &bias_poly], rng).unwrap();
+        let coms = PCS::commit(ck, vec![&weight_poly, &bias_poly], rng).unwrap();
 
         (
             Self::NodeCommitment {
