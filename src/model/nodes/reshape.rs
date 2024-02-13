@@ -35,14 +35,6 @@ where
         self.output_shape.clone()
     }
 
-    fn padded_shape_log(&self) -> Vec<usize> {
-        self.padded_output_shape_log.clone()
-    }
-
-    fn com_num_vars(&self) -> usize {
-        0
-    }
-
     fn evaluate(&self, input: QArray<QSmallType>) -> QArray<QSmallType> {
         // Sanity checks
         // TODO systematise
@@ -56,6 +48,21 @@ where
         output.reshape(self.output_shape.clone());
 
         output
+    }
+}
+
+impl<F, S, PCS> NodeOpsSNARK<F, S, PCS> for ReshapeNode<F, S, PCS>
+where
+    F: PrimeField,
+    S: CryptographicSponge,
+    PCS: PolynomialCommitment<F, Poly<F>, S>,
+{
+    fn padded_shape_log(&self) -> Vec<usize> {
+        self.padded_output_shape_log.clone()
+    }
+
+    fn com_num_vars(&self) -> usize {
+        0
     }
 
     // TODO I think this might be broken due to the failure of commutativity
@@ -85,14 +92,7 @@ where
 
         output
     }
-}
 
-impl<F, S, PCS> NodeOpsSNARK<F, S, PCS> for ReshapeNode<F, S, PCS>
-where
-    F: PrimeField,
-    S: CryptographicSponge,
-    PCS: PolynomialCommitment<F, Poly<F>, S>,
-{
     fn commit(
         &self,
         ck: &PCS::CommitterKey,

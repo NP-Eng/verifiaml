@@ -37,6 +37,21 @@ pub(crate) trait NodeOps {
     /// Returns the shape of the node's output tensor
     fn shape(&self) -> Vec<usize>;
 
+    /// The number of output units of the node
+    fn num_units(&self) -> usize {
+        self.shape().iter().product()
+    }
+
+    /// Evaluate the node natively (without padding)
+    fn evaluate(&self, input: QArray<QSmallType>) -> QArray<QSmallType>;
+}
+
+pub(crate) trait NodeOpsSNARK<F, S, PCS>
+where
+    F: PrimeField,
+    S: CryptographicSponge,
+    PCS: PolynomialCommitment<F, Poly<F>, S>,
+{
     /// Returns the element-wise base-two logarithm of the padded node's
     /// output shape, i.e. the list of numbers of variables of the associated
     /// MLE
@@ -53,11 +68,6 @@ pub(crate) trait NodeOps {
             .collect()
     }
 
-    /// The number of output units of the node
-    fn num_units(&self) -> usize {
-        self.shape().iter().product()
-    }
-
     /// The log of the number of output units of the padded node
     fn padded_num_units_log(&self) -> usize {
         self.padded_shape_log().iter().sum()
@@ -72,19 +82,9 @@ pub(crate) trait NodeOps {
     /// this nodes's commitment.
     fn com_num_vars(&self) -> usize;
 
-    /// Evaluate the node natively (without padding)
-    fn evaluate(&self, input: QArray<QSmallType>) -> QArray<QSmallType>;
-
     /// Evaluate the padded node natively
     fn padded_evaluate(&self, input: QArray<QSmallType>) -> QArray<QSmallType>;
-}
 
-pub(crate) trait NodeOpsSNARK<F, S, PCS>
-where
-    F: PrimeField,
-    S: CryptographicSponge,
-    PCS: PolynomialCommitment<F, Poly<F>, S>,
-{
     /// Commit to the node parameters
     fn commit(
         &self,
@@ -196,45 +196,14 @@ where
         self.as_node_ops().shape()
     }
 
-    /// Returns the element-wise base-two logarithm of the padded node's
-    /// output shape, i.e. the list of numbers of variables of the associated
-    /// MLE
-    fn padded_shape_log(&self) -> Vec<usize> {
-        self.as_node_ops().padded_shape_log()
-    }
-
-    /// Returns the element-wise padded node's output shape
-    fn padded_shape(&self) -> Vec<usize> {
-        self.as_node_ops().padded_shape()
-    }
-
     /// The number of output units of the node
     fn num_units(&self) -> usize {
         self.as_node_ops().num_units()
     }
 
-    /// The log of the number of output units of the padded node
-    fn padded_num_units_log(&self) -> usize {
-        self.padded_shape_log().iter().sum()
-    }
-
-    /// The number of output units of the padded node
-    fn padded_num_units(&self) -> usize {
-        self.as_node_ops().padded_num_units()
-    }
-
-    fn com_num_vars(&self) -> usize {
-        self.as_node_ops().com_num_vars()
-    }
-
     /// Evaluate the node natively (without padding)
     fn evaluate(&self, input: QArray<QSmallType>) -> QArray<QSmallType> {
         self.as_node_ops().evaluate(input)
-    }
-
-    /// Evaluate the padded node natively
-    fn padded_evaluate(&self, input: QArray<QSmallType>) -> QArray<QSmallType> {
-        self.as_node_ops().padded_evaluate(input)
     }
 }
 
@@ -244,6 +213,22 @@ where
     S: CryptographicSponge,
     PCS: PolynomialCommitment<F, Poly<F>, S>,
 {
+    /// Returns the element-wise base-two logarithm of the padded node's
+    /// output shape, i.e. the list of numbers of variables of the associated
+    /// MLE
+    fn padded_shape_log(&self) -> Vec<usize> {
+        self.as_node_ops_snark().padded_shape_log()
+    }
+
+    fn com_num_vars(&self) -> usize {
+        self.as_node_ops_snark().com_num_vars()
+    }
+
+    /// Evaluate the padded node natively
+    fn padded_evaluate(&self, input: QArray<QSmallType>) -> QArray<QSmallType> {
+        self.as_node_ops_snark().padded_evaluate(input)
+    }
+
     /// Commit to the node parameters
     fn commit(
         &self,

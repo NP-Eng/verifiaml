@@ -35,22 +35,7 @@ where
         vec![self.num_units]
     }
 
-    fn padded_shape_log(&self) -> Vec<usize> {
-        vec![self.log_num_units]
-    }
-
-    fn com_num_vars(&self) -> usize {
-        0
-    }
-
     fn evaluate(&self, input: QArray<QSmallType>) -> QArray<QSmallType> {
-        // TODO sanity checks (cf. FC); systematise
-        input.maximum(self.zero_point)
-    }
-
-    // TODO this is the same as evaluate() for now; the two will likely differ
-    // if/when we introduce input size checks
-    fn padded_evaluate(&self, input: QArray<QSmallType>) -> QArray<QSmallType> {
         // TODO sanity checks (cf. FC); systematise
         input.maximum(self.zero_point)
     }
@@ -63,12 +48,27 @@ where
     S: CryptographicSponge,
     PCS: PolynomialCommitment<F, Poly<F>, S>,
 {
+    fn padded_shape_log(&self) -> Vec<usize> {
+        vec![self.log_num_units]
+    }
+
+    fn com_num_vars(&self) -> usize {
+        0
+    }
+
     fn commit(
         &self,
         ck: &PCS::CommitterKey,
         rng: Option<&mut dyn RngCore>,
     ) -> (NodeCommitment<F, S, PCS>, NodeCommitmentState<F, S, PCS>) {
         todo!()
+    }
+
+    // TODO this is the same as evaluate() for now; the two will likely differ
+    // if/when we introduce input size checks
+    fn padded_evaluate(&self, input: QArray<QSmallType>) -> QArray<QSmallType> {
+        // TODO sanity checks (cf. FC); systematise
+        input.maximum(self.zero_point)
     }
 
     fn prove(

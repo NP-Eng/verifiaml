@@ -87,14 +87,6 @@ where
         vec![self.dims.1]
     }
 
-    fn padded_shape_log(&self) -> Vec<usize> {
-        vec![self.padded_dims_log.1]
-    }
-
-    fn com_num_vars(&self) -> usize {
-        self.padded_dims_log.0 + self.padded_dims_log.1
-    }
-
     fn evaluate(&self, input: QArray<QSmallType>) -> QArray<QSmallType> {
         // Sanity checks
         // TODO systematise
@@ -131,6 +123,21 @@ where
         }
 
         requantise_fc(&accumulators, &self.q_info, RoundingScheme::NearestTiesEven).into()
+    }
+}
+
+impl<F, S, PCS> NodeOpsSNARK<F, S, PCS> for FCNode<F, S, PCS>
+where
+    F: PrimeField,
+    S: CryptographicSponge,
+    PCS: PolynomialCommitment<F, Poly<F>, S>,
+{
+    fn padded_shape_log(&self) -> Vec<usize> {
+        vec![self.padded_dims_log.1]
+    }
+
+    fn com_num_vars(&self) -> usize {
+        self.padded_dims_log.0 + self.padded_dims_log.1
     }
 
     // This function naively computes entries which are known to be zero. It is
@@ -177,14 +184,7 @@ where
 
         requantise_fc(&accumulators, &self.q_info, RoundingScheme::NearestTiesEven).into()
     }
-}
 
-impl<F, S, PCS> NodeOpsSNARK<F, S, PCS> for FCNode<F, S, PCS>
-where
-    F: PrimeField,
-    S: CryptographicSponge,
-    PCS: PolynomialCommitment<F, Poly<F>, S>,
-{
     fn commit(
         &self,
         ck: &PCS::CommitterKey,
