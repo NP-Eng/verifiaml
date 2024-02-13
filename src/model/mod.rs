@@ -115,9 +115,12 @@ where
         &self,
         ck: &PCS::CommitterKey,
         rng: Option<&mut dyn RngCore>,
+        s: &mut S,
         node_commitments: Vec<NodeCommitment<F, S, PCS>>,
         input: QArray<QSmallType>,
     ) -> InferenceProof<F, S, PCS> {
+        // TODO Absorb public parameters, ck, node commitments; input too?
+
         let mut output = input.compact_resize(
             self.input_shape
                 .iter()
@@ -131,12 +134,16 @@ where
         let mut output_f = output.values().iter().map(|x| F::from(*x)).collect();
 
         // First pass: computing node values
-        let mut node_values = vec![output_f];
+        // TODO handling F and QSmallType is inelegant; we might want to switch
+        // to F for IO in NodeOps::prove
+        let mut node_values = vec![output];
+        let mut node_values_f = vec![output_f];
 
         for node in &self.nodes {
             output = node.padded_evaluate(output);
             let output_f: Vec<F> = output.values().iter().map(|x| F::from(*x)).collect();
-            node_values.push(output_f);
+            node_values.push(output);
+            node_values_f.push(output_f);
         }
 
         // Committing to node values
@@ -147,7 +154,7 @@ where
             num_vars.push(node.padded_num_units_log());
         }
 
-        let labeled_node_values: Vec<LabeledPolynomial<F, Poly<F>>> = node_values
+        let labeled_node_values: Vec<LabeledPolynomial<F, Poly<F>>> = node_values_f
             .iter()
             .zip(num_vars)
             .into_iter()
@@ -165,6 +172,10 @@ where
         let (node_value_coms, node_value_coms_states) =
             PCS::commit(ck, &labeled_node_values, rng).unwrap();
 
+        // TODO prove all commited IO is in the right range
+
+        let node_proofs = vec![];
+
         // Second pass: proving
         for ((((n, n_com), values), v_coms), v_coms_states) in self
             .nodes
@@ -174,11 +185,46 @@ where
             .zip(node_value_coms.windows(2))
             .zip(node_value_coms_states.windows(2))
         {
-            // let a = n.prove(n_com, values[0], v_coms[0], values[1], v_coms[1]);
+            // TODO prove likely needs to receive the sponge for randomness/FS
+            let a = n.prove(n_com, values[0], v_coms[0], values[1], v_coms[1]);
         }
 
-        unimplemented!();
-        // TODO open output nodes
+        // Opening output
+        // TODO maybe this can be made more efficient by not committing to the
+        // output nodes and instead working witht their plain values all along,
+        // but that would require messy node-by-node handling
+        let output_node = node_values.last().unwrap();
+        let output_node_f = node_values_f.last().unwrap();
+        let output_num_vars = num_vars.last().unwrap();
+        let output_labeled_value = labeled_node_values.last().unwrap();
+        let output_node_com = node_value_coms.last().unwrap();
+        let output_node_com_state: &<PCS as PolynomialCommitment<
+            F,
+            DenseMultilinearExtension<F>,
+            S,
+        >>::CommitmentState = node_value_coms_states.last().unwrap();
+
+        // TODO implement FS; it's possible these have already been absorbed
+        s.absorb_field_elements(output_node_f);
+        let challenge_point = s.squeeze_field_elements(*output_num_vars);
+
+        let opening_proof = PCS::open(
+            ck,
+            [output_labeled_value],
+            [output_node_com],
+            &challenge_point,
+            &mut s,
+            [output_node_com_state],
+            rng,
+        )
+        .unwrap();
+
+        // TODO prove that inputs match input commitments?
+        InferenceProof {
+            outputs: vec![output_node.clone()],
+            node_proofs,
+            opening_proofs: opening_proof.clone(),
+        }
     }
 
     pub(crate) fn commit(
