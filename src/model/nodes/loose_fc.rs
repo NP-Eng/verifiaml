@@ -88,7 +88,7 @@ where
         vec![self.dims.1]
     }
 
-    fn evaluate(&self, input: QArray<QSmallType>) -> QArray<QSmallType> {
+    fn evaluate(&self, input: &QArray<QSmallType>) -> QArray<QSmallType> {
         // Sanity checks
         // TODO systematise
         assert_eq!(
@@ -187,7 +187,7 @@ where
     // meant to exactly mirror the proof-system multiplication proved by the
     // sumcheck argument. Requantisation and shifting are also applied to these
     // trivial entries, as the proof system does.
-    fn padded_evaluate(&self, input: QArray<QSmallType>) -> QArray<QSmallType> {
+    fn padded_evaluate(&self, input: &QArray<QSmallType>) -> QArray<QSmallType> {
         let padded_dims = (1 << self.padded_dims_log.0, 1 << self.padded_dims_log.1);
 
         // Sanity checks
@@ -231,11 +231,11 @@ where
     fn prove(
         &self,
         s: &mut S,
-        node_com: NodeCommitment<F, S, PCS>,
+        node_com: &NodeCommitment<F, S, PCS>,
         input: QArray<QSmallType>,
-        input_com: PCS::Commitment,
+        input_com: &PCS::Commitment,
         output: QArray<QSmallType>,
-        output_com: PCS::Commitment,
+        output_com: &PCS::Commitment,
     ) -> super::NodeProof {
         todo!()
     }

@@ -86,7 +86,7 @@ where
     pub(crate) fn evaluate(&self, input: QArray<QSmallType>) -> QArray<QSmallType> {
         let mut output = input;
         for node in &self.nodes {
-            output = node.evaluate(output);
+            output = node.evaluate(&output);
         }
         output
     }
@@ -104,7 +104,7 @@ where
         );
 
         for node in &self.nodes {
-            output = node.padded_evaluate(output);
+            output = node.padded_evaluate(&output);
         }
 
         // TODO switch to reference in reshape?
@@ -131,12 +131,12 @@ where
 
         let input_num_vars = log2(output.len()) as usize;
 
-        let mut output_f = output.values().iter().map(|x| F::from(*x)).collect();
+        let output_f = output.values().iter().map(|x| F::from(*x)).collect();
 
         // First pass: computing node values
         // TODO handling F and QSmallType is inelegant; we might want to switch
         // to F for IO in NodeOps::prove
-        let mut node_values = vec![output];
+        let mut node_values = vec![output.clone()];
         let mut node_values_f = vec![output_f];
 
         for node in &self.nodes {
@@ -184,6 +184,7 @@ where
         {
             // TODO prove likely needs to receive the sponge for randomness/FS
             let a = n.prove(
+                s,
                 n_com,
                 values[0],
                 l_v_coms[0].commitment(),
@@ -200,28 +201,27 @@ where
         let output_node_f = node_values_f.last().unwrap();
         let output_labeled_value = labeled_node_values.last().unwrap();
         let output_node_com = labeled_node_value_coms.last().unwrap();
-        let output_node_com_state: &<PCS as PolynomialCommitment<
-            F,
-            DenseMultilinearExtension<F>,
-            S,
-        >>::CommitmentState = node_value_coms_states.last().unwrap();
+        let output_node_com_state = node_value_coms_states.last().unwrap();
 
-        // TODO implement FS; it's possible these have already been absorbed
+        // Absorb the plain output and squeeze the challenge point
         s.absorb(output_node_f);
+        let challenge_point = s.squeeze_field_elements(log2(output_node_f.len()) as usize);
 
-        let challenge_point = s.squeeze_field_elements(log2(output_f.len()) as usize);
-
+        // TODO we have to pass rng, not None, but it has been moved before
+        // fix this once we have decided how to handle the cumbersome
+        // Option<&mut rng...>
         let opening_proof = PCS::open(
             ck,
             [output_labeled_value],
             [output_node_com],
             &challenge_point,
-            &mut s,
+            s,
             [output_node_com_state],
-            rng,
+            None,
         )
         .unwrap();
 
+        /** TODO (important) Change output_node to all boundary nodes: first and last **/
         // TODO prove that inputs match input commitments?
         InferenceProof {
             outputs: vec![output_node.clone()],

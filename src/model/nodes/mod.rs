@@ -43,7 +43,7 @@ pub(crate) trait NodeOps {
     }
 
     /// Evaluate the node natively (without padding)
-    fn evaluate(&self, input: QArray<QSmallType>) -> QArray<QSmallType>;
+    fn evaluate(&self, input: &QArray<QSmallType>) -> QArray<QSmallType>;
 }
 
 pub(crate) trait NodeOpsSNARK<F, S, PCS>
@@ -83,7 +83,7 @@ where
     fn com_num_vars(&self) -> usize;
 
     /// Evaluate the padded node natively
-    fn padded_evaluate(&self, input: QArray<QSmallType>) -> QArray<QSmallType>;
+    fn padded_evaluate(&self, input: &QArray<QSmallType>) -> QArray<QSmallType>;
 
     /// Commit to the node parameters
     fn commit(
@@ -96,11 +96,11 @@ where
     fn prove(
         &self,
         s: &mut S,
-        node_com: NodeCommitment<F, S, PCS>,
+        node_com: &NodeCommitment<F, S, PCS>,
         input: QArray<QSmallType>,
-        input_com: PCS::Commitment,
+        input_com: &PCS::Commitment,
         output: QArray<QSmallType>,
-        output_com: PCS::Commitment,
+        output_com: &PCS::Commitment,
     ) -> NodeProof;
 }
 
@@ -203,7 +203,7 @@ where
     }
 
     /// Evaluate the node natively (without padding)
-    fn evaluate(&self, input: QArray<QSmallType>) -> QArray<QSmallType> {
+    fn evaluate(&self, input: &QArray<QSmallType>) -> QArray<QSmallType> {
         self.as_node_ops().evaluate(input)
     }
 }
@@ -226,7 +226,7 @@ where
     }
 
     /// Evaluate the padded node natively
-    fn padded_evaluate(&self, input: QArray<QSmallType>) -> QArray<QSmallType> {
+    fn padded_evaluate(&self, input: &QArray<QSmallType>) -> QArray<QSmallType> {
         self.as_node_ops_snark().padded_evaluate(input)
     }
 
@@ -242,11 +242,11 @@ where
     fn prove(
         &self,
         s: &mut S,
-        node_com: NodeCommitment<F, S, PCS>,
+        node_com: &NodeCommitment<F, S, PCS>,
         input: QArray<QSmallType>,
-        input_com: PCS::Commitment,
+        input_com: &PCS::Commitment,
         output: QArray<QSmallType>,
-        output_com: PCS::Commitment,
+        output_com: &PCS::Commitment,
     ) -> NodeProof {
         self.as_node_ops_snark()
             .prove(s, node_com, input, input_com, output, output_com)
