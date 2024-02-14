@@ -198,9 +198,8 @@ where
         // but that would require messy node-by-node handling
         let output_node = node_values.last().unwrap();
         let output_node_f = node_values_f.last().unwrap();
-        let output_num_vars = num_vars.last().unwrap();
         let output_labeled_value = labeled_node_values.last().unwrap();
-        let output_node_com = node_value_coms.last().unwrap();
+        let output_node_com = labeled_node_value_coms.last().unwrap();
         let output_node_com_state: &<PCS as PolynomialCommitment<
             F,
             DenseMultilinearExtension<F>,
@@ -210,7 +209,7 @@ where
         // TODO implement FS; it's possible these have already been absorbed
         s.absorb(output_node_f);
 
-        let challenge_point = s.squeeze_field_elements(*output_num_vars);
+        let challenge_point = s.squeeze_field_elements(log2(output_f.len()) as usize);
 
         let opening_proof = PCS::open(
             ck,
