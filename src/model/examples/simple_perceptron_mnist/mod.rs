@@ -1,28 +1,60 @@
-use ark_crypto_primitives::sponge::{Absorb, CryptographicSponge};
-use ark_ff::PrimeField;
-use ark_poly_commit::PolynomialCommitment;
 
 use crate::{
     model::{
-        nodes::{fc::FCNode, loose_fc::LooseFCNode, reshape::ReshapeNode, Node},
+        nodes::{loose_fc::LooseFCNode, reshape::ReshapeNode, Node},
         qarray::QArray,
         Model, Poly,
     },
     quantization::{quantise_f32_u8_nne, QSmallType},
 };
 
+use ark_crypto_primitives::{
+    crh::{sha256::Sha256, CRHScheme, TwoToOneCRHScheme},
+    merkle_tree::{ByteDigestConverter, Config},
+    sponge::{poseidon::PoseidonSponge, Absorb, CryptographicSponge},
+};
+use ark_pcs_bench_templates::*;
+use ark_poly::DenseMultilinearExtension;
+
+use ark_bn254::Fr;
+use ark_ff::PrimeField;
+
+use ark_poly_commit::{linear_codes::{LinearCodePCS, MultilinearBrakedown}, PolynomialCommitment};
+use blake2::Blake2s256;
+
 mod input;
 mod parameters;
 
+// Brakedown PCS over BN254
+struct MerkleTreeParams;
+type LeafH = LeafIdentityHasher;
+type CompressH = Sha256;
+impl Config for MerkleTreeParams {
+    type Leaf = Vec<u8>;
+
+    type LeafDigest = <LeafH as CRHScheme>::Output;
+    type LeafInnerDigestConverter = ByteDigestConverter<Self::LeafDigest>;
+    type InnerDigest = <CompressH as TwoToOneCRHScheme>::Output;
+
+    type LeafHash = LeafH;
+    type TwoToOneHash = CompressH;
+}
+
+pub type MLE<F> = DenseMultilinearExtension<F>;
+type MTConfig = MerkleTreeParams;
+type Sponge<F> = PoseidonSponge<F>;
+type ColHasher<F> = FieldToBytesColHasher<F, Blake2s256>;
+type Brakedown<F> = LinearCodePCS<
+    MultilinearBrakedown<F, MTConfig, Sponge<F>, MLE<F>, ColHasher<F>>,
+    F,
+    MLE<F>,
+    Sponge<F>,
+    MTConfig,
+    ColHasher<F>,
+>;
+
 use input::*;
 use parameters::*;
-
-use ark_bn254::{Fr, G1Affine};
-use ark_crypto_primitives::sponge::poseidon::PoseidonSponge;
-use ark_poly_commit::hyrax::HyraxPC;
-
-type Sponge = PoseidonSponge<Fr>;
-type Hyrax254 = HyraxPC<G1Affine, Poly<Fr>, Sponge>;
 
 const INPUT_DIMS: &[usize] = &[28, 28];
 const OUTPUT_DIMS: &[usize] = &[10];
@@ -62,7 +94,7 @@ fn run_simple_perceptron_mnist() {
     let expected_output: Vec<u8> = vec![135, 109, 152, 161, 187, 157, 159, 151, 173, 202];
     /**********************/
 
-    let perceptron = build_simple_perceptron_mnist::<Fr, Sponge, Hyrax254>();
+    let perceptron = build_simple_perceptron_mnist::<Fr, Sponge<Fr>, Brakedown<Fr>>();
 
     let quantised_input: QArray<u8> = input
         .iter()
