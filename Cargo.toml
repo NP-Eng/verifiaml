@@ -23,6 +23,6 @@ ark-ff = { git = "https://github.com/arkworks-rs/algebra/" }
 ark-ec = { git = "https://github.com/arkworks-rs/algebra/" }
 ark-serialize = { git = "https://github.com/arkworks-rs/algebra/" }
 ark-poly = { git = "https://github.com/arkworks-rs/algebra/" }
-ark-poly-commit = { git = "https://github.com/HungryCatsStudio/poly-commit", branch = "hyrax-pcs" }
-ark-crypto-primitives = { git = "https://github.com/arkworks-rs/crypto-primitives" }
+ark-poly-commit = { git = "https://github.com/HungryCatsStudio/poly-commit", branch = "brakedown-com-absorb" }
+ark-crypto-primitives = { git = "https://github.com/HungryCatsStudio/crypto-primitives", branch = "absorb"}
 ark-bn254 = { git = "https://github.com/arkworks-rs/algebra/" }
