@@ -230,6 +230,7 @@ where
 
     fn prove(
         &self,
+        s: &mut S,
         node_com: NodeCommitment<F, S, PCS>,
         input: QArray<QSmallType>,
         input_com: PCS::Commitment,

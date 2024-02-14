@@ -174,16 +174,22 @@ where
         let node_proofs = vec![];
 
         // Second pass: proving
-        for ((((n, n_com), values), v_coms), v_coms_states) in self
+        for ((((n, n_com), values), l_v_coms), v_coms_states) in self
             .nodes
             .iter()
             .zip(node_commitments.iter())
             .zip(node_values.windows(2))
-            .zip(node_value_coms.windows(2))
+            .zip(labeled_node_value_coms.windows(2))
             .zip(node_value_coms_states.windows(2))
         {
             // TODO prove likely needs to receive the sponge for randomness/FS
-            let a = n.prove(n_com, values[0], v_coms[0], values[1], v_coms[1]);
+            let a = n.prove(
+                n_com,
+                values[0],
+                l_v_coms[0].commitment(),
+                values[1],
+                l_v_coms[1].commitment(),
+            );
         }
 
         // Opening output

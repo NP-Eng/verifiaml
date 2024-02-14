@@ -106,6 +106,7 @@ where
 
     fn prove(
         &self,
+        s: &mut S,
         node_com: super::NodeCommitment<F, S, PCS>,
         input: QArray<QSmallType>,
         input_com: PCS::Commitment,

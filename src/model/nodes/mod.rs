@@ -95,6 +95,7 @@ where
     /// Produce a node output proof
     fn prove(
         &self,
+        s: &mut S,
         node_com: NodeCommitment<F, S, PCS>,
         input: QArray<QSmallType>,
         input_com: PCS::Commitment,
@@ -240,6 +241,7 @@ where
 
     fn prove(
         &self,
+        s: &mut S,
         node_com: NodeCommitment<F, S, PCS>,
         input: QArray<QSmallType>,
         input_com: PCS::Commitment,
@@ -247,6 +249,6 @@ where
         output_com: PCS::Commitment,
     ) -> NodeProof {
         self.as_node_ops_snark()
-            .prove(node_com, input, input_com, output, output_com)
+            .prove(s, node_com, input, input_com, output, output_com)
     }
 }
