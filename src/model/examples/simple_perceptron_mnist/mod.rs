@@ -1,4 +1,4 @@
-use ark_crypto_primitives::sponge::CryptographicSponge;
+use ark_crypto_primitives::sponge::{Absorb, CryptographicSponge};
 use ark_ff::PrimeField;
 use ark_poly_commit::PolynomialCommitment;
 
@@ -30,7 +30,7 @@ const OUTPUT_DIMS: &[usize] = &[10];
 // TODO this is incorrect now that we have switched to logs
 fn build_simple_perceptron_mnist<F, S, PCS>() -> Model<F, S, PCS>
 where
-    F: PrimeField,
+    F: PrimeField + Absorb,
     S: CryptographicSponge,
     PCS: PolynomialCommitment<F, Poly<F>, S>,
 {
