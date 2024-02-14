@@ -33,8 +33,9 @@ dependencies = [
 [[package]]
 name = "ark-crypto-primitives"
 version = "0.4.0"
-source = "git+https://github.com/arkworks-rs/crypto-primitives#9f9324b6fa8aeee11d8db3052950e88d16135b40"
+source = "git+https://github.com/HungryCatsStudio/crypto-primitives?branch=absorb#fdc92e2bad35e06187a14ff46425382aa6d5b446"
 dependencies = [
+ "ark-crypto-primitives-macros",
  "ark-ec",
  "ark-ff",
  "ark-relations",
@@ -45,6 +46,16 @@ dependencies = [
  "derivative",
  "digest 0.10.7",
  "sha2",
+]
+
+[[package]]
+name = "ark-crypto-primitives-macros"
+version = "0.4.0"
+source = "git+https://github.com/HungryCatsStudio/crypto-primitives?branch=absorb#fdc92e2bad35e06187a14ff46425382aa6d5b446"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn 2.0.48",
 ]
 
 [[package]]
@@ -132,7 +143,7 @@ dependencies = [
 [[package]]
 name = "ark-poly-commit"
 version = "0.4.0"
-source = "git+https://github.com/HungryCatsStudio/poly-commit?branch=hyrax-pcs#ac4a14c5e7a3486d845229e0ef529ed64457648e"
+source = "git+https://github.com/HungryCatsStudio/poly-commit?branch=brakedown-com-absorb#95fc96c5af94ad3cb6b83a5133810a2954336bc7"
 dependencies = [
  "ark-crypto-primitives",
  "ark-ec",
@@ -140,9 +151,9 @@ dependencies = [
  "ark-poly",
  "ark-serialize",
  "ark-std",
- "blake2 0.10.6",
  "derivative",
  "digest 0.10.7",
+ "num-traits",
 ]
 
 [[package]]
@@ -354,6 +365,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "13e3bf6590cbc649f4d1a3eefc9d5d6eb746f5200ffb04e5e142700b8faa56e7"
 
 [[package]]
+name = "libm"
+version = "0.2.8"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4ec2a862134d2a7d32d7983ddcdd1c4923530833c9f2ea1a44fc5fa473989058"
+
+[[package]]
 name = "num-bigint"
 version = "0.4.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -381,6 +398,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "39e3200413f237f41ab11ad6d161bc7239c84dcb631773ccd7de3dfe4b5c267c"
 dependencies = [
  "autocfg",
+ "libm",
 ]
 
 [[package]]
