@@ -32,7 +32,7 @@ where
     // Proofs of evaluation of each of the model's nodes
     node_proofs: Vec<NodeProof>,
 
-    // Proofs of opening of each of the models output
+    // Proofs of opening of each of the model's outputs
     opening_proofs: PCS::Proof,
 }
 
