@@ -10,7 +10,7 @@ use crate::model::qarray::QArray;
 use crate::model::Poly;
 use crate::quantization::QSmallType;
 
-use super::{NodeOps, NodeOpsSNARK, NodeProof};
+use super::{NodeCommitment, NodeOps, NodeOpsSNARK, NodeProof};
 
 pub(crate) struct ReshapeNode<F, S, PCS>
 where
@@ -35,7 +35,7 @@ where
         self.output_shape.clone()
     }
 
-    fn evaluate(&self, input: QArray<QSmallType>) -> QArray<QSmallType> {
+    fn evaluate(&self, input: &QArray<QSmallType>) -> QArray<QSmallType> {
         // Sanity checks
         // TODO systematise
         assert_eq!(
@@ -67,7 +67,7 @@ where
 
     // TODO I think this might be broken due to the failure of commutativity
     // between product and and nearest-geq-power-of-two
-    fn padded_evaluate(&self, input: QArray<QSmallType>) -> QArray<QSmallType> {
+    fn padded_evaluate(&self, input: &QArray<QSmallType>) -> QArray<QSmallType> {
         let padded_input_shape: Vec<usize> = self
             .padded_input_shape_log
             .iter()
@@ -107,11 +107,11 @@ where
     fn prove(
         &self,
         s: &mut S,
-        node_com: super::NodeCommitment<F, S, PCS>,
+        node_com: &NodeCommitment<F, S, PCS>,
         input: QArray<QSmallType>,
-        input_com: PCS::Commitment,
+        input_com: &PCS::Commitment,
         output: QArray<QSmallType>,
-        output_com: PCS::Commitment,
+        output_com: &PCS::Commitment,
     ) -> NodeProof {
         unimplemented!()
     }
