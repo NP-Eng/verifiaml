@@ -119,7 +119,7 @@ where
         node_commitments: Vec<NodeCommitment<F, S, PCS>>,
         input: QArray<QSmallType>,
     ) -> InferenceProof<F, S, PCS> {
-        // TODO Absorb public parameters, ck, node commitments; input too?
+        // TODO Absorb public parameters into s (to be determined what exactly)
 
         let mut output = input.compact_resize(
             self.input_shape
@@ -147,32 +147,29 @@ where
         }
 
         // Committing to node values
-        // TODO this doesn't change with every iteration, should be precomputed
-        let mut num_vars = vec![input_num_vars];
-
-        for node in self.nodes.iter() {
-            num_vars.push(node.padded_num_units_log());
-        }
-
         let labeled_node_values: Vec<LabeledPolynomial<F, Poly<F>>> = node_values_f
             .iter()
-            .zip(num_vars)
-            .into_iter()
-            .map(|(values, n)|
+            .map(|values|
             // TODO change dummy label once we e.g. have given numbers to the
             // nodes in the model: fc_1, fc_2, relu_1, etc.
             LabeledPolynomial::new(
                 "dummy".to_string(),
-                Poly::from_evaluations_vec(n, values.clone()),
+                Poly::from_evaluations_vec(log2(values.len()) as usize, values.clone()),
                 None,
                 None,
             ))
             .collect();
 
-        let (node_value_coms, node_value_coms_states) =
+        let (labeled_node_value_coms, node_value_coms_states) =
             PCS::commit(ck, &labeled_node_values, rng).unwrap();
 
-        // TODO prove all commited IO is in the right range
+        // Absorb all commitments into the sponge
+        for lcom in labeled_node_value_coms.iter() {
+            s.absorb(lcom.commitment());
+        }
+
+        // TODO Prove that all commited NIOs live in the right range (to be
+        // discussed)
 
         let node_proofs = vec![];
 
