@@ -2,39 +2,19 @@ use ark_std::{log2, rand::RngCore};
 
 use ark_crypto_primitives::sponge::{Absorb, CryptographicSponge};
 use ark_ff::PrimeField;
-use ark_poly::DenseMultilinearExtension;
 use ark_poly_commit::{LabeledPolynomial, PolynomialCommitment};
 
 use crate::model::nodes::{NodeOps, NodeOpsSNARK};
+use crate::proofs::InferenceProof;
+use crate::qarray::QArray;
+use crate::Poly;
 use crate::{model::nodes::Node, quantization::QSmallType};
 
-use self::{
-    nodes::{NodeCommitment, NodeCommitmentState, NodeProof},
-    qarray::QArray,
-};
+use self::nodes::{NodeCommitment, NodeCommitmentState};
 
 mod examples;
-mod nodes;
-mod qarray;
+pub(crate) mod nodes;
 mod reshaping;
-
-pub(crate) type Poly<F> = DenseMultilinearExtension<F>;
-
-pub(crate) struct InferenceProof<F, S, PCS>
-where
-    F: PrimeField,
-    S: CryptographicSponge,
-    PCS: PolynomialCommitment<F, Poly<F>, S>,
-{
-    // Model output tensors
-    outputs: Vec<QArray<QSmallType>>,
-
-    // Proofs of evaluation of each of the model's nodes
-    node_proofs: Vec<NodeProof>,
-
-    // Proofs of opening of each of the model's outputs
-    opening_proofs: Vec<PCS::Proof>,
-}
 
 // TODO change the functions that receive vectors to receive slices instead whenever it makes sense
 
@@ -245,7 +225,7 @@ where
         /* TODO (important) Change output_node to all boundary nodes: first and last */
         // TODO prove that inputs match input commitments?
         InferenceProof {
-            outputs: vec![input_node.clone(), output_node.clone()],
+            openings: vec![input_node.clone(), output_node.clone()],
             node_proofs,
             opening_proofs: vec![input_opening_proof, output_opening_proof],
         }

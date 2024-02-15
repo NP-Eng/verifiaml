@@ -1,10 +1,8 @@
 use crate::{
     model::{
         nodes::{fc::FCNode, loose_fc::LooseFCNode, relu::ReLUNode, reshape::ReshapeNode, Node},
-        qarray::QArray,
         Model, Poly,
-    },
-    quantization::{quantise_f32_u8_nne, QSmallType},
+    }, qarray::QArray, quantization::{quantise_f32_u8_nne, QSmallType}
 };
 
 use ark_crypto_primitives::{

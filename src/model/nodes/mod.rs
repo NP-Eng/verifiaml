@@ -7,6 +7,7 @@ use crate::{
         nodes::{fc::FCNode, relu::ReLUNode},
         CryptographicSponge, Poly,
     },
+    qarray::QArray,
     quantization::QSmallType,
 };
 
@@ -15,8 +16,6 @@ use self::{
     loose_fc::{LooseFCNode, LooseFCNodeCommitment, LooseFCNodeCommitmentState, LooseFCNodeProof},
     reshape::ReshapeNode,
 };
-
-use super::qarray::QArray;
 
 pub(crate) mod fc;
 pub(crate) mod loose_fc;
@@ -131,8 +130,8 @@ where
 {
     FC(FCNodeCommitment<F, S, PCS>),
     LooseFC(LooseFCNodeCommitment<F, S, PCS>),
-    ReLU(()),
-    Reshape(()),
+    ReLU,
+    Reshape,
 }
 
 pub(crate) enum NodeCommitmentState<F, S, PCS>
@@ -143,8 +142,8 @@ where
 {
     FC(FCNodeCommitmentState<F, S, PCS>),
     LooseFC(LooseFCNodeCommitmentState<F, S, PCS>),
-    ReLU(()),
-    Reshape(()),
+    ReLU,
+    Reshape,
 }
 
 // A lot of this overlaps with the NodeOps trait and could be handled more

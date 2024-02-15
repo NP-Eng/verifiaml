@@ -6,8 +6,8 @@ use ark_ff::PrimeField;
 use ark_poly_commit::PolynomialCommitment;
 use ark_std::rand::RngCore;
 
-use crate::model::qarray::QArray;
 use crate::model::Poly;
+use crate::qarray::QArray;
 use crate::quantization::QSmallType;
 
 use super::{NodeCommitment, NodeCommitmentState, NodeOps, NodeOpsSNARK};

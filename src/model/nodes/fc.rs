@@ -6,8 +6,8 @@ use ark_poly_commit::{LabeledPolynomial, PolynomialCommitment};
 use ark_std::log2;
 use ark_std::rand::RngCore;
 
-use crate::model::qarray::QArray;
 use crate::model::Poly;
+use crate::qarray::QArray;
 use crate::quantization::{
     requantise_fc, FCQInfo, QInfo, QLargeType, QScaleType, QSmallType, RoundingScheme,
 };
