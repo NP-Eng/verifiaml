@@ -86,7 +86,7 @@ where
     pub(crate) fn evaluate(&self, input: QArray<QSmallType>) -> QArray<QSmallType> {
         let mut output = input;
         for node in &self.nodes {
-            output = node.evaluate(&output);
+            output = node.evaluate(output);
         }
         output
     }
@@ -104,7 +104,7 @@ where
         );
 
         for node in &self.nodes {
-            output = node.padded_evaluate(&output);
+            output = node.padded_evaluate(output);
         }
 
         // TODO switch to reference in reshape?
@@ -142,7 +142,7 @@ where
         for node in &self.nodes {
             output = node.padded_evaluate(output);
             let output_f: Vec<F> = output.values().iter().map(|x| F::from(*x)).collect();
-            node_values.push(output);
+            node_values.push(output.clone());
             node_values_f.push(output_f);
         }
 
@@ -186,9 +186,9 @@ where
             let a = n.prove(
                 s,
                 n_com,
-                values[0],
+                values[0].clone(),
                 l_v_coms[0].commitment(),
-                values[1],
+                values[1].clone(),
                 l_v_coms[1].commitment(),
             );
         }
