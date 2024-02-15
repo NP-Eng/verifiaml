@@ -35,7 +35,7 @@ where
         self.output_shape.clone()
     }
 
-    fn evaluate(&self, input: &QArray<QSmallType>) -> QArray<QSmallType> {
+    fn evaluate(&self, input: QArray<QSmallType>) -> QArray<QSmallType> {
         // Sanity checks
         // TODO systematise
         assert_eq!(
@@ -67,7 +67,7 @@ where
 
     // TODO I think this might be broken due to the failure of commutativity
     // between product and and nearest-geq-power-of-two
-    fn padded_evaluate(&self, input: &QArray<QSmallType>) -> QArray<QSmallType> {
+    fn padded_evaluate(&self, input: QArray<QSmallType>) -> QArray<QSmallType> {
         let padded_input_shape: Vec<usize> = self
             .padded_input_shape_log
             .iter()

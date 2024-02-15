@@ -35,7 +35,7 @@ where
         vec![self.num_units]
     }
 
-    fn evaluate(&self, input: &QArray<QSmallType>) -> QArray<QSmallType> {
+    fn evaluate(&self, input: QArray<QSmallType>) -> QArray<QSmallType> {
         // TODO sanity checks (cf. FC); systematise
         input.maximum(self.zero_point)
     }
@@ -66,7 +66,7 @@ where
 
     // TODO this is the same as evaluate() for now; the two will likely differ
     // if/when we introduce input size checks
-    fn padded_evaluate(&self, input: &QArray<QSmallType>) -> QArray<QSmallType> {
+    fn padded_evaluate(&self, input: QArray<QSmallType>) -> QArray<QSmallType> {
         // TODO sanity checks (cf. FC); systematise
         input.maximum(self.zero_point)
     }
