@@ -4,12 +4,13 @@ use ark_std::marker::PhantomData;
 use ark_crypto_primitives::sponge::CryptographicSponge;
 use ark_ff::PrimeField;
 use ark_poly_commit::PolynomialCommitment;
+use ark_std::rand::RngCore;
 
 use crate::model::qarray::QArray;
 use crate::model::Poly;
 use crate::quantization::QSmallType;
 
-use super::NodeOps;
+use super::{NodeOps, NodeOpsSNARK, NodeProof};
 
 pub(crate) struct ReshapeNode<F, S, PCS>
 where
@@ -24,21 +25,14 @@ where
     phantom: PhantomData<(F, S, PCS)>,
 }
 
-impl<F, S, PCS> NodeOps<F, S, PCS> for ReshapeNode<F, S, PCS>
+impl<F, S, PCS> NodeOps for ReshapeNode<F, S, PCS>
 where
     F: PrimeField,
     S: CryptographicSponge,
     PCS: PolynomialCommitment<F, Poly<F>, S>,
 {
-    type NodeCommitment = ();
-    type Proof = (); // TODO to decide
-
     fn shape(&self) -> Vec<usize> {
         self.output_shape.clone()
-    }
-
-    fn padded_shape_log(&self) -> Vec<usize> {
-        self.padded_output_shape_log.clone()
     }
 
     fn evaluate(&self, input: QArray<QSmallType>) -> QArray<QSmallType> {
@@ -54,6 +48,21 @@ where
         output.reshape(self.output_shape.clone());
 
         output
+    }
+}
+
+impl<F, S, PCS> NodeOpsSNARK<F, S, PCS> for ReshapeNode<F, S, PCS>
+where
+    F: PrimeField,
+    S: CryptographicSponge,
+    PCS: PolynomialCommitment<F, Poly<F>, S>,
+{
+    fn padded_shape_log(&self) -> Vec<usize> {
+        self.padded_output_shape_log.clone()
+    }
+
+    fn com_num_vars(&self) -> usize {
+        0
     }
 
     // TODO I think this might be broken due to the failure of commutativity
@@ -84,23 +93,25 @@ where
         output
     }
 
-    fn commit(&self) -> Self::NodeCommitment {
-        // TODO assuming we want to make the reshape parameters public info,
-        // no commitment is needed
-        ()
+    fn commit(
+        &self,
+        ck: &PCS::CommitterKey,
+        rng: Option<&mut dyn RngCore>,
+    ) -> (
+        super::NodeCommitment<F, S, PCS>,
+        super::NodeCommitmentState<F, S, PCS>,
+    ) {
+        todo!()
     }
 
     fn prove(
-        node_com: Self::NodeCommitment,
+        &self,
+        node_com: super::NodeCommitment<F, S, PCS>,
         input: QArray<QSmallType>,
         input_com: PCS::Commitment,
         output: QArray<QSmallType>,
         output_com: PCS::Commitment,
-    ) -> Self::Proof {
-        unimplemented!()
-    }
-
-    fn verify(node_com: Self::NodeCommitment, proof: Self::Proof) -> bool {
+    ) -> NodeProof {
         unimplemented!()
     }
 }
