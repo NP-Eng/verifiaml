@@ -3,54 +3,16 @@ use crate::{
         nodes::{fc::FCNode, loose_fc::LooseFCNode, relu::ReLUNode, reshape::ReshapeNode, Node},
         qarray::QArray,
         Model, Poly,
-    },
-    quantization::{quantise_f32_u8_nne, QSmallType},
+    }, pcs_types::Brakedown, quantization::{quantise_f32_u8_nne, QSmallType}
 };
 
-use ark_crypto_primitives::{
-    crh::{sha256::Sha256, CRHScheme, TwoToOneCRHScheme},
-    merkle_tree::{ByteDigestConverter, Config},
-    sponge::{poseidon::PoseidonSponge, Absorb, CryptographicSponge},
-};
-use ark_pcs_bench_templates::*;
-use ark_poly::DenseMultilinearExtension;
-
+use ark_crypto_primitives::sponge::{poseidon::PoseidonSponge, Absorb, CryptographicSponge};
+use ark_poly_commit::PolynomialCommitment;
 use ark_bn254::Fr;
 use ark_ff::PrimeField;
 
-use ark_poly_commit::{linear_codes::{LinearCodePCS, MultilinearBrakedown}, PolynomialCommitment};
-use blake2::Blake2s256;
-
 mod input;
 mod parameters;
-
-// Brakedown PCS over BN254
-struct MerkleTreeParams;
-type LeafH = LeafIdentityHasher;
-type CompressH = Sha256;
-impl Config for MerkleTreeParams {
-    type Leaf = Vec<u8>;
-
-    type LeafDigest = <LeafH as CRHScheme>::Output;
-    type LeafInnerDigestConverter = ByteDigestConverter<Self::LeafDigest>;
-    type InnerDigest = <CompressH as TwoToOneCRHScheme>::Output;
-
-    type LeafHash = LeafH;
-    type TwoToOneHash = CompressH;
-}
-
-pub type MLE<F> = DenseMultilinearExtension<F>;
-type MTConfig = MerkleTreeParams;
-type Sponge<F> = PoseidonSponge<F>;
-type ColHasher<F> = FieldToBytesColHasher<F, Blake2s256>;
-type Brakedown<F> = LinearCodePCS<
-    MultilinearBrakedown<F, MTConfig, Sponge<F>, MLE<F>, ColHasher<F>>,
-    F,
-    MLE<F>,
-    Sponge<F>,
-    MTConfig,
-    ColHasher<F>,
->;
 
 use input::*;
 use parameters::*;
@@ -113,7 +75,7 @@ fn run_two_layer_perceptron_mnist() {
     let expected_output: Vec<u8> = vec![138, 106, 149, 160, 174, 152, 141, 146, 169, 207];
     /**********************/
 
-    let perceptron = build_two_layer_perceptron_mnist::<Fr, Sponge<Fr>, Brakedown<Fr>>();
+    let perceptron = build_two_layer_perceptron_mnist::<Fr, PoseidonSponge<Fr>, Brakedown<Fr>>();
 
     let quantised_input: QArray<u8> = input
         .iter()
