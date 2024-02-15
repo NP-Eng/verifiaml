@@ -1,28 +1,21 @@
-use ark_crypto_primitives::sponge::{Absorb, CryptographicSponge};
-use ark_ff::PrimeField;
-use ark_poly_commit::PolynomialCommitment;
-
 use crate::{
     model::{
         nodes::{fc::FCNode, loose_fc::LooseFCNode, relu::ReLUNode, reshape::ReshapeNode, Node},
         qarray::QArray,
         Model, Poly,
-    },
-    quantization::{quantise_f32_u8_nne, QSmallType},
+    }, pcs_types::Brakedown, quantization::{quantise_f32_u8_nne, QSmallType}
 };
+
+use ark_crypto_primitives::sponge::{poseidon::PoseidonSponge, Absorb, CryptographicSponge};
+use ark_poly_commit::PolynomialCommitment;
+use ark_bn254::Fr;
+use ark_ff::PrimeField;
 
 mod input;
 mod parameters;
 
 use input::*;
 use parameters::*;
-
-use ark_bn254::{Fr, G1Affine};
-use ark_crypto_primitives::sponge::poseidon::PoseidonSponge;
-use ark_poly_commit::hyrax::HyraxPC;
-
-type Sponge = PoseidonSponge<Fr>;
-type Hyrax254 = HyraxPC<G1Affine, Poly<Fr>, Sponge>;
 
 const INPUT_DIMS: &[usize] = &[28, 28];
 const INTER_DIM: usize = 28;
@@ -82,7 +75,7 @@ fn run_two_layer_perceptron_mnist() {
     let expected_output: Vec<u8> = vec![138, 106, 149, 160, 174, 152, 141, 146, 169, 207];
     /**********************/
 
-    let perceptron = build_two_layer_perceptron_mnist::<Fr, Sponge, Hyrax254>();
+    let perceptron = build_two_layer_perceptron_mnist::<Fr, PoseidonSponge<Fr>, Brakedown<Fr>>();
 
     let quantised_input: QArray<u8> = input
         .iter()
