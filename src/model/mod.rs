@@ -33,7 +33,7 @@ where
     node_proofs: Vec<NodeProof>,
 
     // Proofs of opening of each of the model's outputs
-    opening_proofs: PCS::Proof,
+    opening_proofs: Vec<PCS::Proof>,
 }
 
 // TODO change the functions that receive vectors to receive slices instead whenever it makes sense
@@ -129,8 +129,6 @@ where
             0,
         );
 
-        let input_num_vars = log2(output.len()) as usize;
-
         let output_f = output.values().iter().map(|x| F::from(*x)).collect();
 
         // First pass: computing node values
@@ -193,40 +191,63 @@ where
             );
         }
 
-        // Opening output
+        // Opening model IO
         // TODO maybe this can be made more efficient by not committing to the
         // output nodes and instead working witht their plain values all along,
         // but that would require messy node-by-node handling
+        let input_node = node_values.first().unwrap();
+        let input_node_f = node_values_f.first().unwrap();
+        let input_labeled_value = labeled_node_values.first().unwrap();
+        let input_node_com = labeled_node_value_coms.first().unwrap();
+        let input_node_com_state = node_value_coms_states.first().unwrap();
+
         let output_node = node_values.last().unwrap();
         let output_node_f = node_values_f.last().unwrap();
         let output_labeled_value = labeled_node_values.last().unwrap();
         let output_node_com = labeled_node_value_coms.last().unwrap();
         let output_node_com_state = node_value_coms_states.last().unwrap();
 
+        // Absorb the model IO output and squeeze the challenge point
         // Absorb the plain output and squeeze the challenge point
+        s.absorb(input_node_f);
         s.absorb(output_node_f);
-        let challenge_point = s.squeeze_field_elements(log2(output_node_f.len()) as usize);
+        let input_challenge_point = s.squeeze_field_elements(log2(input_node_f.len()) as usize);
+        let output_challenge_point = s.squeeze_field_elements(log2(output_node_f.len()) as usize);
 
         // TODO we have to pass rng, not None, but it has been moved before
         // fix this once we have decided how to handle the cumbersome
         // Option<&mut rng...>
-        let opening_proof = PCS::open(
+        let input_opening_proof = PCS::open(
+            ck,
+            [input_labeled_value],
+            [input_node_com],
+            &input_challenge_point,
+            s,
+            [input_node_com_state],
+            None,
+        )
+        .unwrap();
+
+        // TODO we have to pass rng, not None, but it has been moved before
+        // fix this once we have decided how to handle the cumbersome
+        // Option<&mut rng...>
+        let output_opening_proof = PCS::open(
             ck,
             [output_labeled_value],
             [output_node_com],
-            &challenge_point,
+            &output_challenge_point,
             s,
             [output_node_com_state],
             None,
         )
         .unwrap();
 
-        /** TODO (important) Change output_node to all boundary nodes: first and last **/
+        /* TODO (important) Change output_node to all boundary nodes: first and last */
         // TODO prove that inputs match input commitments?
         InferenceProof {
-            outputs: vec![output_node.clone()],
+            outputs: vec![input_node.clone(), output_node.clone()],
             node_proofs,
-            opening_proofs: opening_proof.clone(),
+            opening_proofs: vec![input_opening_proof, output_opening_proof],
         }
     }
 
