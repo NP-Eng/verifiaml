@@ -78,7 +78,7 @@ where
         rng: Option<&mut dyn RngCore>,
     ) -> (HiddenNode<F, S, PCS>, NodeCommitmentState<F, S, PCS>) {
         (
-            HiddenNode::HiddenReLU(HiddenReLUNode::new(self.num_units, self.zero_point)),
+            HiddenNode::ReLU(HiddenReLUNode::new(self.num_units, self.zero_point)),
             NodeCommitmentState::ReLU,
         )
     }

@@ -193,7 +193,7 @@ where
     ) -> (HiddenNode<F, S, PCS>, NodeCommitmentState<F, S, PCS>) {
         if let (NodeCommitment::LooseFC(com), com_status) = self.commit(ck, rng) {
             (
-                HiddenNode::HiddenLooseFC(HiddenLooseFCNode::new(
+                HiddenNode::LooseFC(HiddenLooseFCNode::new(
                     self.padded_dims_log,
                     self.q_info.clone(),
                     com,

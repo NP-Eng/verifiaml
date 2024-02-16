@@ -67,10 +67,10 @@ where
     S: CryptographicSponge,
     PCS: PolynomialCommitment<F, Poly<F>, S>,
 {
-    HiddenFC(HiddenFCNode<F, S, PCS>),
-    HiddenLooseFC(HiddenLooseFCNode<F, S, PCS>),
-    HiddenReLU(HiddenReLUNode<F, S, PCS>),
-    HiddenReshape(HiddenReshapeNode<F, S, PCS>),
+    FC(HiddenFCNode<F, S, PCS>),
+    LooseFC(HiddenLooseFCNode<F, S, PCS>),
+    ReLU(HiddenReLUNode<F, S, PCS>),
+    Reshape(HiddenReshapeNode<F, S, PCS>),
 }
 
 // A lot of this overlaps with the NodeOps trait and could be handled more
@@ -85,10 +85,10 @@ where
     // Debug
     fn type_name(&self) -> &'static str {
         match self {
-            HiddenNode::HiddenFC(_) => "FC",
-            HiddenNode::HiddenLooseFC(_) => "LooseFC",
-            HiddenNode::HiddenReLU(_) => "ReLU",
-            HiddenNode::HiddenReshape(_) => "Reshape",
+            HiddenNode::FC(_) => "FC",
+            HiddenNode::LooseFC(_) => "LooseFC",
+            HiddenNode::ReLU(_) => "ReLU",
+            HiddenNode::Reshape(_) => "Reshape",
         }
     }
 }
@@ -103,19 +103,19 @@ where
 {
     fn padded_shape_log(&self) -> Vec<usize> {
         match self {
-            HiddenNode::HiddenFC(fc) => fc.padded_shape_log(),
-            HiddenNode::HiddenLooseFC(fc) => fc.padded_shape_log(),
-            HiddenNode::HiddenReLU(r) => r.padded_shape_log(),
-            HiddenNode::HiddenReshape(r) => r.padded_shape_log(),
+            HiddenNode::FC(fc) => fc.padded_shape_log(),
+            HiddenNode::LooseFC(fc) => fc.padded_shape_log(),
+            HiddenNode::ReLU(r) => r.padded_shape_log(),
+            HiddenNode::Reshape(r) => r.padded_shape_log(),
         }
     }
 
     fn verify(&self, vk: &PCS::VerifierKey, proof: NodeProof) -> Result<(), VerificationError> {
         match self {
-            HiddenNode::HiddenFC(fc) => fc.verify(vk, proof),
-            HiddenNode::HiddenLooseFC(fc) => fc.verify(vk, proof),
-            HiddenNode::HiddenReLU(r) => r.verify(vk, proof),
-            HiddenNode::HiddenReshape(r) => r.verify(vk, proof),
+            HiddenNode::FC(fc) => fc.verify(vk, proof),
+            HiddenNode::LooseFC(fc) => fc.verify(vk, proof),
+            HiddenNode::ReLU(r) => r.verify(vk, proof),
+            HiddenNode::Reshape(r) => r.verify(vk, proof),
         }
     }
 }

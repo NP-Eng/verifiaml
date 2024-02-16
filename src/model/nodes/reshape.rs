@@ -111,7 +111,7 @@ where
         rng: Option<&mut dyn RngCore>,
     ) -> (HiddenNode<F, S, PCS>, NodeCommitmentState<F, S, PCS>) {
         (
-            HiddenNode::HiddenReshape(HiddenReshapeNode::new(
+            HiddenNode::Reshape(HiddenReshapeNode::new(
                 self.input_shape.clone(),
                 self.output_shape.clone(),
             )),
