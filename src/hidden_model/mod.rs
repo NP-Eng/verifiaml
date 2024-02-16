@@ -5,7 +5,10 @@ use ark_ff::PrimeField;
 use ark_poly::DenseMultilinearExtension;
 use ark_poly_commit::{LabeledPolynomial, PolynomialCommitment};
 
-use crate::{error::VerificationError, proofs::InferenceProof, Poly};
+use crate::{
+    error::VerificationError, hidden_model::hidden_nodes::HiddenNodeOps, proofs::InferenceProof,
+    Poly,
+};
 
 use self::hidden_nodes::HiddenNode;
 
@@ -21,8 +24,8 @@ where
     S: CryptographicSponge,
     PCS: PolynomialCommitment<F, Poly<F>, S>,
 {
-    input_shape: Vec<usize>,
-    output_shape: Vec<usize>,
+    input_shape_log: Vec<usize>,
+    output_shape_log: Vec<usize>,
     nodes: Vec<HiddenNode<F, S, PCS>>,
 }
 
@@ -32,6 +35,17 @@ where
     S: CryptographicSponge,
     PCS: PolynomialCommitment<F, Poly<F>, S>,
 {
+    pub(crate) fn new(input_shape_log: Vec<usize>, nodes: Vec<HiddenNode<F, S, PCS>>) -> Self {
+        // An empty model would cause problems later on
+        assert!(!nodes.is_empty(), "A model cannot have no nodes",);
+
+        Self {
+            input_shape_log,
+            output_shape_log: nodes.last().unwrap().padded_shape_log(),
+            nodes,
+        }
+    }
+
     // pub(crate) fn verify_inference(
     //     &self,
     //     vk: &PCS::VerifierKey,

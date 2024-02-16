@@ -237,9 +237,19 @@ where
         ck: &PCS::CommitterKey,
         rng: Option<&mut dyn RngCore>,
     ) -> (HiddenModel<F, S, PCS>, Vec<NodeCommitmentState<F, S, PCS>>) {
-        // TODO blindly passing None, likely need to change to get hiding
+        // TODO we're blindly passing None because of known the typing issues,
+        // but randomness will lileky be needed
+        let (hidden_nodes, com_states) = self.nodes.iter().map(|n| n.hide(ck, None)).unzip();
 
-        unimplemented!()
-        // self.nodes.iter().map(|n| n.commit(ck, None)).collect()
+        (
+            HiddenModel::new(
+                self.input_shape
+                    .iter()
+                    .map(|x| x.next_power_of_two())
+                    .collect(),
+                hidden_nodes,
+            ),
+            com_states,
+        )
     }
 }
