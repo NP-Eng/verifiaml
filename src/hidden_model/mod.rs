@@ -46,6 +46,10 @@ where
         }
     }
 
+    pub(crate) fn get_nodes(&self) -> &Vec<HiddenNode<F, S, PCS>> {
+        &self.nodes
+    }
+
     // pub(crate) fn verify_inference(
     //     &self,
     //     vk: &PCS::VerifierKey,

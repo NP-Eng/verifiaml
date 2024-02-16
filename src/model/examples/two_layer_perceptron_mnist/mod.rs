@@ -1,5 +1,5 @@
 use crate::{
-    model::{
+    hidden_model::hidden_nodes::HiddenNode, model::{
         nodes::{fc::FCNode, loose_fc::LooseFCNode, relu::ReLUNode, reshape::ReshapeNode, Node},
         Model, Poly,
     }, qarray::QArray, quantization::{quantise_f32_u8_nne, QSmallType}
@@ -17,6 +17,7 @@ use ark_bn254::Fr;
 use ark_ff::PrimeField;
 
 use ark_poly_commit::{linear_codes::{LinearCodePCS, MultilinearBrakedown}, PolynomialCommitment};
+use ark_std::test_rng;
 use blake2::Blake2s256;
 
 mod input;
@@ -127,4 +128,24 @@ fn run_two_layer_perceptron_mnist() {
 
     println!("Output: {:?}", output_u8.values());
     assert_eq!(output_u8.move_values(), expected_output);
+}
+
+#[test]
+fn hide_two_layer_perceptron_mnist() {
+    
+    let perceptron = build_two_layer_perceptron_mnist::<Fr, Sponge<Fr>, Brakedown<Fr>>();
+
+    let mut rng = test_rng();
+    let (ck, _) = perceptron.setup_keys(&mut rng).unwrap();
+
+    let (hidden_model, _) = perceptron.hide(&ck, Some(&mut rng));
+
+    let hidden_nodes = hidden_model.get_nodes();
+
+    assert!(hidden_nodes.len() == 4);
+
+    assert!(matches!(hidden_nodes[0], HiddenNode::Reshape(_)));
+    assert!(matches!(hidden_nodes[1], HiddenNode::LooseFC(_)));
+    assert!(matches!(hidden_nodes[2], HiddenNode::ReLU(_)));
+    assert!(matches!(hidden_nodes[3], HiddenNode::FC(_)));
 }
