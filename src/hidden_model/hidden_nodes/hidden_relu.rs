@@ -41,7 +41,7 @@ where
     PCS: PolynomialCommitment<F, Poly<F>, S>,
 {
     fn padded_shape_log(&self) -> Vec<usize> {
-        unimplemented!()
+        vec![self.log_num_units]
     }
 
     fn verify(&self, vk: &PCS::VerifierKey, proof: NodeProof) -> Result<(), VerificationError> {
