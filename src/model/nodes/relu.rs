@@ -6,9 +6,10 @@ use ark_ff::PrimeField;
 use ark_poly_commit::PolynomialCommitment;
 use ark_std::rand::RngCore;
 
-use crate::model::Poly;
+use crate::hidden_model::hidden_nodes::hidden_relu::HiddenReLUNode;
 use crate::qarray::QArray;
 use crate::quantization::QSmallType;
+use crate::{hidden_model::hidden_nodes::HiddenNode, model::Poly};
 
 use super::{NodeCommitment, NodeCommitmentState, NodeOps, NodeOpsSNARK};
 
@@ -69,6 +70,17 @@ where
     fn padded_evaluate(&self, input: QArray<QSmallType>) -> QArray<QSmallType> {
         // TODO sanity checks (cf. FC); systematise
         input.maximum(self.zero_point)
+    }
+
+    fn hide(
+        &self,
+        ck: &PCS::CommitterKey,
+        rng: Option<&mut dyn RngCore>,
+    ) -> (HiddenNode<F, S, PCS>, NodeCommitmentState<F, S, PCS>) {
+        (
+            HiddenNode::HiddenReLU(HiddenReLUNode::new(self.num_units, self.zero_point)),
+            NodeCommitmentState::ReLU,
+        )
     }
 
     fn prove(

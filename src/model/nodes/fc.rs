@@ -6,6 +6,8 @@ use ark_poly_commit::{LabeledPolynomial, PolynomialCommitment};
 use ark_std::log2;
 use ark_std::rand::RngCore;
 
+use crate::hidden_model::hidden_nodes::hidden_fc::HiddenFCNode;
+use crate::hidden_model::hidden_nodes::HiddenNode;
 use crate::model::Poly;
 use crate::qarray::QArray;
 use crate::quantization::{
@@ -223,6 +225,30 @@ where
                 bias_com_state: coms.1[1].clone(),
             }),
         )
+    }
+
+    fn hide(
+        &self,
+        ck: &PCS::CommitterKey,
+        rng: Option<&mut dyn RngCore>,
+    ) -> (HiddenNode<F, S, PCS>, NodeCommitmentState<F, S, PCS>) {
+        if let (NodeCommitment::FC(com), com_status) = self.commit(ck, rng) {
+            (
+                HiddenNode::HiddenFC(HiddenFCNode::new(
+                    self.padded_dims_log,
+                    self.q_info.clone(),
+                    com,
+                )),
+                com_status,
+            )
+        } else {
+            // TODO it's possible there's a better design for this
+            // We know this line will never be reached, as self.commit will
+            // always return the FC variant when called on an FC node
+            // However, we are forced to wrap the FCNodeCommitment in a
+            // NodeCommitment::FC to satisfy the trait method signature
+            panic!()
+        }
     }
 
     fn prove(

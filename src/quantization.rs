@@ -5,6 +5,7 @@ pub(crate) type QScaleType = f32; // type for quantisation scales
 pub(crate) type QScaleComputationType = f64; // larger precision type to compute the requantisation scale in some schemes
 pub(crate) type QZeroPointType = QSmallType; // the quantisation zero-point has the same type as the output
 
+#[derive(Clone)]
 pub(crate) struct QInfo {
     pub(super) scale: QScaleType,
     pub(crate) zero_point: QZeroPointType,
@@ -13,6 +14,7 @@ pub(crate) struct QInfo {
 // TODO: this will probably change to inference-ready requantisation info
 // Even what is being done now could be optimised by precomputing outside the
 // evaluate function
+#[derive(Clone)]
 pub(crate) struct FCQInfo {
     pub(crate) input_info: QInfo,
     pub(crate) weight_info: QInfo,

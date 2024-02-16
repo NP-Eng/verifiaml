@@ -9,7 +9,7 @@ use crate::{error::VerificationError, proofs::InferenceProof, Poly};
 
 use self::hidden_nodes::HiddenNode;
 
-mod hidden_nodes;
+pub(crate) mod hidden_nodes;
 
 // TODO change the functions that receive vectors to receive slices instead whenever it makes sense
 

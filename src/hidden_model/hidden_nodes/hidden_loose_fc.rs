@@ -22,6 +22,25 @@ where
     com: LooseFCNodeCommitment<F, S, PCS>,
 }
 
+impl<F, S, PCS> HiddenLooseFCNode<F, S, PCS>
+where
+    F: PrimeField,
+    S: CryptographicSponge,
+    PCS: PolynomialCommitment<F, Poly<F>, S>,
+{
+    pub(crate) fn new(
+        padded_dims_log: (usize, usize),
+        q_info: FCQInfo,
+        com: LooseFCNodeCommitment<F, S, PCS>,
+    ) -> Self {
+        Self {
+            padded_dims_log,
+            q_info,
+            com,
+        }
+    }
+}
+
 impl<F, S, PCS> HiddenNodeOps<F, S, PCS> for HiddenLooseFCNode<F, S, PCS>
 where
     F: PrimeField,

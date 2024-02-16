@@ -19,6 +19,24 @@ where
     phantom: PhantomData<(F, S, PCS)>,
 }
 
+impl<F, S, PCS> HiddenReshapeNode<F, S, PCS>
+where
+    F: PrimeField,
+    S: CryptographicSponge,
+    PCS: PolynomialCommitment<F, Poly<F>, S>,
+{
+    pub(crate) fn new(
+        padded_input_shape_log: Vec<usize>,
+        padded_output_shape_log: Vec<usize>,
+    ) -> Self {
+        Self {
+            padded_input_shape_log,
+            padded_output_shape_log,
+            phantom: PhantomData,
+        }
+    }
+}
+
 impl<F, S, PCS> HiddenNodeOps<F, S, PCS> for HiddenReshapeNode<F, S, PCS>
 where
     F: PrimeField,

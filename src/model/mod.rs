@@ -4,6 +4,7 @@ use ark_crypto_primitives::sponge::{Absorb, CryptographicSponge};
 use ark_ff::PrimeField;
 use ark_poly_commit::{LabeledPolynomial, PolynomialCommitment};
 
+use crate::hidden_model::HiddenModel;
 use crate::model::nodes::{NodeOps, NodeOpsSNARK};
 use crate::proofs::InferenceProof;
 use crate::qarray::QArray;
@@ -231,12 +232,14 @@ where
         }
     }
 
-    pub(crate) fn commit(
+    pub(crate) fn hide(
         &self,
         ck: &PCS::CommitterKey,
         rng: Option<&mut dyn RngCore>,
-    ) -> Vec<(NodeCommitment<F, S, PCS>, NodeCommitmentState<F, S, PCS>)> {
+    ) -> (HiddenModel<F, S, PCS>, Vec<NodeCommitmentState<F, S, PCS>>) {
         // TODO blindly passing None, likely need to change to get hiding
-        self.nodes.iter().map(|n| n.commit(ck, None)).collect()
+
+        unimplemented!()
+        // self.nodes.iter().map(|n| n.commit(ck, None)).collect()
     }
 }

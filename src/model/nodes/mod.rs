@@ -3,6 +3,7 @@ use ark_poly_commit::PolynomialCommitment;
 use ark_std::rand::RngCore;
 
 use crate::{
+    hidden_model::{hidden_nodes::HiddenNode, HiddenModel},
     model::{
         nodes::{fc::FCNode, relu::ReLUNode},
         CryptographicSponge, Poly,
@@ -90,6 +91,14 @@ where
         ck: &PCS::CommitterKey,
         rng: Option<&mut dyn RngCore>,
     ) -> (NodeCommitment<F, S, PCS>, NodeCommitmentState<F, S, PCS>);
+
+    /// Hide this node, committing to its parameters and returning an opaque
+    /// node with public information only
+    fn hide(
+        &self,
+        ck: &PCS::CommitterKey,
+        rng: Option<&mut dyn RngCore>,
+    ) -> (HiddenNode<F, S, PCS>, NodeCommitmentState<F, S, PCS>);
 
     /// Produce a node output proof
     fn prove(
@@ -213,9 +222,6 @@ where
     S: CryptographicSponge,
     PCS: PolynomialCommitment<F, Poly<F>, S>,
 {
-    /// Returns the element-wise base-two logarithm of the padded node's
-    /// output shape, i.e. the list of numbers of variables of the associated
-    /// MLE
     fn padded_shape_log(&self) -> Vec<usize> {
         self.as_node_ops_snark().padded_shape_log()
     }
@@ -224,18 +230,24 @@ where
         self.as_node_ops_snark().com_num_vars()
     }
 
-    /// Evaluate the padded node natively
     fn padded_evaluate(&self, input: QArray<QSmallType>) -> QArray<QSmallType> {
         self.as_node_ops_snark().padded_evaluate(input)
     }
 
-    /// Commit to the node parameters
     fn commit(
         &self,
         ck: &PCS::CommitterKey,
         rng: Option<&mut dyn RngCore>,
     ) -> (NodeCommitment<F, S, PCS>, NodeCommitmentState<F, S, PCS>) {
         self.as_node_ops_snark().commit(ck, rng)
+    }
+
+    fn hide(
+        &self,
+        ck: &PCS::CommitterKey,
+        rng: Option<&mut dyn RngCore>,
+    ) -> (HiddenNode<F, S, PCS>, NodeCommitmentState<F, S, PCS>) {
+        self.as_node_ops_snark().hide(ck, rng)
     }
 
     fn prove(

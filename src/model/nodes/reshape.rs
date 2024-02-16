@@ -6,11 +6,12 @@ use ark_ff::PrimeField;
 use ark_poly_commit::PolynomialCommitment;
 use ark_std::rand::RngCore;
 
-use crate::model::Poly;
+use crate::hidden_model::hidden_nodes::hidden_reshape::HiddenReshapeNode;
 use crate::qarray::QArray;
 use crate::quantization::QSmallType;
+use crate::{hidden_model::hidden_nodes::HiddenNode, model::Poly};
 
-use super::{NodeCommitment, NodeOps, NodeOpsSNARK, NodeProof};
+use super::{NodeCommitment, NodeCommitmentState, NodeOps, NodeOpsSNARK, NodeProof};
 
 pub(crate) struct ReshapeNode<F, S, PCS>
 where
@@ -102,6 +103,20 @@ where
         super::NodeCommitmentState<F, S, PCS>,
     ) {
         todo!()
+    }
+
+    fn hide(
+        &self,
+        ck: &PCS::CommitterKey,
+        rng: Option<&mut dyn RngCore>,
+    ) -> (HiddenNode<F, S, PCS>, NodeCommitmentState<F, S, PCS>) {
+        (
+            HiddenNode::HiddenReshape(HiddenReshapeNode::new(
+                self.input_shape.clone(),
+                self.output_shape.clone(),
+            )),
+            super::NodeCommitmentState::Reshape,
+        )
     }
 
     fn prove(

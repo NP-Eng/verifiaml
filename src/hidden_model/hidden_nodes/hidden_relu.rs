@@ -19,6 +19,21 @@ where
     phantom: PhantomData<(F, S, PCS)>,
 }
 
+impl<F, S, PCS> HiddenReLUNode<F, S, PCS>
+where
+    F: PrimeField,
+    S: CryptographicSponge,
+    PCS: PolynomialCommitment<F, Poly<F>, S>,
+{
+    pub(crate) fn new(log_num_units: usize, zero_point: QSmallType) -> Self {
+        Self {
+            log_num_units,
+            zero_point,
+            phantom: PhantomData,
+        }
+    }
+}
+
 impl<F, S, PCS> HiddenNodeOps<F, S, PCS> for HiddenReLUNode<F, S, PCS>
 where
     F: PrimeField,
