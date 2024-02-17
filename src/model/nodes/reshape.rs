@@ -10,7 +10,7 @@ use crate::model::qarray::QArray;
 use crate::model::Poly;
 use crate::quantization::QSmallType;
 
-use super::{NodeOps, NodeOpsSNARK, NodeProof};
+use super::{NodeOps, NodeOpsSNARK, NodeProof, NodeType};
 
 pub(crate) struct ReshapeNode<F, S, PCS>
 where
@@ -22,6 +22,7 @@ where
     output_shape: Vec<usize>,
     padded_input_shape_log: Vec<usize>,
     padded_output_shape_log: Vec<usize>,
+    node_type: NodeType,
     phantom: PhantomData<(F, S, PCS)>,
 }
 
@@ -122,7 +123,11 @@ where
     S: CryptographicSponge,
     PCS: PolynomialCommitment<F, Poly<F>, S>,
 {
-    pub(crate) fn new(input_shape: Vec<usize>, output_shape: Vec<usize>) -> Self {
+    pub(crate) fn new(
+        input_shape: Vec<usize>,
+        output_shape: Vec<usize>,
+        node_type: NodeType,
+    ) -> Self {
         assert_eq!(
             input_shape.iter().product::<usize>(),
             output_shape.iter().product::<usize>(),
@@ -144,6 +149,7 @@ where
             output_shape,
             padded_input_shape_log,
             padded_output_shape_log,
+            node_type,
             phantom: PhantomData,
         }
     }

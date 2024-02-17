@@ -1,15 +1,17 @@
 use crate::{
     model::{
-        nodes::{loose_fc::LooseFCNode, reshape::ReshapeNode, Node},
+        nodes::{loose_fc::LooseFCNode, reshape::ReshapeNode, Node, NodeType},
         qarray::QArray,
         Model, Poly,
-    }, pcs_types::Brakedown, quantization::{quantise_f32_u8_nne, QSmallType}
+    },
+    pcs_types::Brakedown,
+    quantization::{quantise_f32_u8_nne, QSmallType},
 };
 
-use ark_crypto_primitives::sponge::{poseidon::PoseidonSponge, Absorb, CryptographicSponge};
-use ark_poly_commit::PolynomialCommitment;
 use ark_bn254::Fr;
+use ark_crypto_primitives::sponge::{poseidon::PoseidonSponge, Absorb, CryptographicSponge};
 use ark_ff::PrimeField;
+use ark_poly_commit::PolynomialCommitment;
 
 mod input;
 mod parameters;
@@ -27,10 +29,10 @@ where
     S: CryptographicSponge,
     PCS: PolynomialCommitment<F, Poly<F>, S>,
 {
-
     let flat_dim = INPUT_DIMS.iter().product();
 
-    let reshape: ReshapeNode<F, S, PCS> = ReshapeNode::new(INPUT_DIMS.to_vec(), vec![flat_dim]);
+    let reshape: ReshapeNode<F, S, PCS> =
+        ReshapeNode::new(INPUT_DIMS.to_vec(), vec![flat_dim], NodeType::Input);
 
     let lfc: LooseFCNode<F, S, PCS> = LooseFCNode::new(
         WEIGHTS.to_vec(),
@@ -43,9 +45,13 @@ where
         Z_W,
         S_O,
         Z_O,
+        NodeType::Output,
     );
 
-    Model::new(INPUT_DIMS.to_vec(), vec![Node::Reshape(reshape), Node::LooseFC(lfc)])
+    Model::new(
+        INPUT_DIMS.to_vec(),
+        vec![Node::Reshape(reshape), Node::LooseFC(lfc)],
+    )
 }
 
 #[test]
