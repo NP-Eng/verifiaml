@@ -134,18 +134,18 @@ where
         // First pass: computing node values
         // TODO handling F and QSmallType is inelegant; we might want to switch
         // to F for IO in NodeOps::prove
-        let mut node_values = vec![output.clone()];
-        let mut node_values_f = vec![output_f];
+        let mut node_outputs = vec![output.clone()];
+        let mut node_outputs_f = vec![output_f];
 
         for node in &self.nodes {
             output = node.padded_evaluate(output);
             let output_f: Vec<F> = output.values().iter().map(|x| F::from(*x)).collect();
-            node_values.push(output.clone());
-            node_values_f.push(output_f);
+            node_outputs.push(output.clone());
+            node_outputs_f.push(output_f);
         }
 
-        // Committing to node values
-        let labeled_node_values: Vec<LabeledPolynomial<F, Poly<F>>> = node_values_f
+        // Committing to node outputs as MLEs (individual per node for now)
+        let output_mles: Vec<LabeledPolynomial<F, Poly<F>>> = node_outputs_f
             .iter()
             .map(|values|
             // TODO change dummy label once we e.g. have given numbers to the
@@ -158,8 +158,7 @@ where
             ))
             .collect();
 
-        let (labeled_node_value_coms, node_value_coms_states) =
-            PCS::commit(ck, &labeled_node_values, rng).unwrap();
+        let (node_coms, node_com_states) = PCS::commit(ck, &output_mles, rng).unwrap();
 
         // Absorb all commitments into the sponge
         sponge.absorb(&node_coms);
@@ -170,18 +169,18 @@ where
         let node_proofs = vec![];
 
         // Second pass: proving
-        for ((((n, n_com), values), l_v_coms), v_coms_states) in self
+        for ((((node, node_com), values), l_v_coms), v_coms_states) in self
             .nodes
             .iter()
             .zip(node_commitments.iter())
-            .zip(node_values.windows(2))
-            .zip(labeled_node_value_coms.windows(2))
-            .zip(node_value_coms_states.windows(2))
+            .zip(node_outputs.windows(2))
+            .zip(node_coms.windows(2))
+            .zip(node_com_states.windows(2))
         {
             // TODO prove likely needs to receive the sponge for randomness/FS
-            let a = n.prove(
+            let a = node.prove(
                 sponge,
-                n_com,
+                node_com,
                 values[0].clone(),
                 l_v_coms[0].commitment(),
                 values[1].clone(),
@@ -193,17 +192,17 @@ where
         // TODO maybe this can be made more efficient by not committing to the
         // output nodes and instead working witht their plain values all along,
         // but that would require messy node-by-node handling
-        let input_node = node_values.first().unwrap();
-        let input_node_f = node_values_f.first().unwrap();
-        let input_labeled_value = labeled_node_values.first().unwrap();
-        let input_node_com = labeled_node_value_coms.first().unwrap();
-        let input_node_com_state = node_value_coms_states.first().unwrap();
+        let input_node = node_outputs.first().unwrap();
+        let input_node_f = node_outputs_f.first().unwrap();
+        let input_labeled_value = output_mles.first().unwrap();
+        let input_node_com = node_coms.first().unwrap();
+        let input_node_com_state = node_com_states.first().unwrap();
 
-        let output_node = node_values.last().unwrap();
-        let output_node_f = node_values_f.last().unwrap();
-        let output_labeled_value = labeled_node_values.last().unwrap();
-        let output_node_com = labeled_node_value_coms.last().unwrap();
-        let output_node_com_state = node_value_coms_states.last().unwrap();
+        let output_node = node_outputs.last().unwrap();
+        let output_node_f = node_outputs_f.last().unwrap();
+        let output_labeled_value = output_mles.last().unwrap();
+        let output_node_com = node_coms.last().unwrap();
+        let output_node_com_state = node_com_states.last().unwrap();
 
         // Absorb the model IO output and squeeze the challenge point
         // Absorb the plain output and squeeze the challenge point
