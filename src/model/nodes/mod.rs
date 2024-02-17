@@ -25,7 +25,7 @@ pub(crate) mod reshape;
 
 // mod parser;
 
-#[derive(Default)]
+#[derive(Default, PartialEq, Eq, Debug)]
 pub enum NodeType {
     Input,
     Output,

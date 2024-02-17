@@ -129,6 +129,12 @@ where
         node_type: NodeType,
     ) -> Self {
         assert_eq!(
+            node_type,
+            NodeType::Input,
+            "Currently reshape is supported for input nodes only."
+        );
+
+        assert_eq!(
             input_shape.iter().product::<usize>(),
             output_shape.iter().product::<usize>(),
             "Input and output shapes have a different number of entries",
