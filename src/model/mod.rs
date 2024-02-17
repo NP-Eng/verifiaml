@@ -115,7 +115,7 @@ where
         &self,
         ck: &PCS::CommitterKey,
         rng: Option<&mut dyn RngCore>,
-        s: &mut S,
+        sponge: &mut S,
         node_commitments: Vec<NodeCommitment<F, S, PCS>>,
         input: QArray<QSmallType>,
     ) -> InferenceProof<F, S, PCS> {
@@ -162,9 +162,7 @@ where
             PCS::commit(ck, &labeled_node_values, rng).unwrap();
 
         // Absorb all commitments into the sponge
-        for lcom in labeled_node_value_coms.iter() {
-            s.absorb(lcom.commitment());
-        }
+        sponge.absorb(&node_coms);
 
         // TODO Prove that all commited NIOs live in the right range (to be
         // discussed)
@@ -182,7 +180,7 @@ where
         {
             // TODO prove likely needs to receive the sponge for randomness/FS
             let a = n.prove(
-                s,
+                sponge,
                 n_com,
                 values[0].clone(),
                 l_v_coms[0].commitment(),
@@ -209,10 +207,12 @@ where
 
         // Absorb the model IO output and squeeze the challenge point
         // Absorb the plain output and squeeze the challenge point
-        s.absorb(input_node_f);
-        s.absorb(output_node_f);
-        let input_challenge_point = s.squeeze_field_elements(log2(input_node_f.len()) as usize);
-        let output_challenge_point = s.squeeze_field_elements(log2(output_node_f.len()) as usize);
+        sponge.absorb(input_node_f);
+        sponge.absorb(output_node_f);
+        let input_challenge_point =
+            sponge.squeeze_field_elements(log2(input_node_f.len()) as usize);
+        let output_challenge_point =
+            sponge.squeeze_field_elements(log2(output_node_f.len()) as usize);
 
         // TODO we have to pass rng, not None, but it has been moved before
         // fix this once we have decided how to handle the cumbersome
@@ -222,7 +222,7 @@ where
             [input_labeled_value],
             [input_node_com],
             &input_challenge_point,
-            s,
+            sponge,
             [input_node_com_state],
             None,
         )
@@ -236,7 +236,7 @@ where
             [output_labeled_value],
             [output_node_com],
             &output_challenge_point,
-            s,
+            sponge,
             [output_node_com_state],
             None,
         )
