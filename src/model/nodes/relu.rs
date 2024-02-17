@@ -10,7 +10,7 @@ use crate::model::qarray::QArray;
 use crate::model::Poly;
 use crate::quantization::QSmallType;
 
-use super::{NodeCommitment, NodeCommitmentState, NodeOps, NodeOpsSNARK};
+use super::{Node, NodeCommitment, NodeCommitmentState, NodeOps, NodeOpsSNARK, NodeType};
 
 // Rectified linear unit node performing x |-> max(0, x).
 pub(crate) struct ReLUNode<F, S, PCS>
@@ -22,6 +22,7 @@ where
     num_units: usize,
     log_num_units: usize,
     zero_point: QSmallType,
+    node_type: NodeType,
     phantom: PhantomData<(F, S, PCS)>,
 }
 
@@ -89,13 +90,14 @@ where
     S: CryptographicSponge,
     PCS: PolynomialCommitment<F, Poly<F>, S>,
 {
-    pub(crate) fn new(num_units: usize, zero_point: QSmallType) -> Self {
+    pub(crate) fn new(num_units: usize, zero_point: QSmallType, node_type: NodeType) -> Self {
         let log_num_units = log2(num_units.next_power_of_two()) as usize;
 
         Self {
             num_units,
             log_num_units,
             zero_point,
+            node_type,
             phantom: PhantomData,
         }
     }

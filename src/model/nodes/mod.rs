@@ -25,9 +25,13 @@ pub(crate) mod reshape;
 
 // mod parser;
 
-// TODO: batched methods (e.g. for multiple evaluations)
-// TODO: issue: missing info about size of the next output? Or reduplicate it?
-// TODO way to handle generics more elegantly? or perhaps polynomials can be made ML directly?
+#[derive(Default, PartialEq, Eq, Debug)]
+pub enum NodeType {
+    Input,
+    Output,
+    #[default]
+    Middle,
+}
 
 /// A node of the model including its transition function to the next node(s).
 /// It stores information about the transition (such as a matrix and bias, if

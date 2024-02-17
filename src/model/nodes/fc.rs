@@ -13,7 +13,7 @@ use crate::quantization::{
 };
 use crate::{Commitment, CommitmentState};
 
-use super::{NodeCommitment, NodeCommitmentState, NodeOps, NodeOpsSNARK, NodeProof};
+use super::{NodeCommitment, NodeCommitmentState, NodeOps, NodeOpsSNARK, NodeProof, NodeType};
 
 // TODO convention: input, bias and output are rows, the op is vec-by-mat (in that order)
 
@@ -33,6 +33,8 @@ pub(crate) struct FCNode<F, S, PCS> {
     padded_dims_log: (usize, usize),
     /// Quantisation info used for both result computation and requantisation
     q_info: FCQInfo,
+
+    node_type: NodeType,
 
     phantom: PhantomData<(F, S, PCS)>,
 }
@@ -253,6 +255,7 @@ where
         z_w: QSmallType,
         s_o: QScaleType,
         z_o: QSmallType,
+        node_type: NodeType,
     ) -> Self {
         assert_eq!(
             weights.len(),
@@ -308,6 +311,7 @@ where
             dims,
             padded_dims_log,
             q_info,
+            node_type,
             phantom: PhantomData,
         }
     }

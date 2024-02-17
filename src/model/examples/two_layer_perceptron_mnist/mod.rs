@@ -1,15 +1,19 @@
 use crate::{
     model::{
-        nodes::{fc::FCNode, loose_fc::LooseFCNode, relu::ReLUNode, reshape::ReshapeNode, Node},
+        nodes::{
+            fc::FCNode, loose_fc::LooseFCNode, relu::ReLUNode, reshape::ReshapeNode, Node, NodeType,
+        },
         qarray::QArray,
         Model, Poly,
-    }, pcs_types::Brakedown, quantization::{quantise_f32_u8_nne, QSmallType}
+    },
+    pcs_types::Brakedown,
+    quantization::{quantise_f32_u8_nne, QSmallType},
 };
 
-use ark_crypto_primitives::sponge::{poseidon::PoseidonSponge, Absorb, CryptographicSponge};
-use ark_poly_commit::PolynomialCommitment;
 use ark_bn254::Fr;
+use ark_crypto_primitives::sponge::{poseidon::PoseidonSponge, Absorb, CryptographicSponge};
 use ark_ff::PrimeField;
+use ark_poly_commit::PolynomialCommitment;
 
 mod input;
 mod parameters;
@@ -28,10 +32,10 @@ where
     S: CryptographicSponge,
     PCS: PolynomialCommitment<F, Poly<F>, S>,
 {
-
     let flat_dim = INPUT_DIMS.iter().product();
 
-    let reshape: ReshapeNode<F, S, PCS> = ReshapeNode::new(INPUT_DIMS.to_vec(), vec![flat_dim]);
+    let reshape: ReshapeNode<F, S, PCS> =
+        ReshapeNode::new(INPUT_DIMS.to_vec(), vec![flat_dim], NodeType::Input);
 
     let lfc: LooseFCNode<F, S, PCS> = LooseFCNode::new(
         WEIGHTS_1.to_vec(),
@@ -44,9 +48,10 @@ where
         Z_1_W,
         S_1_O,
         Z_1_O,
+        NodeType::default(),
     );
 
-    let relu: ReLUNode<F, S, PCS> = ReLUNode::new(28, Z_1_O);
+    let relu: ReLUNode<F, S, PCS> = ReLUNode::new(28, Z_1_O, NodeType::default());
 
     let fc2: FCNode<F, S, PCS> = FCNode::new(
         WEIGHTS_2.to_vec(),
@@ -58,14 +63,18 @@ where
         Z_2_W,
         S_2_O,
         Z_2_O,
+        NodeType::Output,
     );
 
-    Model::new(INPUT_DIMS.to_vec(), vec![
-        Node::Reshape(reshape),
-        Node::LooseFC(lfc),
-        Node::ReLU(relu),
-        Node::FC(fc2),
-    ])
+    Model::new(
+        INPUT_DIMS.to_vec(),
+        vec![
+            Node::Reshape(reshape),
+            Node::LooseFC(lfc),
+            Node::ReLU(relu),
+            Node::FC(fc2),
+        ],
+    )
 }
 
 #[test]
