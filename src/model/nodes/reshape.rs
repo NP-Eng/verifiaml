@@ -73,7 +73,7 @@ where
 
     // TODO I think this might be broken due to the failure of commutativity
     // between product and and nearest-geq-power-of-two
-    fn padded_evaluate(&self, input: QTypeArray) -> QTypeArray {
+    fn padded_evaluate(&self, input: &QTypeArray) -> QTypeArray {
         let input = match input {
             QTypeArray::S(i) => i,
             _ => panic!("Reshape node expects QSmallType as its QArray input type"),

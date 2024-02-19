@@ -149,7 +149,7 @@ where
     // meant to exactly mirror the proof-system multiplication proved by the
     // sumcheck argument. Requantisation and shifting are also applied to these
     // trivial entries, as the proof system does.
-    fn padded_evaluate(&self, input: QTypeArray) -> QTypeArray {
+    fn padded_evaluate(&self, input: &QTypeArray) -> QTypeArray {
         let input = match input {
             QTypeArray::S(i) => i,
             _ => panic!("BMM node expects QSmallType as its QArray input type"),

@@ -86,7 +86,7 @@ where
     fn com_num_vars(&self) -> usize;
 
     /// Evaluate the padded node natively
-    fn padded_evaluate(&self, input: QTypeArray) -> QTypeArray;
+    fn padded_evaluate(&self, input: &QTypeArray) -> QTypeArray;
 
     /// Commit to the node parameters
     fn commit(
@@ -229,7 +229,7 @@ where
     }
 
     /// Evaluate the padded node natively
-    fn padded_evaluate(&self, input: QTypeArray) -> QTypeArray {
+    fn padded_evaluate(&self, input: &QTypeArray) -> QTypeArray {
         self.as_node_ops_snark().padded_evaluate(input)
     }
 

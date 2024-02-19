@@ -99,7 +99,7 @@ where
         self.padded_size_log
     }
 
-    fn padded_evaluate(&self, input: QTypeArray) -> QTypeArray {
+    fn padded_evaluate(&self, input: &QTypeArray) -> QTypeArray {
         let input = match input {
             QTypeArray::L(i) => i,
             _ => panic!("RequantiseBMM node expects QLargeType as its QArray input type"),

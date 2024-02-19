@@ -71,7 +71,7 @@ where
 
     // TODO this is the same as evaluate() for now; the two will likely differ
     // if/when we introduce input size checks
-    fn padded_evaluate(&self, input: QTypeArray) -> QTypeArray {
+    fn padded_evaluate(&self, input: &QTypeArray) -> QTypeArray {
         // TODO sanity checks (cf. BMM); systematise
 
         let input = match input {
