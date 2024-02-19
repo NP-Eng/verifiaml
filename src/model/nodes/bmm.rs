@@ -1,3 +1,5 @@
+use ark_std::rc::Rc;
+
 use ark_poly::MultilinearExtension;
 use ark_std::marker::PhantomData;
 
@@ -6,6 +8,7 @@ use ark_ff::PrimeField;
 use ark_poly_commit::{LabeledPolynomial, PolynomialCommitment};
 use ark_std::log2;
 use ark_std::rand::RngCore;
+use ark_sumcheck::ml_sumcheck::protocol::ListOfProductsOfPolynomials;
 
 use crate::model::qarray::{QArray, QTypeArray};
 use crate::model::Poly;
@@ -251,12 +254,25 @@ where
         // commitments in Model::prove_inference
         let r: Vec<F> = sponge.squeeze_field_elements(self.padded_dims_log.1);
 
+        // TODO consider whether this can be done once and stored
         let weights_f = self.padded_weights.iter().map(|w| F::from(*w)).collect();
         // TODO this might need LE -> BE conversion
         let weights_mle = Poly::from_evaluations_vec(self.com_num_vars(), weights_f);
 
         // TODO we actually need fix_variables_last
         weights_mle.fix_variables(&r);
+
+        // Constructing the sumcheck polynomial
+        // big_poly(x) = input(x) * weights(x, r)
+        let mut big_poly = ListOfProductsOfPolynomials::new(self.padded_dims_log.0);
+
+        big_poly.add_product(
+            vec![weights_mle, input]
+                .into_iter()
+                .map(|mle| Rc::new(mle))
+                .collect::<Vec<_>>(),
+            F::one(),
+        );
 
         unimplemented!()
     }
