@@ -2,7 +2,7 @@ use ark_std::{log2, rand::RngCore};
 
 use ark_crypto_primitives::sponge::{Absorb, CryptographicSponge};
 use ark_ff::PrimeField;
-use ark_poly::DenseMultilinearExtension;
+use ark_poly::{DenseMultilinearExtension, MultilinearExtension};
 use ark_poly_commit::{LabeledPolynomial, PolynomialCommitment};
 
 use crate::model::nodes::{NodeOps, NodeOpsSNARK};
@@ -141,7 +141,7 @@ where
             0,
         );
 
-        let output_f = output.values().iter().map(|x| F::from(*x)).collect();
+        let output_f: Vec<F> = output.values().iter().map(|x| F::from(*x)).collect();
 
         let mut output = QTypeArray::S(output);
 
@@ -149,7 +149,10 @@ where
         // TODO handling F and QSmallType is inelegant; we might want to switch
         // to F for IO in NodeOps::prove
         let mut node_outputs = vec![output.clone()];
-        let mut node_outputs_f = vec![output_f];
+        let mut node_output_mles = vec![Poly::from_evaluations_vec(
+            log2(output_f.len()) as usize,
+            output_f,
+        )];
 
         for node in &self.nodes {
             output = node.padded_evaluate(&output);
@@ -160,18 +163,22 @@ where
             };
 
             node_outputs.push(output.clone());
-            node_outputs_f.push(output_f);
+            node_output_mles.push(Poly::from_evaluations_vec(
+                log2(output_f.len()) as usize,
+                output_f,
+            ));
         }
 
         // Committing to node outputs as MLEs (individual per node for now)
-        let output_mles: Vec<LabeledPolynomial<F, Poly<F>>> = node_outputs_f
+        let output_mles: Vec<LabeledPolynomial<F, Poly<F>>> = node_output_mles
             .iter()
-            .map(|values|
+            .map(|mle|
             // TODO change dummy label once we e.g. have given numbers to the
             // nodes in the model: fc_1, fc_2, relu_1, etc.
+            // TODO maybe we don't need to clone, if `prove` can take a reference
             LabeledPolynomial::new(
                 "dummy".to_string(),
-                Poly::from_evaluations_vec(log2(values.len()) as usize, values.clone()),
+                mle.clone(),
                 None,
                 None,
             ))
@@ -192,7 +199,7 @@ where
             .nodes
             .iter()
             .zip(node_commitments.iter())
-            .zip(node_outputs.windows(2))
+            .zip(node_output_mles.windows(2))
             .zip(node_coms.windows(2))
             .zip(node_com_states.windows(2))
         {
@@ -212,21 +219,21 @@ where
         // output nodes and instead working witht their plain values all along,
         // but that would require messy node-by-node handling
         let input_node = node_outputs.first().unwrap();
-        let input_node_f = node_outputs_f.first().unwrap();
+        let input_node_f = node_output_mles.first().unwrap().to_evaluations();
         let input_labeled_value = output_mles.first().unwrap();
         let input_node_com = node_coms.first().unwrap();
         let input_node_com_state = node_com_states.first().unwrap();
 
         let output_node = node_outputs.last().unwrap();
-        let output_node_f = node_outputs_f.last().unwrap();
+        let output_node_f = node_output_mles.last().unwrap().to_evaluations();
         let output_labeled_value = output_mles.last().unwrap();
         let output_node_com = node_coms.last().unwrap();
         let output_node_com_state = node_com_states.last().unwrap();
 
         // Absorb the model IO output and squeeze the challenge point
         // Absorb the plain output and squeeze the challenge point
-        sponge.absorb(input_node_f);
-        sponge.absorb(output_node_f);
+        sponge.absorb(&input_node_f);
+        sponge.absorb(&output_node_f);
         let input_challenge_point =
             sponge.squeeze_field_elements(log2(input_node_f.len()) as usize);
         let output_challenge_point =

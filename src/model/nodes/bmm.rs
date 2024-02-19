@@ -1,3 +1,4 @@
+use ark_poly::MultilinearExtension;
 use ark_std::marker::PhantomData;
 
 use ark_crypto_primitives::sponge::CryptographicSponge;
@@ -239,13 +240,24 @@ where
 
     fn prove(
         &self,
-        s: &mut S,
+        sponge: &mut S,
         node_com: &NodeCommitment<F, S, PCS>,
-        input: QTypeArray,
+        input: Poly<F>,
         input_com: &PCS::Commitment,
-        output: QTypeArray,
+        output: Poly<F>,
         output_com: &PCS::Commitment,
     ) -> NodeProof {
+        // we can squeeze directly, since the sponge has already absorbed all the
+        // commitments in Model::prove_inference
+        let r: Vec<F> = sponge.squeeze_field_elements(self.padded_dims_log.1);
+
+        let weights_f = self.padded_weights.iter().map(|w| F::from(*w)).collect();
+        // TODO this might need LE -> BE conversion
+        let weights_mle = Poly::from_evaluations_vec(self.com_num_vars(), weights_f);
+
+        // TODO we actually need fix_variables_last
+        weights_mle.fix_variables(&r);
+
         unimplemented!()
     }
 }

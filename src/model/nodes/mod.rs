@@ -100,9 +100,9 @@ where
         &self,
         s: &mut S,
         node_com: &NodeCommitment<F, S, PCS>,
-        input: QTypeArray,
+        input: Poly<F>,
         input_com: &PCS::Commitment,
-        output: QTypeArray,
+        output: Poly<F>,
         output_com: &PCS::Commitment,
     ) -> NodeProof;
 }
@@ -246,9 +246,9 @@ where
         &self,
         s: &mut S,
         node_com: &NodeCommitment<F, S, PCS>,
-        input: QTypeArray,
+        input: Poly<F>,
         input_com: &PCS::Commitment,
-        output: QTypeArray,
+        output: Poly<F>,
         output_com: &PCS::Commitment,
     ) -> NodeProof {
         self.as_node_ops_snark()
