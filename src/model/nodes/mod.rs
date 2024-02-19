@@ -1,3 +1,4 @@
+use ark_crypto_primitives::sponge::Absorb;
 use ark_ff::PrimeField;
 use ark_poly_commit::PolynomialCommitment;
 use ark_std::rand::RngCore;
@@ -155,7 +156,7 @@ where
 // elegantly by simply implementing the trait
 impl<F, S, PCS> Node<F, S, PCS>
 where
-    F: PrimeField,
+    F: PrimeField + Absorb,
     S: CryptographicSponge,
     PCS: PolynomialCommitment<F, Poly<F>, S>,
 {
@@ -192,7 +193,7 @@ where
 // elegantly by simply implementing the trait
 impl<F, S, PCS> NodeOps for Node<F, S, PCS>
 where
-    F: PrimeField,
+    F: PrimeField + Absorb,
     S: CryptographicSponge,
     PCS: PolynomialCommitment<F, Poly<F>, S>,
 {
@@ -214,7 +215,7 @@ where
 
 impl<F, S, PCS> NodeOpsSNARK<F, S, PCS> for Node<F, S, PCS>
 where
-    F: PrimeField,
+    F: PrimeField + Absorb,
     S: CryptographicSponge,
     PCS: PolynomialCommitment<F, Poly<F>, S>,
 {
