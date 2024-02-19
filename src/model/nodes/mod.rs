@@ -98,6 +98,7 @@ where
     /// Produce a node output proof
     fn prove(
         &self,
+        ck: &PCS::CommitterKey,
         s: &mut S,
         node_com: &NodeCommitment<F, S, PCS>,
         input: Poly<F>,
@@ -244,6 +245,7 @@ where
 
     fn prove(
         &self,
+        ck: &PCS::CommitterKey,
         s: &mut S,
         node_com: &NodeCommitment<F, S, PCS>,
         input: Poly<F>,
@@ -252,6 +254,6 @@ where
         output_com: &PCS::Commitment,
     ) -> NodeProof {
         self.as_node_ops_snark()
-            .prove(s, node_com, input, input_com, output, output_com)
+            .prove(ck, s, node_com, input, input_com, output, output_com)
     }
 }

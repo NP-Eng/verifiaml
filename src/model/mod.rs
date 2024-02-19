@@ -205,6 +205,7 @@ where
         {
             // TODO prove likely needs to receive the sponge for randomness/FS
             node_proofs.push(node.prove(
+                ck,
                 sponge,
                 node_com,
                 values[0].clone(),

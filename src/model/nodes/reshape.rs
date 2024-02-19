@@ -121,6 +121,7 @@ where
 
     fn prove(
         &self,
+        ck: &PCS::CommitterKey,
         s: &mut S,
         node_com: &NodeCommitment<F, S, PCS>,
         input: Poly<F>,
