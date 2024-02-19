@@ -166,7 +166,7 @@ where
         // TODO Prove that all commited NIOs live in the right range (to be
         // discussed)
 
-        let node_proofs = vec![];
+        let mut node_proofs = Vec::new();
 
         // Second pass: proving
         for ((((node, node_com), values), l_v_coms), v_coms_states) in self
@@ -178,14 +178,14 @@ where
             .zip(node_com_states.windows(2))
         {
             // TODO prove likely needs to receive the sponge for randomness/FS
-            let a = node.prove(
+            node_proofs.push(node.prove(
                 sponge,
                 node_com,
                 values[0].clone(),
                 l_v_coms[0].commitment(),
                 values[1].clone(),
                 l_v_coms[1].commitment(),
-            );
+            ));
         }
 
         // Opening model IO
