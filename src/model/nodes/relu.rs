@@ -73,11 +73,12 @@ where
 
     fn prove(
         &self,
-        node_com: NodeCommitment<F, S, PCS>,
+        s: &mut S,
+        node_com: &NodeCommitment<F, S, PCS>,
         input: QArray<QSmallType>,
-        input_com: PCS::Commitment,
+        input_com: &PCS::Commitment,
         output: QArray<QSmallType>,
-        output_com: PCS::Commitment,
+        output_com: &PCS::Commitment,
     ) -> super::NodeProof {
         todo!()
     }

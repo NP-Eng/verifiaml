@@ -10,7 +10,7 @@ use crate::model::qarray::QArray;
 use crate::model::Poly;
 use crate::quantization::QSmallType;
 
-use super::{NodeOps, NodeOpsSNARK, NodeProof};
+use super::{NodeCommitment, NodeOps, NodeOpsSNARK, NodeProof};
 
 pub(crate) struct ReshapeNode<F, S, PCS>
 where
@@ -107,11 +107,12 @@ where
 
     fn prove(
         &self,
-        node_com: super::NodeCommitment<F, S, PCS>,
+        s: &mut S,
+        node_com: &NodeCommitment<F, S, PCS>,
         input: QArray<QSmallType>,
-        input_com: PCS::Commitment,
+        input_com: &PCS::Commitment,
         output: QArray<QSmallType>,
-        output_com: PCS::Commitment,
+        output_com: &PCS::Commitment,
     ) -> NodeProof {
         unimplemented!()
     }

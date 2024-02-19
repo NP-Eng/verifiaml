@@ -33,7 +33,7 @@ where
     node_proofs: Vec<NodeProof>,
 
     // Proofs of opening of each of the model's outputs
-    opening_proofs: PCS::Proof,
+    opening_proofs: Vec<PCS::Proof>,
 }
 
 // TODO change the functions that receive vectors to receive slices instead whenever it makes sense
@@ -117,11 +117,139 @@ where
         &self,
         ck: &PCS::CommitterKey,
         rng: Option<&mut dyn RngCore>,
-        s: &mut S,
+        sponge: &mut S,
         node_commitments: Vec<NodeCommitment<F, S, PCS>>,
         input: QArray<QSmallType>,
     ) -> InferenceProof<F, S, PCS> {
-        unimplemented!();
+        // TODO Absorb public parameters into s (to be determined what exactly)
+
+        let mut output = input.compact_resize(
+            self.input_shape
+                .iter()
+                .map(|x| x.next_power_of_two())
+                .collect(),
+            0,
+        );
+
+        let output_f = output.values().iter().map(|x| F::from(*x)).collect();
+
+        // First pass: computing node values
+        // TODO handling F and QSmallType is inelegant; we might want to switch
+        // to F for IO in NodeOps::prove
+        let mut node_outputs = vec![output.clone()];
+        let mut node_outputs_f = vec![output_f];
+
+        for node in &self.nodes {
+            output = node.padded_evaluate(output);
+            let output_f: Vec<F> = output.values().iter().map(|x| F::from(*x)).collect();
+            node_outputs.push(output.clone());
+            node_outputs_f.push(output_f);
+        }
+
+        // Committing to node outputs as MLEs (individual per node for now)
+        let output_mles: Vec<LabeledPolynomial<F, Poly<F>>> = node_outputs_f
+            .iter()
+            .map(|values|
+            // TODO change dummy label once we e.g. have given numbers to the
+            // nodes in the model: fc_1, fc_2, relu_1, etc.
+            LabeledPolynomial::new(
+                "dummy".to_string(),
+                Poly::from_evaluations_vec(log2(values.len()) as usize, values.clone()),
+                None,
+                None,
+            ))
+            .collect();
+
+        let (node_coms, node_com_states) = PCS::commit(ck, &output_mles, rng).unwrap();
+
+        // Absorb all commitments into the sponge
+        sponge.absorb(&node_coms);
+
+        // TODO Prove that all commited NIOs live in the right range (to be
+        // discussed)
+
+        let mut node_proofs = Vec::new();
+
+        // Second pass: proving
+        for ((((node, node_com), values), l_v_coms), v_coms_states) in self
+            .nodes
+            .iter()
+            .zip(node_commitments.iter())
+            .zip(node_outputs.windows(2))
+            .zip(node_coms.windows(2))
+            .zip(node_com_states.windows(2))
+        {
+            // TODO prove likely needs to receive the sponge for randomness/FS
+            node_proofs.push(node.prove(
+                sponge,
+                node_com,
+                values[0].clone(),
+                l_v_coms[0].commitment(),
+                values[1].clone(),
+                l_v_coms[1].commitment(),
+            ));
+        }
+
+        // Opening model IO
+        // TODO maybe this can be made more efficient by not committing to the
+        // output nodes and instead working witht their plain values all along,
+        // but that would require messy node-by-node handling
+        let input_node = node_outputs.first().unwrap();
+        let input_node_f = node_outputs_f.first().unwrap();
+        let input_labeled_value = output_mles.first().unwrap();
+        let input_node_com = node_coms.first().unwrap();
+        let input_node_com_state = node_com_states.first().unwrap();
+
+        let output_node = node_outputs.last().unwrap();
+        let output_node_f = node_outputs_f.last().unwrap();
+        let output_labeled_value = output_mles.last().unwrap();
+        let output_node_com = node_coms.last().unwrap();
+        let output_node_com_state = node_com_states.last().unwrap();
+
+        // Absorb the model IO output and squeeze the challenge point
+        // Absorb the plain output and squeeze the challenge point
+        sponge.absorb(input_node_f);
+        sponge.absorb(output_node_f);
+        let input_challenge_point =
+            sponge.squeeze_field_elements(log2(input_node_f.len()) as usize);
+        let output_challenge_point =
+            sponge.squeeze_field_elements(log2(output_node_f.len()) as usize);
+
+        // TODO we have to pass rng, not None, but it has been moved before
+        // fix this once we have decided how to handle the cumbersome
+        // Option<&mut rng...>
+        let input_opening_proof = PCS::open(
+            ck,
+            [input_labeled_value],
+            [input_node_com],
+            &input_challenge_point,
+            sponge,
+            [input_node_com_state],
+            None,
+        )
+        .unwrap();
+
+        // TODO we have to pass rng, not None, but it has been moved before
+        // fix this once we have decided how to handle the cumbersome
+        // Option<&mut rng...>
+        let output_opening_proof = PCS::open(
+            ck,
+            [output_labeled_value],
+            [output_node_com],
+            &output_challenge_point,
+            sponge,
+            [output_node_com_state],
+            None,
+        )
+        .unwrap();
+
+        /* TODO (important) Change output_node to all boundary nodes: first and last */
+        // TODO prove that inputs match input commitments?
+        InferenceProof {
+            outputs: vec![input_node.clone(), output_node.clone()],
+            node_proofs,
+            opening_proofs: vec![input_opening_proof, output_opening_proof],
+        }
     }
 
     pub(crate) fn commit(
