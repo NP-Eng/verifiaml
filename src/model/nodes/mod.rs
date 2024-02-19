@@ -4,21 +4,26 @@ use ark_std::rand::RngCore;
 
 use crate::{
     model::{
-        nodes::{fc::FCNode, relu::ReLUNode},
+        nodes::{bmm::BMMNode, relu::ReLUNode},
         CryptographicSponge, Poly,
     },
     quantization::QSmallType,
 };
 
 use self::{
-    fc::{FCNodeCommitment, FCNodeCommitmentState, FCNodeProof},
+    bmm::{BMMNodeCommitment, BMMNodeCommitmentState, BMMNodeProof},
+    requantise_bmm::{
+        RequantiseBMMNode, RequantiseBMMNodeCommitment, RequantiseBMMNodeCommitmentState,
+        RequantiseBMMNodeProof,
+    },
     reshape::ReshapeNode,
 };
 
-use super::qarray::QArray;
+use super::qarray::{QArray, QTypeArray};
 
-pub(crate) mod fc;
+pub(crate) mod bmm;
 pub(crate) mod relu;
+pub(crate) mod requantise_bmm;
 pub(crate) mod reshape;
 
 // mod parser;
@@ -41,7 +46,7 @@ pub(crate) trait NodeOps {
     }
 
     /// Evaluate the node natively (without padding)
-    fn evaluate(&self, input: QArray<QSmallType>) -> QArray<QSmallType>;
+    fn evaluate(&self, input: &QTypeArray) -> QTypeArray;
 }
 
 pub(crate) trait NodeOpsSNARK<F, S, PCS>
@@ -81,7 +86,7 @@ where
     fn com_num_vars(&self) -> usize;
 
     /// Evaluate the padded node natively
-    fn padded_evaluate(&self, input: QArray<QSmallType>) -> QArray<QSmallType>;
+    fn padded_evaluate(&self, input: &QTypeArray) -> QTypeArray;
 
     /// Commit to the node parameters
     fn commit(
@@ -95,9 +100,9 @@ where
         &self,
         s: &mut S,
         node_com: &NodeCommitment<F, S, PCS>,
-        input: QArray<QSmallType>,
+        input: QTypeArray,
         input_com: &PCS::Commitment,
-        output: QArray<QSmallType>,
+        output: QTypeArray,
         output_com: &PCS::Commitment,
     ) -> NodeProof;
 }
@@ -108,13 +113,15 @@ where
     S: CryptographicSponge,
     PCS: PolynomialCommitment<F, Poly<F>, S>,
 {
-    FC(FCNode<F, S, PCS>),
+    BMM(BMMNode<F, S, PCS>),
+    RequantiseBMM(RequantiseBMMNode<F, S, PCS>),
     ReLU(ReLUNode<F, S, PCS>),
     Reshape(ReshapeNode<F, S, PCS>),
 }
 
 pub(crate) enum NodeProof {
-    FC(FCNodeProof),
+    BMM(BMMNodeProof),
+    RequantiseBMM(RequantiseBMMNodeProof),
     ReLU(()),
     Reshape(()),
 }
@@ -125,7 +132,8 @@ where
     S: CryptographicSponge,
     PCS: PolynomialCommitment<F, Poly<F>, S>,
 {
-    FC(FCNodeCommitment<F, S, PCS>),
+    BMM(BMMNodeCommitment<F, S, PCS>),
+    RequantiseBMM(RequantiseBMMNodeCommitment),
     ReLU(()),
     Reshape(()),
 }
@@ -136,7 +144,8 @@ where
     S: CryptographicSponge,
     PCS: PolynomialCommitment<F, Poly<F>, S>,
 {
-    FC(FCNodeCommitmentState<F, S, PCS>),
+    BMM(BMMNodeCommitmentState<F, S, PCS>),
+    RequantiseBMM(RequantiseBMMNodeCommitmentState),
     ReLU(()),
     Reshape(()),
 }
@@ -151,7 +160,8 @@ where
 {
     fn as_node_ops(&self) -> &dyn NodeOps {
         match self {
-            Node::FC(fc) => fc,
+            Node::BMM(fc) => fc,
+            Node::RequantiseBMM(r) => r,
             Node::ReLU(r) => r,
             Node::Reshape(r) => r,
         }
@@ -159,7 +169,8 @@ where
 
     fn as_node_ops_snark(&self) -> &dyn NodeOpsSNARK<F, S, PCS> {
         match self {
-            Node::FC(fc) => fc,
+            Node::BMM(fc) => fc,
+            Node::RequantiseBMM(r) => r,
             Node::ReLU(r) => r,
             Node::Reshape(r) => r,
         }
@@ -167,9 +178,10 @@ where
 
     // Print the type of the node. This cannot be cleantly achieved by deriving
     // Debug
-    fn type_name(&self) -> &'static str {
+    pub(crate) fn type_name(&self) -> &'static str {
         match self {
-            Node::FC(_) => "FC",
+            Node::BMM(_) => "BMM",
+            Node::RequantiseBMM(r) => "RequantiseBMM",
             Node::ReLU(_) => "ReLU",
             Node::Reshape(_) => "Reshape",
         }
@@ -194,7 +206,7 @@ where
     }
 
     /// Evaluate the node natively (without padding)
-    fn evaluate(&self, input: QArray<QSmallType>) -> QArray<QSmallType> {
+    fn evaluate(&self, input: &QTypeArray) -> QTypeArray {
         self.as_node_ops().evaluate(input)
     }
 }
@@ -217,7 +229,7 @@ where
     }
 
     /// Evaluate the padded node natively
-    fn padded_evaluate(&self, input: QArray<QSmallType>) -> QArray<QSmallType> {
+    fn padded_evaluate(&self, input: &QTypeArray) -> QTypeArray {
         self.as_node_ops_snark().padded_evaluate(input)
     }
 
@@ -234,9 +246,9 @@ where
         &self,
         s: &mut S,
         node_com: &NodeCommitment<F, S, PCS>,
-        input: QArray<QSmallType>,
+        input: QTypeArray,
         input_com: &PCS::Commitment,
-        output: QArray<QSmallType>,
+        output: QTypeArray,
         output_com: &PCS::Commitment,
     ) -> NodeProof {
         self.as_node_ops_snark()

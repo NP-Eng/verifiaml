@@ -6,7 +6,7 @@ use ark_ff::PrimeField;
 use ark_poly_commit::PolynomialCommitment;
 use ark_std::rand::RngCore;
 
-use crate::model::qarray::QArray;
+use crate::model::qarray::{QArray, QTypeArray};
 use crate::model::Poly;
 use crate::quantization::QSmallType;
 
@@ -35,9 +35,15 @@ where
         self.output_shape.clone()
     }
 
-    fn evaluate(&self, input: QArray<QSmallType>) -> QArray<QSmallType> {
+    fn evaluate(&self, input: &QTypeArray) -> QTypeArray {
         // Sanity checks
         // TODO systematise
+
+        let input = match input {
+            QTypeArray::S(i) => i,
+            _ => panic!("Reshape node expects QSmallType as its QArray input type"),
+        };
+
         assert_eq!(
             *input.shape(),
             self.input_shape,
@@ -47,7 +53,7 @@ where
         let mut output = input.clone();
         output.reshape(self.output_shape.clone());
 
-        output
+        QTypeArray::S(output)
     }
 }
 
@@ -67,12 +73,18 @@ where
 
     // TODO I think this might be broken due to the failure of commutativity
     // between product and and nearest-geq-power-of-two
-    fn padded_evaluate(&self, input: QArray<QSmallType>) -> QArray<QSmallType> {
+    fn padded_evaluate(&self, input: &QTypeArray) -> QTypeArray {
+        let input = match input {
+            QTypeArray::S(i) => i,
+            _ => panic!("Reshape node expects QSmallType as its QArray input type"),
+        };
+
         let padded_input_shape: Vec<usize> = self
             .padded_input_shape_log
             .iter()
             .map(|x| (1 << x) as usize)
             .collect();
+
         let padded_output_shape: Vec<usize> = self
             .padded_output_shape_log
             .iter()
@@ -91,7 +103,9 @@ where
 
         // TODO only handles 2-to-1 reshapes, I think
         unpadded_input.reshape(self.output_shape.clone());
-        unpadded_input.compact_resize(padded_output_shape, 0)
+        let padded_output = unpadded_input.compact_resize(padded_output_shape, 0);
+
+        QTypeArray::S(padded_output)
     }
 
     fn commit(
@@ -109,9 +123,9 @@ where
         &self,
         s: &mut S,
         node_com: &NodeCommitment<F, S, PCS>,
-        input: QArray<QSmallType>,
+        input: QTypeArray,
         input_com: &PCS::Commitment,
-        output: QArray<QSmallType>,
+        output: QTypeArray,
         output_com: &PCS::Commitment,
     ) -> NodeProof {
         unimplemented!()

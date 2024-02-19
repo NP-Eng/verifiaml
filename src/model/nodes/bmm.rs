@@ -6,11 +6,9 @@ use ark_poly_commit::{LabeledPolynomial, PolynomialCommitment};
 use ark_std::log2;
 use ark_std::rand::RngCore;
 
-use crate::model::qarray::QArray;
+use crate::model::qarray::{QArray, QTypeArray};
 use crate::model::Poly;
-use crate::quantization::{
-    requantise_fc, FCQInfo, QInfo, QLargeType, QScaleType, QSmallType, RoundingScheme,
-};
+use crate::quantization::{BMMQInfo, QInfo, QLargeType, QScaleType, QSmallType};
 use crate::{Commitment, CommitmentState};
 
 use super::{NodeCommitment, NodeCommitmentState, NodeOps, NodeOpsSNARK, NodeProof};
@@ -18,7 +16,7 @@ use super::{NodeCommitment, NodeCommitmentState, NodeOps, NodeOpsSNARK, NodeProo
 // TODO convention: input, bias and output are rows, the op is vec-by-mat (in that order)
 
 /// Start with 2D matrices, and Mat-by-vector multiplication only
-pub(crate) struct FCNode<F, S, PCS> {
+pub(crate) struct BMMNode<F, S, PCS> {
     /// The row-major flattened unpadded vector of weights
     weights: Vec<QSmallType>,
     /// The padded weight vector
@@ -31,13 +29,13 @@ pub(crate) struct FCNode<F, S, PCS> {
     dims: (usize, usize),
     /// The logarithm of the padded dimensions (rows, columns)
     padded_dims_log: (usize, usize),
-    /// Quantisation info used for both result computation and requantisation
-    q_info: FCQInfo,
+    /// Zero-point quantisation parameter of the input
+    input_zero_point: QSmallType,
 
     phantom: PhantomData<(F, S, PCS)>,
 }
 
-pub(crate) struct FCNodeCommitment<F, S, PCS>
+pub(crate) struct BMMNodeCommitment<F, S, PCS>
 where
     F: PrimeField,
     S: CryptographicSponge,
@@ -47,7 +45,7 @@ where
     bias_com: PCS::Commitment,
 }
 
-impl<F, S, PCS> Commitment for FCNodeCommitment<F, S, PCS>
+impl<F, S, PCS> Commitment for BMMNodeCommitment<F, S, PCS>
 where
     F: PrimeField,
     S: CryptographicSponge,
@@ -55,7 +53,7 @@ where
 {
 }
 
-pub(crate) struct FCNodeCommitmentState<F, S, PCS>
+pub(crate) struct BMMNodeCommitmentState<F, S, PCS>
 where
     F: PrimeField,
     S: CryptographicSponge,
@@ -65,7 +63,7 @@ where
     bias_com_state: PCS::CommitmentState,
 }
 
-impl<F, S, PCS> CommitmentState for FCNodeCommitmentState<F, S, PCS>
+impl<F, S, PCS> CommitmentState for BMMNodeCommitmentState<F, S, PCS>
 where
     F: PrimeField,
     S: CryptographicSponge,
@@ -73,11 +71,11 @@ where
 {
 }
 
-pub(crate) struct FCNodeProof {
+pub(crate) struct BMMNodeProof {
     // this will be the sumcheck proof
 }
 
-impl<F, S, PCS> NodeOps for FCNode<F, S, PCS>
+impl<F, S, PCS> NodeOps for BMMNode<F, S, PCS>
 where
     F: PrimeField,
     S: CryptographicSponge,
@@ -87,18 +85,23 @@ where
         vec![self.dims.1]
     }
 
-    fn evaluate(&self, input: QArray<QSmallType>) -> QArray<QSmallType> {
+    fn evaluate(&self, input: &QTypeArray) -> QTypeArray {
         // Sanity checks
         // TODO systematise
+        let input = match input {
+            QTypeArray::S(i) => i,
+            _ => panic!("BMM node expects QSmallType as its QArray input type"),
+        };
+
         assert_eq!(
             input.num_dims(),
             1,
-            "Incorrect shape: Fully connected node expected a 1-dimensional input array"
+            "Incorrect shape: BMM node expects a 1-dimensional input array"
         );
         assert_eq!(
             self.dims.0,
             input.len(),
-            "Length mismatch: Fully connected node expected input with {} elements, got {} elements instead",
+            "Length mismatch: BMM node expects input with {} elements, got {} elements instead",
             self.dims.0,
             input.len()
         );
@@ -107,7 +110,7 @@ where
 
         // TODO this is a bigger question: can this overflow an i8? Supposedly the point of quantisation
         // is that input-by-weight products can be computed in i8. To be safe, let us use the large type here
-        let shifted_input = input - self.q_info.input_info.zero_point as QLargeType;
+        let shifted_input = input - self.input_zero_point as QLargeType;
 
         let mut accumulators = self.bias.clone();
 
@@ -122,11 +125,13 @@ where
             }
         }
 
-        requantise_fc(&accumulators, &self.q_info, RoundingScheme::NearestTiesEven).into()
+        let output = QArray::new(accumulators, vec![self.dims.1]);
+
+        QTypeArray::L(output)
     }
 }
 
-impl<F, S, PCS> NodeOpsSNARK<F, S, PCS> for FCNode<F, S, PCS>
+impl<F, S, PCS> NodeOpsSNARK<F, S, PCS> for BMMNode<F, S, PCS>
 where
     F: PrimeField,
     S: CryptographicSponge,
@@ -144,7 +149,12 @@ where
     // meant to exactly mirror the proof-system multiplication proved by the
     // sumcheck argument. Requantisation and shifting are also applied to these
     // trivial entries, as the proof system does.
-    fn padded_evaluate(&self, input: QArray<QSmallType>) -> QArray<QSmallType> {
+    fn padded_evaluate(&self, input: &QTypeArray) -> QTypeArray {
+        let input = match input {
+            QTypeArray::S(i) => i,
+            _ => panic!("BMM node expects QSmallType as its QArray input type"),
+        };
+
         let padded_dims = (1 << self.padded_dims_log.0, 1 << self.padded_dims_log.1);
 
         // Sanity checks
@@ -152,7 +162,7 @@ where
         assert_eq!(
             input.num_dims(),
             1,
-            "Incorrect shape: Fully connected node expected a 1-dimensional input array"
+            "Incorrect shape: BMM node expects a 1-dimensional input array"
         );
 
         assert_eq!(
@@ -167,7 +177,7 @@ where
 
         // TODO this is a bigger question: can this overflow an i8? Supposedly the point of quantisation
         // is that input-by-weight products can be computed in i8. To be safe, let us use the large type here
-        let shifted_input = input - self.q_info.input_info.zero_point as QLargeType;
+        let shifted_input = input - self.input_zero_point as QLargeType;
 
         let mut accumulators = self.padded_bias.clone();
 
@@ -182,7 +192,9 @@ where
             }
         }
 
-        requantise_fc(&accumulators, &self.q_info, RoundingScheme::NearestTiesEven).into()
+        let output = QArray::new(accumulators, vec![padded_dims.1]);
+
+        QTypeArray::L(output)
     }
 
     fn commit(
@@ -214,11 +226,11 @@ where
         let coms = PCS::commit(ck, vec![&weight_poly, &bias_poly], rng).unwrap();
 
         (
-            NodeCommitment::FC(FCNodeCommitment {
+            NodeCommitment::BMM(BMMNodeCommitment {
                 weight_com: coms.0[0].commitment().clone(),
                 bias_com: coms.0[1].commitment().clone(),
             }),
-            NodeCommitmentState::FC(FCNodeCommitmentState {
+            NodeCommitmentState::BMM(BMMNodeCommitmentState {
                 weight_com_state: coms.1[0].clone(),
                 bias_com_state: coms.1[1].clone(),
             }),
@@ -229,16 +241,16 @@ where
         &self,
         s: &mut S,
         node_com: &NodeCommitment<F, S, PCS>,
-        input: QArray<QSmallType>,
+        input: QTypeArray,
         input_com: &PCS::Commitment,
-        output: QArray<QSmallType>,
+        output: QTypeArray,
         output_com: &PCS::Commitment,
     ) -> NodeProof {
         unimplemented!()
     }
 }
 
-impl<F, S, PCS> FCNode<F, S, PCS>
+impl<F, S, PCS> BMMNode<F, S, PCS>
 where
     F: PrimeField,
     S: CryptographicSponge,
@@ -248,12 +260,7 @@ where
         weights: Vec<QSmallType>,
         bias: Vec<QLargeType>,
         dims: (usize, usize),
-        s_i: QScaleType,
-        z_i: QSmallType,
-        s_w: QScaleType,
-        z_w: QSmallType,
-        s_o: QScaleType,
-        z_o: QSmallType,
+        input_zero_point: QSmallType,
     ) -> Self {
         assert_eq!(
             weights.len(),
@@ -286,21 +293,6 @@ where
         let mut padded_bias = bias.clone();
         padded_bias.resize(dims.1.next_power_of_two(), 0);
 
-        let q_info = FCQInfo {
-            input_info: QInfo {
-                scale: s_i,
-                zero_point: z_i,
-            },
-            weight_info: QInfo {
-                scale: s_w,
-                zero_point: z_w,
-            },
-            output_info: QInfo {
-                scale: s_o,
-                zero_point: z_o,
-            },
-        };
-
         Self {
             weights,
             padded_weights,
@@ -308,7 +300,7 @@ where
             padded_bias,
             dims,
             padded_dims_log,
-            q_info,
+            input_zero_point,
             phantom: PhantomData,
         }
     }

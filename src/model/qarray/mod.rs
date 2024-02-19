@@ -12,6 +12,12 @@ use crate::quantization::{QLargeType, QSmallType};
 
 const QARRAY_NESTED_TAB: &str = "    ";
 
+#[derive(Clone)]
+pub(crate) enum QTypeArray {
+    S(QArray<QSmallType>),
+    L(QArray<QLargeType>),
+}
+
 #[cfg(test)]
 mod tests;
 
@@ -68,17 +74,17 @@ impl<T: InnerType> QArray<T> {
     // <T as TryInto<S>>::Error: Debug
     // and replace unwrap() by unwrap_or(), possibly panicking or propagating
     // the error
-    pub(crate) fn cast<S: InnerType>(self) -> QArray<S>
+    pub(crate) fn cast<S: InnerType>(&self) -> QArray<S>
     where
         T: TryInto<S>,
         <T as TryInto<S>>::Error: Debug,
     {
         let flattened = self
             .flattened
-            .into_iter()
-            .map(|x| x.try_into().unwrap())
+            .iter()
+            .map(|x| TryInto::<S>::try_into(*x).unwrap())
             .collect();
-        QArray::new(flattened, self.shape)
+        QArray::new(flattened, self.shape.clone())
     }
 
     // Reshapes the QArray in-place

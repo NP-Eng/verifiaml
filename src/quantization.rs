@@ -1,5 +1,5 @@
 pub(crate) type QSmallType = i8; // core type for quantised arithmetic: activation, matrix weights, etc.
-pub(crate) type QLargeType = i32; // larger type for quantised arithmetic, used in FC and convolutional biases
+pub(crate) type QLargeType = i32; // larger type for quantised arithmetic, used in BMM and convolutional biases
 pub(crate) type QScaleType = f32; // type for quantisation scales
                                   // TODO this one is likely exclusive to this module, reconsider visibility
 pub(crate) type QScaleComputationType = f64; // larger precision type to compute the requantisation scale in some schemes
@@ -13,7 +13,7 @@ pub(crate) struct QInfo {
 // TODO: this will probably change to inference-ready requantisation info
 // Even what is being done now could be optimised by precomputing outside the
 // evaluate function
-pub(crate) struct FCQInfo {
+pub(crate) struct BMMQInfo {
     pub(crate) input_info: QInfo,
     pub(crate) weight_info: QInfo,
     // Bias requantisation information is not used (and is indeed directly
@@ -28,7 +28,7 @@ pub(crate) enum RoundingScheme {
 
 pub(crate) fn requantise_fc(
     output: &[QLargeType],
-    q_info: &FCQInfo,
+    q_info: &BMMQInfo,
     scheme: RoundingScheme,
 ) -> Vec<QSmallType> {
     match scheme {
@@ -37,7 +37,7 @@ pub(crate) fn requantise_fc(
     }
 }
 
-fn requantise_fc_ntafz(output: &[QLargeType], q_info: &FCQInfo) -> Vec<QSmallType> {
+fn requantise_fc_ntafz(output: &[QLargeType], q_info: &BMMQInfo) -> Vec<QSmallType> {
     // 1. Computing scale
     // TODO In actual schemes, this will be decomposed as (int, shift)
     let (s_i, s_w, s_o) = (
@@ -65,7 +65,7 @@ fn requantise_fc_ntafz(output: &[QLargeType], q_info: &FCQInfo) -> Vec<QSmallTyp
         .collect()
 }
 
-fn requantise_fc_nte(output: &[QLargeType], q_info: &FCQInfo) -> Vec<QSmallType> {
+fn requantise_fc_nte(output: &[QLargeType], q_info: &BMMQInfo) -> Vec<QSmallType> {
     // 1. Computing scale
     // TODO In actual schemes, this will be decomposed as (int, shift)
     let (s_i, s_w, s_o) = (
@@ -110,7 +110,7 @@ mod tests {
     #[test]
     fn test_nnafz_noop() {
         let output = vec![0, 1, 2, 3, 4, 5, 6, 7];
-        let q_info = FCQInfo {
+        let q_info = BMMQInfo {
             input_info: QInfo {
                 scale: 1.0,
                 zero_point: 0,
@@ -133,7 +133,7 @@ mod tests {
     fn test_nnafz_halves() {
         // test when the output lands at .5 intervals
         let output = vec![-3, -2, -1, 0, 1, 2, 3];
-        let q_info = FCQInfo {
+        let q_info = BMMQInfo {
             input_info: QInfo {
                 scale: 0.5,
                 zero_point: 0,

@@ -8,6 +8,7 @@ use ark_poly_commit::{LabeledPolynomial, PolynomialCommitment};
 use crate::model::nodes::{NodeOps, NodeOpsSNARK};
 use crate::{model::nodes::Node, quantization::QSmallType};
 
+use self::qarray::QTypeArray;
 use self::{
     nodes::{NodeCommitment, NodeCommitmentState, NodeProof},
     qarray::QArray,
@@ -27,7 +28,7 @@ where
     PCS: PolynomialCommitment<F, Poly<F>, S>,
 {
     // Model output tensors
-    outputs: Vec<QArray<QSmallType>>,
+    outputs: Vec<QTypeArray>,
 
     // Proofs of evaluation of each of the model's nodes
     node_proofs: Vec<NodeProof>,
@@ -84,11 +85,15 @@ where
     }
 
     pub(crate) fn evaluate(&self, input: QArray<QSmallType>) -> QArray<QSmallType> {
-        let mut output = input;
+        let mut output = QTypeArray::S(input);
         for node in &self.nodes {
-            output = node.evaluate(output);
+            output = node.evaluate(&output);
         }
-        output
+
+        match output {
+            QTypeArray::S(o) => o,
+            _ => panic!("Output QArray type should be QSmallType"),
+        }
     }
 
     /// Unlike the node's `padded_evaluate`, the model's `padded_evaluate` accepts unpadded input
@@ -96,7 +101,7 @@ where
     pub(crate) fn padded_evaluate(&self, input: QArray<QSmallType>) -> QArray<QSmallType> {
         // TODO sanity check: input shape matches model input shape
 
-        let mut output = input.compact_resize(
+        let input = input.compact_resize(
             // TODO this functionality is so common we might as well make it an #[inline] function
             self.input_shape
                 .iter()
@@ -105,12 +110,17 @@ where
             0,
         );
 
+        let mut output = QTypeArray::S(input);
+
         for node in &self.nodes {
-            output = node.padded_evaluate(output);
+            output = node.padded_evaluate(&output);
         }
 
         // TODO switch to reference in reshape?
-        output.compact_resize(self.output_shape.clone(), 0)
+        match output {
+            QTypeArray::S(o) => o.compact_resize(self.output_shape.clone(), 0),
+            _ => panic!("Output QArray type should be QSmallType"),
+        }
     }
 
     pub(crate) fn prove_inference(
@@ -123,7 +133,7 @@ where
     ) -> InferenceProof<F, S, PCS> {
         // TODO Absorb public parameters into s (to be determined what exactly)
 
-        let mut output = input.compact_resize(
+        let output = input.compact_resize(
             self.input_shape
                 .iter()
                 .map(|x| x.next_power_of_two())
@@ -133,6 +143,8 @@ where
 
         let output_f = output.values().iter().map(|x| F::from(*x)).collect();
 
+        let mut output = QTypeArray::S(output);
+
         // First pass: computing node values
         // TODO handling F and QSmallType is inelegant; we might want to switch
         // to F for IO in NodeOps::prove
@@ -140,8 +152,13 @@ where
         let mut node_outputs_f = vec![output_f];
 
         for node in &self.nodes {
-            output = node.padded_evaluate(output);
-            let output_f: Vec<F> = output.values().iter().map(|x| F::from(*x)).collect();
+            output = node.padded_evaluate(&output);
+
+            let output_f: Vec<F> = match &output {
+                QTypeArray::S(o) => o.values().iter().map(|x| F::from(*x)).collect(),
+                QTypeArray::L(o) => o.values().iter().map(|x| F::from(*x)).collect(),
+            };
+
             node_outputs.push(output.clone());
             node_outputs_f.push(output_f);
         }
