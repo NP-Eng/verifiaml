@@ -12,14 +12,12 @@ use crate::{
 
 use self::{
     fc::{FCNodeCommitment, FCNodeCommitmentState, FCNodeProof},
-    loose_fc::{LooseFCNode, LooseFCNodeCommitment, LooseFCNodeCommitmentState, LooseFCNodeProof},
     reshape::ReshapeNode,
 };
 
 use super::qarray::QArray;
 
 pub(crate) mod fc;
-pub(crate) mod loose_fc;
 pub(crate) mod relu;
 pub(crate) mod reshape;
 
@@ -110,14 +108,12 @@ where
     PCS: PolynomialCommitment<F, Poly<F>, S>,
 {
     FC(FCNode<F, S, PCS>),
-    LooseFC(LooseFCNode<F, S, PCS>),
     ReLU(ReLUNode<F, S, PCS>),
     Reshape(ReshapeNode<F, S, PCS>),
 }
 
 pub(crate) enum NodeProof {
     FC(FCNodeProof),
-    LooseFC(LooseFCNodeProof),
     ReLU(()),
     Reshape(()),
 }
@@ -129,7 +125,6 @@ where
     PCS: PolynomialCommitment<F, Poly<F>, S>,
 {
     FC(FCNodeCommitment<F, S, PCS>),
-    LooseFC(LooseFCNodeCommitment<F, S, PCS>),
     ReLU(()),
     Reshape(()),
 }
@@ -141,7 +136,6 @@ where
     PCS: PolynomialCommitment<F, Poly<F>, S>,
 {
     FC(FCNodeCommitmentState<F, S, PCS>),
-    LooseFC(LooseFCNodeCommitmentState<F, S, PCS>),
     ReLU(()),
     Reshape(()),
 }
@@ -157,7 +151,6 @@ where
     fn as_node_ops(&self) -> &dyn NodeOps {
         match self {
             Node::FC(fc) => fc,
-            Node::LooseFC(fc) => fc,
             Node::ReLU(r) => r,
             Node::Reshape(r) => r,
         }
@@ -166,7 +159,6 @@ where
     fn as_node_ops_snark(&self) -> &dyn NodeOpsSNARK<F, S, PCS> {
         match self {
             Node::FC(fc) => fc,
-            Node::LooseFC(fc) => fc,
             Node::ReLU(r) => r,
             Node::Reshape(r) => r,
         }
@@ -177,7 +169,6 @@ where
     fn type_name(&self) -> &'static str {
         match self {
             Node::FC(_) => "FC",
-            Node::LooseFC(_) => "LooseFC",
             Node::ReLU(_) => "ReLU",
             Node::Reshape(_) => "Reshape",
         }
