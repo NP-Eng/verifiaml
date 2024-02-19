@@ -90,10 +90,9 @@ where
             output = node.evaluate(&output);
         }
 
-        if let QTypeArray::S(output) = output {
-            output
-        } else {
-            panic!("Output QArray type should be QSmallType")
+        match output {
+            QTypeArray::S(o) => o,
+            _ => panic!("Output QArray type should be QSmallType"),
         }
     }
 
@@ -118,11 +117,9 @@ where
         }
 
         // TODO switch to reference in reshape?
-
-        if let QTypeArray::S(output) = output {
-            output.compact_resize(self.output_shape.clone(), 0)
-        } else {
-            panic!("Output QArray type should be QSmallType")
+        match output {
+            QTypeArray::S(o) => o.compact_resize(self.output_shape.clone(), 0),
+            _ => panic!("Output QArray type should be QSmallType"),
         }
     }
 
