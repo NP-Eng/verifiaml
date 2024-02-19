@@ -133,7 +133,7 @@ where
     ) -> InferenceProof<F, S, PCS> {
         // TODO Absorb public parameters into s (to be determined what exactly)
 
-        let mut output = input.compact_resize(
+        let output = input.compact_resize(
             self.input_shape
                 .iter()
                 .map(|x| x.next_power_of_two())
@@ -143,7 +143,7 @@ where
 
         let output_f = output.values().iter().map(|x| F::from(*x)).collect();
 
-        let mut output = QTypeArray::S(output.clone());
+        let mut output = QTypeArray::S(output);
 
         // First pass: computing node values
         // TODO handling F and QSmallType is inelegant; we might want to switch
@@ -154,7 +154,7 @@ where
         for node in &self.nodes {
             output = node.padded_evaluate(output);
 
-            let output_f: Vec<F> = match output.clone() {
+            let output_f: Vec<F> = match &output {
                 QTypeArray::S(o) => o.values().iter().map(|x| F::from(*x)).collect(),
                 QTypeArray::L(o) => o.values().iter().map(|x| F::from(*x)).collect(),
             };
