@@ -12,6 +12,10 @@ use crate::{
 
 use self::{
     bmm::{BMMNodeCommitment, BMMNodeCommitmentState, BMMNodeProof},
+    requantise_bmm::{
+        RequantiseBMMNode, RequantiseBMMNodeCommitment, RequantiseBMMNodeCommitmentState,
+        RequantiseBMMNodeProof,
+    },
     reshape::ReshapeNode,
 };
 
@@ -19,6 +23,7 @@ use super::qarray::{QArray, QTypeArray};
 
 pub(crate) mod bmm;
 pub(crate) mod relu;
+pub(crate) mod requantise_bmm;
 pub(crate) mod reshape;
 
 // mod parser;
@@ -109,12 +114,14 @@ where
     PCS: PolynomialCommitment<F, Poly<F>, S>,
 {
     BMM(BMMNode<F, S, PCS>),
+    RequantiseBMM(RequantiseBMMNode<F, S, PCS>),
     ReLU(ReLUNode<F, S, PCS>),
     Reshape(ReshapeNode<F, S, PCS>),
 }
 
 pub(crate) enum NodeProof {
     BMM(BMMNodeProof),
+    RequantiseBMM(RequantiseBMMNodeProof),
     ReLU(()),
     Reshape(()),
 }
@@ -126,6 +133,7 @@ where
     PCS: PolynomialCommitment<F, Poly<F>, S>,
 {
     BMM(BMMNodeCommitment<F, S, PCS>),
+    RequantiseBMM(RequantiseBMMNodeCommitment),
     ReLU(()),
     Reshape(()),
 }
@@ -137,6 +145,7 @@ where
     PCS: PolynomialCommitment<F, Poly<F>, S>,
 {
     BMM(BMMNodeCommitmentState<F, S, PCS>),
+    RequantiseBMM(RequantiseBMMNodeCommitmentState),
     ReLU(()),
     Reshape(()),
 }
@@ -152,6 +161,7 @@ where
     fn as_node_ops(&self) -> &dyn NodeOps {
         match self {
             Node::BMM(fc) => fc,
+            Node::RequantiseBMM(r) => r,
             Node::ReLU(r) => r,
             Node::Reshape(r) => r,
         }
@@ -160,6 +170,7 @@ where
     fn as_node_ops_snark(&self) -> &dyn NodeOpsSNARK<F, S, PCS> {
         match self {
             Node::BMM(fc) => fc,
+            Node::RequantiseBMM(r) => r,
             Node::ReLU(r) => r,
             Node::Reshape(r) => r,
         }
@@ -170,6 +181,7 @@ where
     fn type_name(&self) -> &'static str {
         match self {
             Node::BMM(_) => "BMM",
+            Node::RequantiseBMM(r) => "RequantiseBMM",
             Node::ReLU(_) => "ReLU",
             Node::Reshape(_) => "Reshape",
         }
