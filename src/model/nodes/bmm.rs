@@ -271,7 +271,7 @@ where
         big_poly.add_product(
             vec![weights_mle, input]
                 .into_iter()
-                .map(|mle| Rc::new(mle))
+                .map(Rc::new)
                 .collect::<Vec<_>>(),
             F::one(),
         );
