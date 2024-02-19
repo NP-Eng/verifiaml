@@ -11,7 +11,7 @@ ark-serialize = { version = "^0.4.0", default-features = false, features = [ "de
 ark-poly = {version = "^0.4.0", default-features = false }
 ark-poly-commit = {version = "^0.4.0", default-features = false }
 ark-crypto-primitives = {version = "^0.4.0", default-features = false }
-ark-linear-sumcheck = { git = "https://github.com/arkworks-rs/sumcheck/", default-features = false }
+ark-sumcheck = { git = "ssh://git@github.com/HungryCatsStudio/sumcheck-private.git", default-features = false }
 
 [dev-dependencies]
 ark-bn254 = { version = "^0.4.0", default-features = false, features = [ "curve" ] }
