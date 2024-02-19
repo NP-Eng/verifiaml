@@ -91,6 +91,8 @@ where
         output
     }
 
+    /// Unlike the node's `padded_evaluate`, the model's `padded_evaluate` accepts unpadded input
+    /// and first re-sizes it before running inference.
     pub(crate) fn padded_evaluate(&self, input: QArray<QSmallType>) -> QArray<QSmallType> {
         // TODO sanity check: input shape matches model input shape
 

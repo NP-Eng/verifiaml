@@ -1,6 +1,6 @@
 use crate::{
     model::{
-        nodes::{fc::FCNode, loose_fc::LooseFCNode, relu::ReLUNode, reshape::ReshapeNode, Node},
+        nodes::{fc::FCNode, relu::ReLUNode, reshape::ReshapeNode, Node},
         qarray::QArray,
         Model, Poly,
     }, pcs_types::Brakedown, quantization::{quantise_f32_u8_nne, QSmallType}
@@ -33,11 +33,10 @@ where
 
     let reshape: ReshapeNode<F, S, PCS> = ReshapeNode::new(INPUT_DIMS.to_vec(), vec![flat_dim]);
 
-    let lfc: LooseFCNode<F, S, PCS> = LooseFCNode::new(
+    let fc1: FCNode<F, S, PCS> = FCNode::new(
         WEIGHTS_1.to_vec(),
         BIAS_1.to_vec(),
         (flat_dim, INTER_DIM),
-        (INPUT_DIMS[0], INPUT_DIMS[1]),
         S_1_I,
         Z_1_I,
         S_1_W,
@@ -62,7 +61,7 @@ where
 
     Model::new(INPUT_DIMS.to_vec(), vec![
         Node::Reshape(reshape),
-        Node::LooseFC(lfc),
+        Node::FC(fc1),
         Node::ReLU(relu),
         Node::FC(fc2),
     ])
