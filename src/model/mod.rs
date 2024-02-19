@@ -215,6 +215,9 @@ where
         let output_challenge_point =
             sponge.squeeze_field_elements(log2(output_node_f.len()) as usize);
 
+        // TODO we have to pass rng, not None, but it has been moved before
+        // fix this once we have decided how to handle the cumbersome
+        // Option<&mut rng...>
         let input_opening_proof = PCS::open(
             ck,
             [input_labeled_value],
@@ -226,6 +229,9 @@ where
         )
         .unwrap();
 
+        // TODO we have to pass rng, not None, but it has been moved before
+        // fix this once we have decided how to handle the cumbersome
+        // Option<&mut rng...>
         let output_opening_proof = PCS::open(
             ck,
             [output_labeled_value],
