@@ -46,7 +46,7 @@ pub(crate) trait NodeOps {
     }
 
     /// Evaluate the node natively (without padding)
-    fn evaluate(&self, input: QTypeArray) -> QTypeArray;
+    fn evaluate(&self, input: &QTypeArray) -> QTypeArray;
 }
 
 pub(crate) trait NodeOpsSNARK<F, S, PCS>
@@ -206,7 +206,7 @@ where
     }
 
     /// Evaluate the node natively (without padding)
-    fn evaluate(&self, input: QTypeArray) -> QTypeArray {
+    fn evaluate(&self, input: &QTypeArray) -> QTypeArray {
         self.as_node_ops().evaluate(input)
     }
 }

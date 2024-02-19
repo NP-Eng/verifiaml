@@ -35,7 +35,7 @@ where
         vec![self.num_units]
     }
 
-    fn evaluate(&self, input: QTypeArray) -> QTypeArray {
+    fn evaluate(&self, input: &QTypeArray) -> QTypeArray {
         // TODO sanity checks (cf. BMM); systematise
         let input = match input {
             QTypeArray::S(i) => i,

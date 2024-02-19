@@ -87,7 +87,7 @@ where
     pub(crate) fn evaluate(&self, input: QArray<QSmallType>) -> QArray<QSmallType> {
         let mut output = QTypeArray::S(input);
         for node in &self.nodes {
-            output = node.evaluate(output);
+            output = node.evaluate(&output);
         }
 
         if let QTypeArray::S(output) = output {

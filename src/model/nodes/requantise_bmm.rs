@@ -53,7 +53,7 @@ where
         vec![self.size]
     }
 
-    fn evaluate(&self, input: QTypeArray) -> QTypeArray {
+    fn evaluate(&self, input: &QTypeArray) -> QTypeArray {
         // Sanity checks
         // TODO systematise
         let input = match input {

@@ -35,7 +35,7 @@ where
         self.output_shape.clone()
     }
 
-    fn evaluate(&self, input: QTypeArray) -> QTypeArray {
+    fn evaluate(&self, input: &QTypeArray) -> QTypeArray {
         // Sanity checks
         // TODO systematise
 
