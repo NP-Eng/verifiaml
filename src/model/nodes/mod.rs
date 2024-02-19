@@ -15,7 +15,7 @@ use self::{
     reshape::ReshapeNode,
 };
 
-use super::qarray::QArray;
+use super::qarray::{QArray, QTypeArray};
 
 pub(crate) mod fc;
 pub(crate) mod relu;
@@ -41,7 +41,7 @@ pub(crate) trait NodeOps {
     }
 
     /// Evaluate the node natively (without padding)
-    fn evaluate(&self, input: QArray<QSmallType>) -> QArray<QSmallType>;
+    fn evaluate(&self, input: QTypeArray) -> QTypeArray;
 }
 
 pub(crate) trait NodeOpsSNARK<F, S, PCS>
@@ -81,7 +81,7 @@ where
     fn com_num_vars(&self) -> usize;
 
     /// Evaluate the padded node natively
-    fn padded_evaluate(&self, input: QArray<QSmallType>) -> QArray<QSmallType>;
+    fn padded_evaluate(&self, input: QTypeArray) -> QTypeArray;
 
     /// Commit to the node parameters
     fn commit(
@@ -95,9 +95,9 @@ where
         &self,
         s: &mut S,
         node_com: &NodeCommitment<F, S, PCS>,
-        input: QArray<QSmallType>,
+        input: QTypeArray,
         input_com: &PCS::Commitment,
-        output: QArray<QSmallType>,
+        output: QTypeArray,
         output_com: &PCS::Commitment,
     ) -> NodeProof;
 }
@@ -194,7 +194,7 @@ where
     }
 
     /// Evaluate the node natively (without padding)
-    fn evaluate(&self, input: QArray<QSmallType>) -> QArray<QSmallType> {
+    fn evaluate(&self, input: QTypeArray) -> QTypeArray {
         self.as_node_ops().evaluate(input)
     }
 }
@@ -217,7 +217,7 @@ where
     }
 
     /// Evaluate the padded node natively
-    fn padded_evaluate(&self, input: QArray<QSmallType>) -> QArray<QSmallType> {
+    fn padded_evaluate(&self, input: QTypeArray) -> QTypeArray {
         self.as_node_ops_snark().padded_evaluate(input)
     }
 
@@ -234,9 +234,9 @@ where
         &self,
         s: &mut S,
         node_com: &NodeCommitment<F, S, PCS>,
-        input: QArray<QSmallType>,
+        input: QTypeArray,
         input_com: &PCS::Commitment,
-        output: QArray<QSmallType>,
+        output: QTypeArray,
         output_com: &PCS::Commitment,
     ) -> NodeProof {
         self.as_node_ops_snark()

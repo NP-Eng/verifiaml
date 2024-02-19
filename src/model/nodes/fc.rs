@@ -6,7 +6,7 @@ use ark_poly_commit::{LabeledPolynomial, PolynomialCommitment};
 use ark_std::log2;
 use ark_std::rand::RngCore;
 
-use crate::model::qarray::QArray;
+use crate::model::qarray::{QArray, QTypeArray};
 use crate::model::Poly;
 use crate::quantization::{
     requantise_fc, FCQInfo, QInfo, QLargeType, QScaleType, QSmallType, RoundingScheme,
@@ -87,9 +87,14 @@ where
         vec![self.dims.1]
     }
 
-    fn evaluate(&self, input: QArray<QSmallType>) -> QArray<QSmallType> {
+    fn evaluate(&self, input: QTypeArray) -> QTypeArray {
         // Sanity checks
         // TODO systematise
+        let input = match input {
+            QTypeArray::S(i) => i,
+            _ => panic!("FC node expects QSmallType as its QArray input type"),
+        };
+
         assert_eq!(
             input.num_dims(),
             1,
@@ -122,7 +127,10 @@ where
             }
         }
 
-        requantise_fc(&accumulators, &self.q_info, RoundingScheme::NearestTiesEven).into()
+        let output: QArray<QSmallType> =
+            requantise_fc(&accumulators, &self.q_info, RoundingScheme::NearestTiesEven).into();
+
+        QTypeArray::S(output)
     }
 }
 
@@ -144,7 +152,12 @@ where
     // meant to exactly mirror the proof-system multiplication proved by the
     // sumcheck argument. Requantisation and shifting are also applied to these
     // trivial entries, as the proof system does.
-    fn padded_evaluate(&self, input: QArray<QSmallType>) -> QArray<QSmallType> {
+    fn padded_evaluate(&self, input: QTypeArray) -> QTypeArray {
+        let input = match input {
+            QTypeArray::S(i) => i,
+            _ => panic!("FC node expects QSmallType as its QArray input type"),
+        };
+
         let padded_dims = (1 << self.padded_dims_log.0, 1 << self.padded_dims_log.1);
 
         // Sanity checks
@@ -182,7 +195,10 @@ where
             }
         }
 
-        requantise_fc(&accumulators, &self.q_info, RoundingScheme::NearestTiesEven).into()
+        let output: QArray<QSmallType> =
+            requantise_fc(&accumulators, &self.q_info, RoundingScheme::NearestTiesEven).into();
+
+        QTypeArray::S(output)
     }
 
     fn commit(
@@ -229,9 +245,9 @@ where
         &self,
         s: &mut S,
         node_com: &NodeCommitment<F, S, PCS>,
-        input: QArray<QSmallType>,
+        input: QTypeArray,
         input_com: &PCS::Commitment,
-        output: QArray<QSmallType>,
+        output: QTypeArray,
         output_com: &PCS::Commitment,
     ) -> NodeProof {
         unimplemented!()

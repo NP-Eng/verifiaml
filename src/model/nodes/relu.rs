@@ -6,7 +6,7 @@ use ark_ff::PrimeField;
 use ark_poly_commit::PolynomialCommitment;
 use ark_std::rand::RngCore;
 
-use crate::model::qarray::QArray;
+use crate::model::qarray::{QArray, QTypeArray};
 use crate::model::Poly;
 use crate::quantization::QSmallType;
 
@@ -35,9 +35,14 @@ where
         vec![self.num_units]
     }
 
-    fn evaluate(&self, input: QArray<QSmallType>) -> QArray<QSmallType> {
+    fn evaluate(&self, input: QTypeArray) -> QTypeArray {
         // TODO sanity checks (cf. FC); systematise
-        input.maximum(self.zero_point)
+        let input = match input {
+            QTypeArray::S(i) => i,
+            _ => panic!("ReLU node expects QSmallType as its QArray input type"),
+        };
+
+        QTypeArray::S(input.maximum(self.zero_point))
     }
 }
 
@@ -66,18 +71,24 @@ where
 
     // TODO this is the same as evaluate() for now; the two will likely differ
     // if/when we introduce input size checks
-    fn padded_evaluate(&self, input: QArray<QSmallType>) -> QArray<QSmallType> {
+    fn padded_evaluate(&self, input: QTypeArray) -> QTypeArray {
         // TODO sanity checks (cf. FC); systematise
-        input.maximum(self.zero_point)
+
+        let input = match input {
+            QTypeArray::S(i) => i,
+            _ => panic!("ReLU node expects QSmallType as its QArray input type"),
+        };
+
+        QTypeArray::S(input.maximum(self.zero_point))
     }
 
     fn prove(
         &self,
         s: &mut S,
         node_com: &NodeCommitment<F, S, PCS>,
-        input: QArray<QSmallType>,
+        input: QTypeArray,
         input_com: &PCS::Commitment,
-        output: QArray<QSmallType>,
+        output: QTypeArray,
         output_com: &PCS::Commitment,
     ) -> super::NodeProof {
         todo!()

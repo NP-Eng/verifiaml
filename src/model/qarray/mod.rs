@@ -12,6 +12,12 @@ use crate::quantization::{QLargeType, QSmallType};
 
 const QARRAY_NESTED_TAB: &str = "    ";
 
+#[derive(Clone)]
+pub(crate) enum QTypeArray {
+    S(QArray<QSmallType>),
+    L(QArray<QLargeType>),
+}
+
 #[cfg(test)]
 mod tests;
 
