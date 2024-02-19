@@ -1,18 +1,18 @@
 use ark_std::rc::Rc;
 
-use ark_poly::MultilinearExtension;
+use ark_poly::{MultilinearExtension, Polynomial};
 use ark_std::marker::PhantomData;
 
 use ark_crypto_primitives::sponge::{Absorb, CryptographicSponge};
 use ark_ff::PrimeField;
-use ark_poly_commit::{LabeledPolynomial, PolynomialCommitment};
+use ark_poly_commit::{LabeledCommitment, LabeledPolynomial, PolynomialCommitment};
 use ark_std::log2;
 use ark_std::rand::RngCore;
 use ark_sumcheck::ml_sumcheck::protocol::ListOfProductsOfPolynomials;
-use ark_sumcheck::ml_sumcheck::MLSumcheck;
+use ark_sumcheck::ml_sumcheck::{MLSumcheck, Proof};
 
 use crate::model::qarray::{QArray, QTypeArray};
-use crate::model::Poly;
+use crate::model::{LabeledPoly, Poly};
 use crate::quantization::{BMMQInfo, QInfo, QLargeType, QScaleType, QSmallType};
 use crate::{Commitment, CommitmentState};
 
@@ -76,8 +76,14 @@ where
 {
 }
 
-pub(crate) struct BMMNodeProof {
-    // this will be the sumcheck proof
+pub(crate) struct BMMNodeProof<
+    F: PrimeField + Absorb,
+    S: CryptographicSponge,
+    PCS: PolynomialCommitment<F, Poly<F>, S>,
+> {
+    sumcheck_proof: Proof<F>,
+    opening_proof: PCS::Proof,
+    claimed_evaluations: Vec<F>,
 }
 
 impl<F, S, PCS> NodeOps for BMMNode<F, S, PCS>
@@ -247,11 +253,13 @@ where
         ck: &PCS::CommitterKey,
         sponge: &mut S,
         node_com: &NodeCommitment<F, S, PCS>,
-        input: Poly<F>,
-        input_com: &PCS::Commitment,
-        output: Poly<F>,
-        output_com: &PCS::Commitment,
-    ) -> NodeProof {
+        input: LabeledPoly<F>,
+        input_com: &LabeledCommitment<PCS::Commitment>,
+        input_com_state: PCS::CommitmentState,
+        output: LabeledPoly<F>,
+        output_com: &LabeledCommitment<PCS::Commitment>,
+        output_com_state: PCS::CommitmentState,
+    ) -> NodeProof<F, S, PCS> {
         // we can squeeze directly, since the sponge has already absorbed all the
         // commitments in Model::prove_inference
         let r: Vec<F> = sponge.squeeze_field_elements(self.padded_dims_log.1);
@@ -268,15 +276,44 @@ where
         // big_poly(x) = input(x) * weights(x, r)
         let mut big_poly = ListOfProductsOfPolynomials::new(self.padded_dims_log.0);
 
+        // TODO we are cloning the input here, can we do better?
         big_poly.add_product(
-            vec![weights_mle, input]
+            vec![weights_mle, (*input).clone()]
                 .into_iter()
                 .map(Rc::new)
                 .collect::<Vec<_>>(),
             F::one(),
         );
 
-        unimplemented!()
+        let (sumcheck_proof, prover_state) =
+            MLSumcheck::<F, S>::prove_as_subprotocol(&big_poly, sponge).unwrap();
+
+        // Prover computes the claimed evaluations of Weights, Input, at the random point
+        // Note this is a different random point than `r` above: `prover_state.randomness` is
+        // the list of random values sampled vy V during the sumcheck itself
+        let claimed_evaluations: Vec<F> = big_poly
+            .flattened_ml_extensions
+            .iter()
+            .map(|x| x.evaluate(&prover_state.randomness))
+            .collect();
+
+        // TODO need to pass the labeled poly, and the commitment to, and the state for, the weights matrix. Currently only passing the data related to the input
+        let opening_proof = PCS::open(
+            &ck,
+            &[input],
+            &[(*input_com).clone()],
+            &prover_state.randomness,
+            sponge,
+            &[input_com_state],
+            None,
+        )
+        .unwrap();
+
+        NodeProof::BMM(BMMNodeProof {
+            sumcheck_proof,
+            opening_proof,
+            claimed_evaluations,
+        })
     }
 }
 

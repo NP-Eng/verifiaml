@@ -20,10 +20,11 @@ mod qarray;
 mod reshaping;
 
 pub(crate) type Poly<F> = DenseMultilinearExtension<F>;
+pub(crate) type LabeledPoly<F> = LabeledPolynomial<F, DenseMultilinearExtension<F>>;
 
 pub(crate) struct InferenceProof<F, S, PCS>
 where
-    F: PrimeField,
+    F: PrimeField + Absorb,
     S: CryptographicSponge,
     PCS: PolynomialCommitment<F, Poly<F>, S>,
 {
@@ -31,7 +32,7 @@ where
     outputs: Vec<QTypeArray>,
 
     // Proofs of evaluation of each of the model's nodes
-    node_proofs: Vec<NodeProof>,
+    node_proofs: Vec<NodeProof<F, S, PCS>>,
 
     // Proofs of opening of each of the model's outputs
     opening_proofs: Vec<PCS::Proof>,
@@ -170,7 +171,7 @@ where
         }
 
         // Committing to node outputs as MLEs (individual per node for now)
-        let output_mles: Vec<LabeledPolynomial<F, Poly<F>>> = node_output_mles
+        let labeled_output_mles: Vec<LabeledPolynomial<F, Poly<F>>> = node_output_mles
             .iter()
             .map(|mle|
             // TODO change dummy label once we e.g. have given numbers to the
@@ -184,10 +185,10 @@ where
             ))
             .collect();
 
-        let (node_coms, node_com_states) = PCS::commit(ck, &output_mles, rng).unwrap();
+        let (output_coms, output_com_states) = PCS::commit(ck, &labeled_output_mles, rng).unwrap();
 
         // Absorb all commitments into the sponge
-        sponge.absorb(&node_coms);
+        sponge.absorb(&output_coms);
 
         // TODO Prove that all commited NIOs live in the right range (to be
         // discussed)
@@ -199,9 +200,9 @@ where
             .nodes
             .iter()
             .zip(node_commitments.iter())
-            .zip(node_output_mles.windows(2))
-            .zip(node_coms.windows(2))
-            .zip(node_com_states.windows(2))
+            .zip(labeled_output_mles.windows(2))
+            .zip(output_coms.windows(2))
+            .zip(output_com_states.windows(2))
         {
             // TODO prove likely needs to receive the sponge for randomness/FS
             node_proofs.push(node.prove(
@@ -209,9 +210,11 @@ where
                 sponge,
                 node_com,
                 values[0].clone(),
-                l_v_coms[0].commitment(),
+                &l_v_coms[0],
+                v_coms_states[0].clone(),
                 values[1].clone(),
-                l_v_coms[1].commitment(),
+                &l_v_coms[1],
+                v_coms_states[1].clone(),
             ));
         }
 
@@ -221,15 +224,15 @@ where
         // but that would require messy node-by-node handling
         let input_node = node_outputs.first().unwrap();
         let input_node_f = node_output_mles.first().unwrap().to_evaluations();
-        let input_labeled_value = output_mles.first().unwrap();
-        let input_node_com = node_coms.first().unwrap();
-        let input_node_com_state = node_com_states.first().unwrap();
+        let input_labeled_value = labeled_output_mles.first().unwrap();
+        let input_node_com = output_coms.first().unwrap();
+        let input_node_com_state = output_com_states.first().unwrap();
 
         let output_node = node_outputs.last().unwrap();
         let output_node_f = node_output_mles.last().unwrap().to_evaluations();
-        let output_labeled_value = output_mles.last().unwrap();
-        let output_node_com = node_coms.last().unwrap();
-        let output_node_com_state = node_com_states.last().unwrap();
+        let output_labeled_value = labeled_output_mles.last().unwrap();
+        let output_node_com = output_coms.last().unwrap();
+        let output_node_com_state = output_com_states.last().unwrap();
 
         // Absorb the model IO output and squeeze the challenge point
         // Absorb the plain output and squeeze the challenge point

@@ -1,6 +1,6 @@
 use ark_crypto_primitives::sponge::Absorb;
 use ark_ff::PrimeField;
-use ark_poly_commit::PolynomialCommitment;
+use ark_poly_commit::{LabeledCommitment, LabeledPolynomial, PolynomialCommitment};
 use ark_std::rand::RngCore;
 
 use crate::{
@@ -20,7 +20,10 @@ use self::{
     reshape::ReshapeNode,
 };
 
-use super::qarray::{QArray, QTypeArray};
+use super::{
+    qarray::{QArray, QTypeArray},
+    LabeledPoly,
+};
 
 pub(crate) mod bmm;
 pub(crate) mod relu;
@@ -52,7 +55,7 @@ pub(crate) trait NodeOps {
 
 pub(crate) trait NodeOpsSNARK<F, S, PCS>
 where
-    F: PrimeField,
+    F: PrimeField + Absorb,
     S: CryptographicSponge,
     PCS: PolynomialCommitment<F, Poly<F>, S>,
 {
@@ -102,11 +105,13 @@ where
         ck: &PCS::CommitterKey,
         s: &mut S,
         node_com: &NodeCommitment<F, S, PCS>,
-        input: Poly<F>,
-        input_com: &PCS::Commitment,
-        output: Poly<F>,
-        output_com: &PCS::Commitment,
-    ) -> NodeProof;
+        input: LabeledPoly<F>,
+        input_com: &LabeledCommitment<PCS::Commitment>,
+        input_com_state: PCS::CommitmentState,
+        output: LabeledPoly<F>,
+        output_com: &LabeledCommitment<PCS::Commitment>,
+        output_com_state: PCS::CommitmentState,
+    ) -> NodeProof<F, S, PCS>;
 }
 
 pub(crate) enum Node<F, S, PCS>
@@ -121,8 +126,13 @@ where
     Reshape(ReshapeNode<F, S, PCS>),
 }
 
-pub(crate) enum NodeProof {
-    BMM(BMMNodeProof),
+pub(crate) enum NodeProof<F, S, PCS>
+where
+    F: PrimeField + Absorb,
+    S: CryptographicSponge,
+    PCS: PolynomialCommitment<F, Poly<F>, S>,
+{
+    BMM(BMMNodeProof<F, S, PCS>),
     RequantiseBMM(RequantiseBMMNodeProof),
     ReLU(()),
     Reshape(()),
@@ -249,12 +259,23 @@ where
         ck: &PCS::CommitterKey,
         s: &mut S,
         node_com: &NodeCommitment<F, S, PCS>,
-        input: Poly<F>,
-        input_com: &PCS::Commitment,
-        output: Poly<F>,
-        output_com: &PCS::Commitment,
-    ) -> NodeProof {
-        self.as_node_ops_snark()
-            .prove(ck, s, node_com, input, input_com, output, output_com)
+        input: LabeledPoly<F>,
+        input_com: &LabeledCommitment<PCS::Commitment>,
+        input_com_state: PCS::CommitmentState,
+        output: LabeledPoly<F>,
+        output_com: &LabeledCommitment<PCS::Commitment>,
+        output_com_state: PCS::CommitmentState,
+    ) -> NodeProof<F, S, PCS> {
+        self.as_node_ops_snark().prove(
+            ck,
+            s,
+            node_com,
+            input,
+            input_com,
+            input_com_state,
+            output,
+            output_com,
+            output_com_state,
+        )
     }
 }
