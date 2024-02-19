@@ -87,12 +87,11 @@ where
             "Received padded input shape does not match node's padded input shape"
         );
 
-        let unpadded_input = input.compact_resize(self.input_shape.clone(), 0);
+        let mut unpadded_input = input.compact_resize(self.input_shape.clone(), 0);
 
         // TODO only handles 2-to-1 reshapes, I think
-        let unpadded_output = QArray::new(unpadded_input.move_values(), self.output_shape.clone());
-
-        unpadded_output.compact_resize(padded_output_shape, 0)
+        unpadded_input.reshape(self.output_shape.clone());
+        unpadded_input.compact_resize(padded_output_shape, 0)
     }
 
     fn commit(
