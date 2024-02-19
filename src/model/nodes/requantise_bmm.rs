@@ -198,5 +198,4 @@ where
         }
     }
 }
-// TODO in constructor, add quantisation information checks? (s_bias = s_input * s_weight, z_bias = 0, z_weight = 0, etc.)
-// TODO in constructor, check bias length matches appropriate matrix dimension
+// TODO in constructor, add quantisation information checks? (e.g. z_weight = 0, etc.)
