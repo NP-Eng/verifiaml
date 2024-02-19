@@ -1,6 +1,6 @@
 use crate::{
     model::{
-        nodes::{fc::FCNode, relu::ReLUNode, reshape::ReshapeNode, Node},
+        nodes::{bmm::BMMNode, relu::ReLUNode, reshape::ReshapeNode, Node},
         qarray::QArray,
         Model, Poly,
     }, pcs_types::Brakedown, quantization::{quantise_f32_u8_nne, QSmallType}
@@ -33,7 +33,7 @@ where
 
     let reshape: ReshapeNode<F, S, PCS> = ReshapeNode::new(INPUT_DIMS.to_vec(), vec![flat_dim]);
 
-    let fc1: FCNode<F, S, PCS> = FCNode::new(
+    let fc1: BMMNode<F, S, PCS> = BMMNode::new(
         WEIGHTS_1.to_vec(),
         BIAS_1.to_vec(),
         (flat_dim, INTER_DIM),
@@ -47,7 +47,7 @@ where
 
     let relu: ReLUNode<F, S, PCS> = ReLUNode::new(28, Z_1_O);
 
-    let fc2: FCNode<F, S, PCS> = FCNode::new(
+    let fc2: BMMNode<F, S, PCS> = BMMNode::new(
         WEIGHTS_2.to_vec(),
         BIAS_2.to_vec(),
         (INTER_DIM, OUTPUT_DIM),
@@ -61,9 +61,9 @@ where
 
     Model::new(INPUT_DIMS.to_vec(), vec![
         Node::Reshape(reshape),
-        Node::FC(fc1),
+        Node::BMM(fc1),
         Node::ReLU(relu),
-        Node::FC(fc2),
+        Node::BMM(fc2),
     ])
 }
 

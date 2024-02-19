@@ -4,20 +4,20 @@ use ark_std::rand::RngCore;
 
 use crate::{
     model::{
-        nodes::{fc::FCNode, relu::ReLUNode},
+        nodes::{bmm::BMMNode, relu::ReLUNode},
         CryptographicSponge, Poly,
     },
     quantization::QSmallType,
 };
 
 use self::{
-    fc::{FCNodeCommitment, FCNodeCommitmentState, FCNodeProof},
+    bmm::{BMMNodeCommitment, BMMNodeCommitmentState, BMMNodeProof},
     reshape::ReshapeNode,
 };
 
 use super::qarray::{QArray, QTypeArray};
 
-pub(crate) mod fc;
+pub(crate) mod bmm;
 pub(crate) mod relu;
 pub(crate) mod reshape;
 
@@ -108,13 +108,13 @@ where
     S: CryptographicSponge,
     PCS: PolynomialCommitment<F, Poly<F>, S>,
 {
-    FC(FCNode<F, S, PCS>),
+    BMM(BMMNode<F, S, PCS>),
     ReLU(ReLUNode<F, S, PCS>),
     Reshape(ReshapeNode<F, S, PCS>),
 }
 
 pub(crate) enum NodeProof {
-    FC(FCNodeProof),
+    BMM(BMMNodeProof),
     ReLU(()),
     Reshape(()),
 }
@@ -125,7 +125,7 @@ where
     S: CryptographicSponge,
     PCS: PolynomialCommitment<F, Poly<F>, S>,
 {
-    FC(FCNodeCommitment<F, S, PCS>),
+    BMM(BMMNodeCommitment<F, S, PCS>),
     ReLU(()),
     Reshape(()),
 }
@@ -136,7 +136,7 @@ where
     S: CryptographicSponge,
     PCS: PolynomialCommitment<F, Poly<F>, S>,
 {
-    FC(FCNodeCommitmentState<F, S, PCS>),
+    BMM(BMMNodeCommitmentState<F, S, PCS>),
     ReLU(()),
     Reshape(()),
 }
@@ -151,7 +151,7 @@ where
 {
     fn as_node_ops(&self) -> &dyn NodeOps {
         match self {
-            Node::FC(fc) => fc,
+            Node::BMM(fc) => fc,
             Node::ReLU(r) => r,
             Node::Reshape(r) => r,
         }
@@ -159,7 +159,7 @@ where
 
     fn as_node_ops_snark(&self) -> &dyn NodeOpsSNARK<F, S, PCS> {
         match self {
-            Node::FC(fc) => fc,
+            Node::BMM(fc) => fc,
             Node::ReLU(r) => r,
             Node::Reshape(r) => r,
         }
@@ -169,7 +169,7 @@ where
     // Debug
     fn type_name(&self) -> &'static str {
         match self {
-            Node::FC(_) => "FC",
+            Node::BMM(_) => "BMM",
             Node::ReLU(_) => "ReLU",
             Node::Reshape(_) => "Reshape",
         }
