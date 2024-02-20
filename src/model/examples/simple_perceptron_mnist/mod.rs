@@ -57,7 +57,33 @@ where
 }
 
 #[test]
-fn run_simple_perceptron_mnist() {
+fn run_native_simple_perceptron_mnist() {
+    /**** Change here ****/
+    let input = NORMALISED_INPUT_TEST_150;
+    let expected_output: Vec<u8> = vec![135, 109, 152, 161, 187, 157, 159, 151, 173, 202];
+    /**********************/
+
+    let perceptron = build_simple_perceptron_mnist::<Fr, PoseidonSponge<Fr>, Brakedown<Fr>>();
+
+    let quantised_input: QArray<u8> = input
+        .iter()
+        .map(|r| quantise_f32_u8_nne(r, S_INPUT, Z_INPUT))
+        .collect::<Vec<Vec<u8>>>()
+        .into();
+
+    let input_i8 = (quantised_input.cast::<i32>() - 128).cast::<QSmallType>();
+
+    let output_i8 = perceptron.evaluate(input_i8);
+
+    let output_u8 = (output_i8.cast::<i32>() + 128).cast::<u8>();
+
+    println!("Output: {:?}", output_u8.values());
+    assert_eq!(output_u8.move_values(), expected_output);
+}
+
+
+#[test]
+fn run_padded_simple_perceptron_mnist() {
     /**** Change here ****/
     let input = NORMALISED_INPUT_TEST_150;
     let expected_output: Vec<u8> = vec![135, 109, 152, 161, 187, 157, 159, 151, 173, 202];

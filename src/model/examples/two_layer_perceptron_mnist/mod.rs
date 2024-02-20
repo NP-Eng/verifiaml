@@ -80,7 +80,32 @@ where
 }
 
 #[test]
-fn run_two_layer_perceptron_mnist() {
+fn run_native_two_layer_perceptron_mnist() {
+    /**** Change here ****/
+    let input = NORMALISED_INPUT_TEST_150;
+    let expected_output: Vec<u8> = vec![138, 106, 149, 160, 174, 152, 141, 146, 169, 207];
+    /**********************/
+
+    let perceptron = build_two_layer_perceptron_mnist::<Fr, PoseidonSponge<Fr>, Brakedown<Fr>>();
+
+    let quantised_input: QArray<u8> = input
+        .iter()
+        .map(|r| quantise_f32_u8_nne(r, S_INPUT, Z_INPUT))
+        .collect::<Vec<Vec<u8>>>()
+        .into();
+
+    let input_i8 = (quantised_input.cast::<i32>() - 128).cast::<QSmallType>();
+
+    let output_i8 = perceptron.evaluate(input_i8);
+
+    let output_u8 = (output_i8.cast::<i32>() + 128).cast::<u8>();
+
+    println!("Output: {:?}", output_u8.values());
+    assert_eq!(output_u8.move_values(), expected_output);
+}
+
+#[test]
+fn run_padded_two_layer_perceptron_mnist() {
     /**** Change here ****/
     let input = NORMALISED_INPUT_TEST_150;
     let expected_output: Vec<u8> = vec![138, 106, 149, 160, 174, 152, 141, 146, 169, 207];
