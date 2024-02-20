@@ -1,9 +1,9 @@
 use crate::{
     model::{
         nodes::{bmm::BMMNode, requantise_bmm::RequantiseBMMNode, reshape::ReshapeNode, Node},
-        qarray::QArray,
+        qarray::{QArray, QTypeArray},
         Model, Poly,
-    }, utils::pcs_types::Brakedown, quantization::{quantise_f32_u8_nne, QSmallType}
+    }, quantization::{quantise_f32_u8_nne, QSmallType}, utils::{pcs_types::Brakedown, test_sponge::test_sponge}
 };
 
 use ark_crypto_primitives::sponge::{poseidon::PoseidonSponge, Absorb, CryptographicSponge};
@@ -130,15 +130,22 @@ fn prove_inference_simple_perceptron_mnist() {
 
     let mut sponge: PoseidonSponge<Fr> = test_sponge();
 
-    let output_i8 = perceptron.prove_inference(
+    let inference_proof = perceptron.prove_inference(
         &ck,
         Some(&mut rng),
-        sponge: &mut S,
-        node_coms: &Vec<NodeCommitment<F, S, PCS>>,
-        node_com_states: &Vec<NodeCommitmentState<F, S, PCS>>,
+        &mut sponge,
+        node_coms,
+        node_com_states,
         input_i8,
-    )
+    );
 
+    let output_qtypearray = inference_proof.outputs[0];
+
+    let output_i8 = match output_qtypearray {
+        QTypeArray::S(o) => o,
+        _ => panic!("Expected QArray"),
+    };
+   
     let output_u8 = (output_i8.cast::<i32>() + 128).cast::<u8>();
 
     println!("Output: {:?}", output_u8.values());

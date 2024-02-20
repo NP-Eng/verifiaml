@@ -29,13 +29,13 @@ where
     PCS: PolynomialCommitment<F, Poly<F>, S>,
 {
     // Model output tensors
-    outputs: Vec<QTypeArray>,
+    pub(crate) outputs: Vec<QTypeArray>,
 
     // Proofs of evaluation of each of the model's nodes
-    node_proofs: Vec<NodeProof<F, S, PCS>>,
+    pub(crate) node_proofs: Vec<NodeProof<F, S, PCS>>,
 
     // Proofs of opening of each of the model's outputs
-    opening_proofs: Vec<PCS::Proof>,
+    pub(crate) opening_proofs: Vec<PCS::Proof>,
 }
 
 // TODO change the functions that receive vectors to receive slices instead whenever it makes sense
