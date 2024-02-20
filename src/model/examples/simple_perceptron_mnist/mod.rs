@@ -3,7 +3,7 @@ use crate::{
         nodes::{bmm::BMMNode, requantise_bmm::RequantiseBMMNode, reshape::ReshapeNode, Node},
         qarray::{QArray, QTypeArray},
         Model, Poly,
-    }, quantization::{quantise_f32_u8_nne, QSmallType}, utils::{pcs_types::Brakedown, test_sponge::test_sponge}
+    }, quantization::{quantise_f32_u8_nne, QSmallType}, utils::{pcs_types::Ligero, test_sponge::test_sponge}
 };
 
 use ark_crypto_primitives::sponge::{poseidon::PoseidonSponge, Absorb, CryptographicSponge};
@@ -64,7 +64,7 @@ fn run_native_simple_perceptron_mnist() {
     let expected_output: Vec<u8> = vec![135, 109, 152, 161, 187, 157, 159, 151, 173, 202];
     /**********************/
 
-    let perceptron = build_simple_perceptron_mnist::<Fr, PoseidonSponge<Fr>, Brakedown<Fr>>();
+    let perceptron = build_simple_perceptron_mnist::<Fr, PoseidonSponge<Fr>, Ligero<Fr>>();
 
     let quantised_input: QArray<u8> = input
         .iter()
@@ -90,7 +90,7 @@ fn run_padded_simple_perceptron_mnist() {
     let expected_output: Vec<u8> = vec![135, 109, 152, 161, 187, 157, 159, 151, 173, 202];
     /**********************/
 
-    let perceptron = build_simple_perceptron_mnist::<Fr, PoseidonSponge<Fr>, Brakedown<Fr>>();
+    let perceptron = build_simple_perceptron_mnist::<Fr, PoseidonSponge<Fr>, Ligero<Fr>>();
 
     let quantised_input: QArray<u8> = input
         .iter()
@@ -115,7 +115,7 @@ fn prove_inference_simple_perceptron_mnist() {
     let expected_output: Vec<u8> = vec![135, 109, 152, 161, 187, 157, 159, 151, 173, 202];
     /**********************/
 
-    let perceptron = build_simple_perceptron_mnist::<Fr, PoseidonSponge<Fr>, Brakedown<Fr>>();
+    let perceptron = build_simple_perceptron_mnist::<Fr, PoseidonSponge<Fr>, Ligero<Fr>>();
 
     let quantised_input: QArray<u8> = input
         .iter()
