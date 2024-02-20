@@ -126,24 +126,27 @@ fn prove_inference_simple_perceptron_mnist() {
     let input_i8 = (quantised_input.cast::<i32>() - 128).cast::<QSmallType>();
 
     let mut rng = test_rng();
-    let (ck, vk) = perceptron.setup_keys(&mut rng).unwrap();
+    let (ck, _) = perceptron.setup_keys(&mut rng).unwrap();
 
     let mut sponge: PoseidonSponge<Fr> = test_sponge();
+
+    //let (hidden_nodes, com_states) = perceptron.commit(&ck, None).iter().unzip();
+    let (node_coms, node_com_states): (Vec<_>, Vec<_>) = perceptron.commit(&ck, None).into_iter().unzip();
 
     let inference_proof = perceptron.prove_inference(
         &ck,
         Some(&mut rng),
         &mut sponge,
-        node_coms,
-        node_com_states,
+        &node_coms,
+        &node_com_states,
         input_i8,
     );
 
-    let output_qtypearray = inference_proof.outputs[0];
+    let output_qtypearray = inference_proof.outputs[0].clone();
 
     let output_i8 = match output_qtypearray {
         QTypeArray::S(o) => o,
-        _ => panic!("Expected QArray"),
+        _ => panic!("Expected QTypeArray::S"),
     };
    
     let output_u8 = (output_i8.cast::<i32>() + 128).cast::<u8>();

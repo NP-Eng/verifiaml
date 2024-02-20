@@ -331,6 +331,12 @@ where
             .map(|x| x.evaluate(&prover_state.randomness))
             .collect();
 
+        // TODO remove
+        println!("*** Before opening input ***");
+        println!("> node dimensions {:?}", self.padded_dims_log);
+        println!("> input_n_vars: {}", input.num_vars());
+        println!("> randomness length: {}", prover_state.randomness.len());
+
         let input_opening_proof = PCS::open(
             &ck,
             [input],
@@ -341,6 +347,9 @@ where
             None,
         )
         .unwrap();
+
+        // TODO remove
+        println!("*** After opening input ***");
 
         let weight_opening_proof = PCS::open(
             &ck,

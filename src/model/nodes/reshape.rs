@@ -112,11 +112,11 @@ where
         &self,
         ck: &PCS::CommitterKey,
         rng: Option<&mut dyn RngCore>,
-    ) -> (
-        super::NodeCommitment<F, S, PCS>,
-        super::NodeCommitmentState<F, S, PCS>,
-    ) {
-        todo!()
+    ) -> (NodeCommitment<F, S, PCS>, NodeCommitmentState<F, S, PCS>) {
+        (
+            NodeCommitment::Reshape(()),
+            NodeCommitmentState::Reshape(()),
+        )
     }
 
     fn prove(
@@ -132,7 +132,7 @@ where
         output_com: &LabeledCommitment<PCS::Commitment>,
         output_com_state: &PCS::CommitmentState,
     ) -> NodeProof<F, S, PCS> {
-        unimplemented!()
+        NodeProof::Reshape(())
     }
 }
 
