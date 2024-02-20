@@ -82,8 +82,12 @@ pub(crate) struct BMMNodeProof<
     PCS: PolynomialCommitment<F, Poly<F>, S>,
 > {
     sumcheck_proof: Proof<F>,
-    opening_proof: PCS::Proof,
-    claimed_evaluations: Vec<F>,
+    input_opening_proof: PCS::Proof,
+    input_opening_value: Vec<F>,
+    weight_opening_proof: PCS::Proof,
+    weight_opening_value: Vec<F>,
+    output_opening_proof: PCS::Proof,
+    output_opening_value: Vec<F>,
 }
 
 impl<F, S, PCS> NodeOps for BMMNode<F, S, PCS>
@@ -253,6 +257,7 @@ where
         ck: &PCS::CommitterKey,
         sponge: &mut S,
         node_com: &NodeCommitment<F, S, PCS>,
+        node_com_state: &NodeCommitmentState<F, S, PCS>,
         input: LabeledPoly<F>,
         input_com: &LabeledCommitment<PCS::Commitment>,
         input_com_state: PCS::CommitmentState,
@@ -260,9 +265,21 @@ where
         output_com: &LabeledCommitment<PCS::Commitment>,
         output_com_state: PCS::CommitmentState,
     ) -> NodeProof<F, S, PCS> {
+        let (weight_com_state, bias_com_state) = match node_com_state {
+            NodeCommitmentState::BMM(BMMNodeCommitmentState {
+                weight_com_state,
+                bias_com_state,
+            }) => (weight_com_state, bias_com_state),
+            _ => panic!(
+                "BMMNode::prove expected node commitment state of type BMMNodeCommitmentState"
+            ),
+        };
+
         // we can squeeze directly, since the sponge has already absorbed all the
         // commitments in Model::prove_inference
         let r: Vec<F> = sponge.squeeze_field_elements(self.padded_dims_log.1);
+
+        let input_mle = input.polynomial().clone();
 
         // TODO consider whether this can be done once and stored
         let weights_f = self.padded_weights.iter().map(|w| F::from(*w)).collect();
@@ -273,12 +290,12 @@ where
         weights_mle.fix_variables(&r);
 
         // Constructing the sumcheck polynomial
-        // big_poly(x) = input(x) * weights(x, r)
+        // big_poly(x) := input(x) * weights(x, r)
         let mut big_poly = ListOfProductsOfPolynomials::new(self.padded_dims_log.0);
 
         // TODO we are cloning the input here, can we do better?
         big_poly.add_product(
-            vec![weights_mle, (*input).clone()]
+            vec![input_mle, weights_mle]
                 .into_iter()
                 .map(Rc::new)
                 .collect::<Vec<_>>(),
@@ -288,17 +305,21 @@ where
         let (sumcheck_proof, prover_state) =
             MLSumcheck::<F, S>::prove_as_subprotocol(&big_poly, sponge).unwrap();
 
-        // Prover computes the claimed evaluations of Weights, Input, at the random point
-        // Note this is a different random point than `r` above: `prover_state.randomness` is
-        // the list of random values sampled vy V during the sumcheck itself
+        // The prover computes the claimed evaluations of weight_mle and
+        // input_mle at the random challenge point
+        // c:= `prover_state.randomness`, the list of random values sampled by
+        // the verifier duriing sumcheck. Note that this is different from `r`
+        // above. If we denote the MLE interpolating the weight matrix by
+        // original_weight_mle, we need to open
+        // input_mle(s) * original_weight_mle(s, r)
+        // as well as output_mle(r)
         let claimed_evaluations: Vec<F> = big_poly
             .flattened_ml_extensions
             .iter()
             .map(|x| x.evaluate(&prover_state.randomness))
             .collect();
 
-        // TODO need to pass the labeled poly, and the commitment to, and the state for, the weights matrix. Currently only passing the data related to the input
-        let opening_proof = PCS::open(
+        let input_opening_proof = PCS::open(
             &ck,
             &[input],
             &[(*input_com).clone()],

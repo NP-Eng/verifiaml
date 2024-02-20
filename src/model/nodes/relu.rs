@@ -87,6 +87,7 @@ where
         ck: &PCS::CommitterKey,
         s: &mut S,
         node_com: &NodeCommitment<F, S, PCS>,
+        node_com_state: &NodeCommitmentState<F, S, PCS>,
         input: LabeledPoly<F>,
         input_com: &LabeledCommitment<PCS::Commitment>,
         input_com_state: PCS::CommitmentState,

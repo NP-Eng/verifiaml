@@ -7,7 +7,7 @@ use ark_poly_commit::{LabeledCommitment, PolynomialCommitment};
 use ark_std::rand::RngCore;
 
 use crate::model::qarray::{QArray, QTypeArray};
-use crate::model::{LabeledPoly, Poly};
+use crate::model::{LabeledPoly, NodeCommitmentState, Poly};
 use crate::quantization::QSmallType;
 
 use super::{NodeCommitment, NodeOps, NodeOpsSNARK, NodeProof};
@@ -124,6 +124,7 @@ where
         ck: &PCS::CommitterKey,
         s: &mut S,
         node_com: &NodeCommitment<F, S, PCS>,
+        node_com_state: &NodeCommitmentState<F, S, PCS>,
         input: LabeledPoly<F>,
         input_com: &LabeledCommitment<PCS::Commitment>,
         input_com_state: PCS::CommitmentState,
