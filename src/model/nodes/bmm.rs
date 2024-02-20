@@ -350,9 +350,6 @@ where
         )
         .unwrap();
 
-        // TODO remove
-        println!("*** After opening input ***");
-
         let weight_opening_proof = PCS::open(
             &ck,
             [&LabeledPolynomial::new(
