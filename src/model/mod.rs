@@ -206,11 +206,6 @@ where
             .zip(output_coms.windows(2))
             .zip(output_com_states.windows(2))
         {
-            // TODO prove likely needs to receive the sponge for randomness/FS
-            println!("Proving node: {}", node.type_name());
-            println!("Node input num_vars: {:?}", values[0].num_vars());
-            println!("Node output num_vars: {:?}", values[1].num_vars());
-
             node_proofs.push(node.prove(
                 ck,
                 sponge,

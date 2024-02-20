@@ -157,7 +157,7 @@ where
         output_com: &LabeledCommitment<PCS::Commitment>,
         output_com_state: &PCS::CommitmentState,
     ) -> NodeProof<F, S, PCS> {
-        unimplemented!()
+        NodeProof::RequantiseBMM(RequantiseBMMNodeProof {})
     }
 }
 
