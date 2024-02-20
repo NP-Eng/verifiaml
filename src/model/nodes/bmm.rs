@@ -86,6 +86,8 @@ pub(crate) struct BMMNodeProof<
     input_opening_value: F,
     weight_opening_proof: PCS::Proof,
     weight_opening_value: F,
+    bias_opening_proof: PCS::Proof,
+    bias_opening_value: F,
     output_opening_proof: PCS::Proof,
     output_opening_value: F,
 }
@@ -287,16 +289,22 @@ where
         // commitments in Model::prove_inference
         let r: Vec<F> = sponge.squeeze_field_elements(self.padded_dims_log.1);
 
-        // TODO is this value directly available from the output of sumcheck?
-        // It doesn't need to be used until the end of the method
-        let claimed_sum = output.evaluate(&r);
-
         let input_mle = input.polynomial().clone();
 
         // TODO consider whether this can be done once and stored
         let weights_f = self.padded_weights.iter().map(|w| F::from(*w)).collect();
         // TODO this might need LE -> BE conversion
         let weight_mle = Poly::from_evaluations_vec(self.com_num_vars(), weights_f);
+
+        // TODO consider whether this can be done once and stored
+        let bias_f = self.padded_bias.iter().map(|w| F::from(*w)).collect();
+        // TODO this might need LE -> BE conversion
+        let bias_mle = Poly::from_evaluations_vec(self.padded_dims_log.1, bias_f);
+
+        // TODO is output_opening_value directly available from the output of sumcheck?
+        // It doesn't need to be used until the end of the method
+        let bias_opening_value = bias_mle.evaluate(&r);
+        let output_opening_value = output.evaluate(&r);
 
         // TODO we actually need fix_variables_last
         let bound_weight_mle = weight_mle.fix_variables(&r);
@@ -371,6 +379,22 @@ where
         )
         .unwrap();
 
+        let bias_opening_proof = PCS::open(
+            &ck,
+            [&LabeledPolynomial::new(
+                "bias_mle".to_string(),
+                bias_mle,
+                Some(1),
+                None,
+            )],
+            [bias_com],
+            &r,
+            sponge,
+            [bias_com_state],
+            None,
+        )
+        .unwrap();
+
         let output_opening_proof = PCS::open(
             &ck,
             [output],
@@ -388,8 +412,10 @@ where
             input_opening_value: claimed_evaluations[0],
             weight_opening_proof,
             weight_opening_value: claimed_evaluations[1],
+            bias_opening_proof,
+            bias_opening_value,
             output_opening_proof,
-            output_opening_value: claimed_sum,
+            output_opening_value,
         })
     }
 }
