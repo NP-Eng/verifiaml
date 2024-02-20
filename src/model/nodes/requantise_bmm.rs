@@ -150,12 +150,12 @@ where
         s: &mut S,
         node_com: &NodeCommitment<F, S, PCS>,
         node_com_state: &NodeCommitmentState<F, S, PCS>,
-        input: LabeledPoly<F>,
+        input: &LabeledPoly<F>,
         input_com: &LabeledCommitment<PCS::Commitment>,
-        input_com_state: PCS::CommitmentState,
-        output: LabeledPoly<F>,
+        input_com_state: &PCS::CommitmentState,
+        output: &LabeledPoly<F>,
         output_com: &LabeledCommitment<PCS::Commitment>,
-        output_com_state: PCS::CommitmentState,
+        output_com_state: &PCS::CommitmentState,
     ) -> NodeProof<F, S, PCS> {
         unimplemented!()
     }

@@ -46,8 +46,8 @@ where
     S: CryptographicSponge,
     PCS: PolynomialCommitment<F, Poly<F>, S>,
 {
-    weight_com: PCS::Commitment,
-    bias_com: PCS::Commitment,
+    weight_com: LabeledCommitment<PCS::Commitment>,
+    bias_com: LabeledCommitment<PCS::Commitment>,
 }
 
 impl<F, S, PCS> Commitment for BMMNodeCommitment<F, S, PCS>
@@ -83,11 +83,11 @@ pub(crate) struct BMMNodeProof<
 > {
     sumcheck_proof: Proof<F>,
     input_opening_proof: PCS::Proof,
-    input_opening_value: Vec<F>,
+    input_opening_value: F,
     weight_opening_proof: PCS::Proof,
-    weight_opening_value: Vec<F>,
+    weight_opening_value: F,
     output_opening_proof: PCS::Proof,
-    output_opening_value: Vec<F>,
+    output_opening_value: F,
 }
 
 impl<F, S, PCS> NodeOps for BMMNode<F, S, PCS>
@@ -242,8 +242,8 @@ where
 
         (
             NodeCommitment::BMM(BMMNodeCommitment {
-                weight_com: coms.0[0].commitment().clone(),
-                bias_com: coms.0[1].commitment().clone(),
+                weight_com: coms.0[0].clone(),
+                bias_com: coms.0[1].clone(),
             }),
             NodeCommitmentState::BMM(BMMNodeCommitmentState {
                 weight_com_state: coms.1[0].clone(),
@@ -258,13 +258,21 @@ where
         sponge: &mut S,
         node_com: &NodeCommitment<F, S, PCS>,
         node_com_state: &NodeCommitmentState<F, S, PCS>,
-        input: LabeledPoly<F>,
+        input: &LabeledPoly<F>,
         input_com: &LabeledCommitment<PCS::Commitment>,
-        input_com_state: PCS::CommitmentState,
-        output: LabeledPoly<F>,
+        input_com_state: &PCS::CommitmentState,
+        output: &LabeledPoly<F>,
         output_com: &LabeledCommitment<PCS::Commitment>,
-        output_com_state: PCS::CommitmentState,
+        output_com_state: &PCS::CommitmentState,
     ) -> NodeProof<F, S, PCS> {
+        let (weight_com, bias_com) = match node_com {
+            NodeCommitment::BMM(BMMNodeCommitment {
+                weight_com,
+                bias_com,
+            }) => (weight_com, bias_com),
+            _ => panic!("BMMNode::prove expected node commitment of type BMMNodeCommitment"),
+        };
+
         let (weight_com_state, bias_com_state) = match node_com_state {
             NodeCommitmentState::BMM(BMMNodeCommitmentState {
                 weight_com_state,
@@ -279,15 +287,19 @@ where
         // commitments in Model::prove_inference
         let r: Vec<F> = sponge.squeeze_field_elements(self.padded_dims_log.1);
 
+        // TODO is this value directly available from the output of sumcheck?
+        // It doesn't need to be used until the end of the method
+        let claimed_sum = output.evaluate(&r);
+
         let input_mle = input.polynomial().clone();
 
         // TODO consider whether this can be done once and stored
         let weights_f = self.padded_weights.iter().map(|w| F::from(*w)).collect();
         // TODO this might need LE -> BE conversion
-        let weights_mle = Poly::from_evaluations_vec(self.com_num_vars(), weights_f);
+        let weight_mle = Poly::from_evaluations_vec(self.com_num_vars(), weights_f);
 
         // TODO we actually need fix_variables_last
-        weights_mle.fix_variables(&r);
+        let bound_weight_mle = weight_mle.fix_variables(&r);
 
         // Constructing the sumcheck polynomial
         // big_poly(x) := input(x) * weights(x, r)
@@ -295,7 +307,7 @@ where
 
         // TODO we are cloning the input here, can we do better?
         big_poly.add_product(
-            vec![input_mle, weights_mle]
+            vec![input_mle, bound_weight_mle]
                 .into_iter()
                 .map(Rc::new)
                 .collect::<Vec<_>>(),
@@ -307,12 +319,12 @@ where
 
         // The prover computes the claimed evaluations of weight_mle and
         // input_mle at the random challenge point
-        // c:= `prover_state.randomness`, the list of random values sampled by
+        // s:= `prover_state.randomness`, the list of random values sampled by
         // the verifier duriing sumcheck. Note that this is different from `r`
-        // above. If we denote the MLE interpolating the weight matrix by
-        // original_weight_mle, we need to open
-        // input_mle(s) * original_weight_mle(s, r)
-        // as well as output_mle(r)
+        // above.
+        //
+        // We need to open input_mle(s) * weight_mle(s, r) as well as
+        // output_mle(r)
         let claimed_evaluations: Vec<F> = big_poly
             .flattened_ml_extensions
             .iter()
@@ -321,19 +333,54 @@ where
 
         let input_opening_proof = PCS::open(
             &ck,
-            &[input],
-            &[(*input_com).clone()],
+            [input],
+            [input_com],
             &prover_state.randomness,
             sponge,
-            &[input_com_state],
+            [input_com_state],
+            None,
+        )
+        .unwrap();
+
+        let weight_opening_proof = PCS::open(
+            &ck,
+            [&LabeledPolynomial::new(
+                "weight_mle".to_string(),
+                weight_mle,
+                Some(1),
+                None,
+            )],
+            [weight_com],
+            &prover_state
+                .randomness
+                .into_iter()
+                .chain(r.clone().into_iter())
+                .collect(),
+            sponge,
+            [weight_com_state],
+            None,
+        )
+        .unwrap();
+
+        let output_opening_proof = PCS::open(
+            &ck,
+            [output],
+            [output_com],
+            &r,
+            sponge,
+            [output_com_state],
             None,
         )
         .unwrap();
 
         NodeProof::BMM(BMMNodeProof {
             sumcheck_proof,
-            opening_proof,
-            claimed_evaluations,
+            input_opening_proof,
+            input_opening_value: claimed_evaluations[0],
+            weight_opening_proof,
+            weight_opening_value: claimed_evaluations[1],
+            output_opening_proof,
+            output_opening_value: claimed_sum,
         })
     }
 }

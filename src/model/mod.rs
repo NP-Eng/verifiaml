@@ -129,7 +129,8 @@ where
         ck: &PCS::CommitterKey,
         rng: Option<&mut dyn RngCore>,
         sponge: &mut S,
-        node_commitments: Vec<NodeCommitment<F, S, PCS>>,
+        node_coms: &Vec<NodeCommitment<F, S, PCS>>,
+        node_com_states: &Vec<NodeCommitmentState<F, S, PCS>>,
         input: QArray<QSmallType>,
     ) -> InferenceProof<F, S, PCS> {
         // TODO Absorb public parameters into s (to be determined what exactly)
@@ -196,10 +197,11 @@ where
         let mut node_proofs = Vec::new();
 
         // Second pass: proving
-        for ((((node, node_com), values), l_v_coms), v_coms_states) in self
+        for (((((node, node_com), node_com_state), values), l_v_coms), v_coms_states) in self
             .nodes
             .iter()
-            .zip(node_commitments.iter())
+            .zip(node_coms.iter())
+            .zip(node_com_states.iter())
             .zip(labeled_output_mles.windows(2))
             .zip(output_coms.windows(2))
             .zip(output_com_states.windows(2))
@@ -208,13 +210,14 @@ where
             node_proofs.push(node.prove(
                 ck,
                 sponge,
-                node_com,
-                values[0].clone(),
+                &node_com,
+                &node_com_state,
+                &values[0],
                 &l_v_coms[0],
-                v_coms_states[0].clone(),
-                values[1].clone(),
+                &v_coms_states[0],
+                &values[1],
                 &l_v_coms[1],
-                v_coms_states[1].clone(),
+                &v_coms_states[1],
             ));
         }
 
