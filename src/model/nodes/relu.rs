@@ -66,7 +66,7 @@ where
         ck: &PCS::CommitterKey,
         rng: Option<&mut dyn RngCore>,
     ) -> (NodeCommitment<F, S, PCS>, NodeCommitmentState<F, S, PCS>) {
-        todo!()
+        (NodeCommitment::ReLU(()), NodeCommitmentState::ReLU(()))
     }
 
     // TODO this is the same as evaluate() for now; the two will likely differ
@@ -95,7 +95,7 @@ where
         output_com: &LabeledCommitment<PCS::Commitment>,
         output_com_state: &PCS::CommitmentState,
     ) -> NodeProof<F, S, PCS> {
-        todo!()
+        NodeProof::ReLU(())
     }
 }
 

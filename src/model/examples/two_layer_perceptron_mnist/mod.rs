@@ -1,9 +1,9 @@
 use crate::{
     model::{
         nodes::{bmm::BMMNode, relu::ReLUNode, requantise_bmm::RequantiseBMMNode, reshape::ReshapeNode, Node},
-        qarray::QArray,
+        qarray::{QArray, QTypeArray},
         Model, Poly,
-    }, utils::pcs_types::Ligero, quantization::{quantise_f32_u8_nne, QSmallType}
+    }, quantization::{quantise_f32_u8_nne, QSmallType}, utils::{pcs_types::Ligero, test_sponge::test_sponge}
 };
 
 use ark_crypto_primitives::sponge::{poseidon::PoseidonSponge, Absorb, CryptographicSponge};
@@ -14,6 +14,7 @@ use ark_ff::PrimeField;
 mod input;
 mod parameters;
 
+use ark_std::test_rng;
 use input::*;
 use parameters::*;
 
@@ -127,4 +128,51 @@ fn run_padded_two_layer_perceptron_mnist() {
 
     println!("Output: {:?}", output_u8.values());
     assert_eq!(output_u8.move_values(), expected_output);
+}
+
+#[test]
+fn prove_inference_two_layer_perceptron_mnist() {
+    /**** Change here ****/
+    let input = NORMALISED_INPUT_TEST_150;
+    let expected_output: Vec<u8> = vec![138, 106, 149, 160, 174, 152, 141, 146, 169, 207];
+    /**********************/
+
+    let perceptron = build_two_layer_perceptron_mnist::<Fr, PoseidonSponge<Fr>, Ligero<Fr>>();
+
+    let quantised_input: QArray<u8> = input
+        .iter()
+        .map(|r| quantise_f32_u8_nne(r, S_INPUT, Z_INPUT))
+        .collect::<Vec<Vec<u8>>>()
+        .into();
+
+    let input_i8 = (quantised_input.cast::<i32>() - 128).cast::<QSmallType>();
+
+    let mut rng = test_rng();
+    let (ck, _) = perceptron.setup_keys(&mut rng).unwrap();
+
+    let mut sponge: PoseidonSponge<Fr> = test_sponge();
+
+    //let (hidden_nodes, com_states) = perceptron.commit(&ck, None).iter().unzip();
+    let (node_coms, node_com_states): (Vec<_>, Vec<_>) = perceptron.commit(&ck, None).into_iter().unzip();
+
+    let inference_proof = perceptron.prove_inference(
+        &ck,
+        Some(&mut rng),
+        &mut sponge,
+        &node_coms,
+        &node_com_states,
+        input_i8,
+    );
+
+    let output_qtypearray = inference_proof.inputs_outputs[1].clone();
+
+    let output_i8 = match output_qtypearray {
+        QTypeArray::S(o) => o,
+        _ => panic!("Expected QTypeArray::S"),
+    };
+   
+    let output_u8 = (output_i8.cast::<i32>() + 128).cast::<u8>();
+
+    println!("Padded output: {:?}", output_u8.values());
+    assert_eq!(output_u8.move_values()[0..OUTPUT_DIM], expected_output);
 }

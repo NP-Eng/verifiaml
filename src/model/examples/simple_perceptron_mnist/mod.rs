@@ -142,7 +142,7 @@ fn prove_inference_simple_perceptron_mnist() {
         input_i8,
     );
 
-    let output_qtypearray = inference_proof.outputs[0].clone();
+    let output_qtypearray = inference_proof.inputs_outputs[1].clone();
 
     let output_i8 = match output_qtypearray {
         QTypeArray::S(o) => o,
@@ -151,6 +151,6 @@ fn prove_inference_simple_perceptron_mnist() {
    
     let output_u8 = (output_i8.cast::<i32>() + 128).cast::<u8>();
 
-    println!("Output: {:?}", output_u8.values());
-    assert_eq!(output_u8.move_values(), expected_output);
+    println!("Padded output: {:?}", output_u8.values());
+    assert_eq!(output_u8.move_values()[0..OUTPUT_DIMS[0]], expected_output);
 }

@@ -28,8 +28,8 @@ where
     S: CryptographicSponge,
     PCS: PolynomialCommitment<F, Poly<F>, S>,
 {
-    // Model output tensors
-    pub(crate) outputs: Vec<QTypeArray>,
+    // Model input and output tensors in plain
+    pub(crate) inputs_outputs: Vec<QTypeArray>,
 
     // Proofs of evaluation of each of the model's nodes
     pub(crate) node_proofs: Vec<NodeProof<F, S, PCS>>,
@@ -276,7 +276,7 @@ where
         /* TODO (important) Change output_node to all boundary nodes: first and last */
         // TODO prove that inputs match input commitments?
         InferenceProof {
-            outputs: vec![input_node.clone(), output_node.clone()],
+            inputs_outputs: vec![input_node.clone(), output_node.clone()],
             node_proofs,
             opening_proofs: vec![input_opening_proof, output_opening_proof],
         }
