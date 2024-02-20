@@ -1,3 +1,7 @@
+
+#[cfg(test)]
+pub(crate) mod pcs_types;
+
 use ark_ff::Field;
 use ark_poly::{DenseMultilinearExtension, MultilinearExtension};
 

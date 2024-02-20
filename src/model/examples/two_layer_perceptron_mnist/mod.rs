@@ -3,7 +3,7 @@ use crate::{
         nodes::{bmm::BMMNode, relu::ReLUNode, requantise_bmm::RequantiseBMMNode, reshape::ReshapeNode, Node},
         qarray::QArray,
         Model, Poly,
-    }, pcs_types::Brakedown, quantization::{quantise_f32_u8_nne, QSmallType}
+    }, utils::pcs_types::Brakedown, quantization::{quantise_f32_u8_nne, QSmallType}
 };
 
 use ark_crypto_primitives::sponge::{poseidon::PoseidonSponge, Absorb, CryptographicSponge};
