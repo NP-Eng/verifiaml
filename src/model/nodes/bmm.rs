@@ -220,14 +220,14 @@ where
         rng: Option<&mut dyn RngCore>,
     ) -> (NodeCommitment<F, S, PCS>, NodeCommitmentState<F, S, PCS>) {
         // TODO should we separate the associated commitment type into one with state and one without?
-
-        let num_vars_weights = self.padded_dims_log.0 + self.padded_dims_log.1;
         let padded_weights_f: Vec<F> = self.padded_weights.iter().map(|w| F::from(*w)).collect();
 
+        // TODO part of this code is duplicated in prove, another hint that this should probs
+        // be stored
         let weight_poly = LabeledPolynomial::new(
             "weight_poly".to_string(),
-            Poly::from_evaluations_vec(num_vars_weights, padded_weights_f),
-            None,
+            Poly::from_evaluations_vec(self.com_num_vars(), padded_weights_f),
+            Some(1),
             None,
         );
 
@@ -236,7 +236,7 @@ where
         let bias_poly = LabeledPolynomial::new(
             "bias_poly".to_string(),
             Poly::from_evaluations_vec(self.padded_dims_log.1, padded_bias_f),
-            None,
+            Some(1),
             None,
         );
 
