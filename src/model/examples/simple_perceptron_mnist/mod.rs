@@ -128,7 +128,7 @@ fn prove_inference_simple_perceptron_mnist() {
     let mut rng = test_rng();
     let (ck, vk) = perceptron.setup_keys(&mut rng).unwrap();
 
-    let mut sponge: PoseidonSponge<Fr> = PoseidonSponge::new(&poseidon_parameters_for_test())
+    let mut sponge: PoseidonSponge<Fr> = test_sponge();
 
     let output_i8 = perceptron.prove_inference(
         &ck,
