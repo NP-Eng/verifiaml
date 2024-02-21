@@ -1,8 +1,6 @@
 use crate::{
     model::{
-        nodes::{bmm::BMMNode, requantise_bmm::RequantiseBMMNode, reshape::ReshapeNode, Node},
-        qarray::{QArray, QTypeArray},
-        Model, Poly,
+        isolated_verification::verify_inference, nodes::{bmm::BMMNode, requantise_bmm::RequantiseBMMNode, reshape::ReshapeNode, Node}, qarray::{QArray, QTypeArray}, Model, Poly
     }, quantization::{quantise_f32_u8_nne, QSmallType}, utils::{pcs_types::Ligero, test_sponge::test_sponge}
 };
 
@@ -174,7 +172,7 @@ fn verify_inference_simple_perceptron_mnist() {
     let input_i8 = (quantised_input.cast::<i32>() - 128).cast::<QSmallType>();
 
     let mut rng = test_rng();
-    let (ck, _) = perceptron.setup_keys(&mut rng).unwrap();
+    let (ck, vk) = perceptron.setup_keys(&mut rng).unwrap();
 
     let mut sponge: PoseidonSponge<Fr> = test_sponge();
 
@@ -191,6 +189,16 @@ fn verify_inference_simple_perceptron_mnist() {
     );
 
     let output_qtypearray = inference_proof.inputs_outputs[1].clone();
+
+    let mut sponge: PoseidonSponge<Fr> = test_sponge();
+    
+    verify_inference(
+        &vk,
+        &mut sponge,
+        &perceptron,
+        &node_coms,
+        inference_proof
+    );
 
     let output_i8 = match output_qtypearray {
         QTypeArray::S(o) => o,

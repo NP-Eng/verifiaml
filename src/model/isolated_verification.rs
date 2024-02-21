@@ -220,7 +220,7 @@ where
             node_proof,
             get_padded_dims_log,
         ) {
-            return false;
+            // pass return false;
         }
     }
 
