@@ -170,7 +170,7 @@ where
     }
 }
 
-fn verify_model<F, S, PCS>(
+pub(crate) fn verify_inference<F, S, PCS>(
     vk: &PCS::VerifierKey,
     sponge: &mut S,
     model: &Model<F, S, PCS>,
