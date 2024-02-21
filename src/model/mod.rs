@@ -75,6 +75,10 @@ where
         }
     }
 
+    pub(crate) fn input_shape(&self) -> &Vec<usize> {
+        &self.input_shape
+    }
+
     pub(crate) fn setup_keys<R: RngCore>(
         &self,
         rng: &mut R,
