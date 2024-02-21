@@ -32,7 +32,7 @@ where
     pub(crate) inputs_outputs: Vec<QTypeArray>,
 
     // Commitments to each of the node values
-    pub(crate) node_commitments: Vec<LabeledCommitment<PCS::Commitment>>,
+    pub(crate) node_value_commitments: Vec<LabeledCommitment<PCS::Commitment>>,
 
     // Proofs of evaluation of each of the model's nodes
     pub(crate) node_proofs: Vec<NodeProof<F, S, PCS>>,
@@ -279,7 +279,7 @@ where
         // TODO prove that inputs match input commitments?
         InferenceProof {
             inputs_outputs: vec![input_node.clone(), output_node.clone()],
-            node_commitments: output_coms,
+            node_value_commitments: output_coms,
             node_proofs,
             opening_proofs: vec![input_opening_proof, output_opening_proof],
         }
