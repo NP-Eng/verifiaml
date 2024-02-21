@@ -15,6 +15,7 @@ use self::{
 };
 
 mod examples;
+mod isolated_verification;
 mod nodes;
 mod qarray;
 mod reshaping;

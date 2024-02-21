@@ -46,8 +46,8 @@ where
     S: CryptographicSponge,
     PCS: PolynomialCommitment<F, Poly<F>, S>,
 {
-    weight_com: LabeledCommitment<PCS::Commitment>,
-    bias_com: LabeledCommitment<PCS::Commitment>,
+    pub(crate) weight_com: LabeledCommitment<PCS::Commitment>,
+    pub(crate) bias_com: LabeledCommitment<PCS::Commitment>,
 }
 
 impl<F, S, PCS> Commitment for BMMNodeCommitment<F, S, PCS>
@@ -81,15 +81,15 @@ pub(crate) struct BMMNodeProof<
     S: CryptographicSponge,
     PCS: PolynomialCommitment<F, Poly<F>, S>,
 > {
-    sumcheck_proof: Proof<F>,
-    input_opening_proof: PCS::Proof,
-    input_opening_value: F,
-    weight_opening_proof: PCS::Proof,
-    weight_opening_value: F,
-    bias_opening_proof: PCS::Proof,
-    bias_opening_value: F,
-    output_opening_proof: PCS::Proof,
-    output_opening_value: F,
+    pub(crate) sumcheck_proof: Proof<F>,
+    pub(crate) input_opening_proof: PCS::Proof,
+    pub(crate) input_opening_value: F,
+    pub(crate) weight_opening_proof: PCS::Proof,
+    pub(crate) weight_opening_value: F,
+    pub(crate) bias_opening_proof: PCS::Proof,
+    pub(crate) bias_opening_value: F,
+    pub(crate) output_opening_proof: PCS::Proof,
+    pub(crate) output_opening_value: F,
 }
 
 impl<F, S, PCS> NodeOps for BMMNode<F, S, PCS>
