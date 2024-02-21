@@ -3,7 +3,7 @@ use ark_std::{log2, rand::RngCore};
 use ark_crypto_primitives::sponge::{Absorb, CryptographicSponge};
 use ark_ff::PrimeField;
 use ark_poly::{DenseMultilinearExtension, MultilinearExtension};
-use ark_poly_commit::{LabeledPolynomial, PolynomialCommitment};
+use ark_poly_commit::{LabeledCommitment, LabeledPolynomial, PolynomialCommitment};
 
 use crate::model::nodes::{NodeOps, NodeOpsSNARK};
 use crate::{model::nodes::Node, quantization::QSmallType};
@@ -30,6 +30,9 @@ where
 {
     // Model input and output tensors in plain
     pub(crate) inputs_outputs: Vec<QTypeArray>,
+
+    // Commitments to each of the node values
+    pub(crate) node_commitments: Vec<LabeledCommitment<PCS::Commitment>>,
 
     // Proofs of evaluation of each of the model's nodes
     pub(crate) node_proofs: Vec<NodeProof<F, S, PCS>>,
@@ -273,10 +276,10 @@ where
         )
         .unwrap();
 
-        /* TODO (important) Change output_node to all boundary nodes: first and last */
         // TODO prove that inputs match input commitments?
         InferenceProof {
             inputs_outputs: vec![input_node.clone(), output_node.clone()],
+            node_commitments: output_coms,
             node_proofs,
             opening_proofs: vec![input_opening_proof, output_opening_proof],
         }
