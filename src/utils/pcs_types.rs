@@ -3,6 +3,10 @@ use ark_crypto_primitives::{
     merkle_tree::{ByteDigestConverter, Config},
     sponge::poseidon::PoseidonSponge,
 };
+// no-std note:
+// Currently, we use the `LeafIdentityHasher` from ark_pcs_bench_templates.
+// This is not ideal, since the entire `ark_pcs_bench_templates` crate does not support `no_std`
+// (due to `criterion`) dependency.
 use ark_pcs_bench_templates::*;
 use ark_poly::DenseMultilinearExtension;
 
