@@ -53,4 +53,4 @@ jobs:
           ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
 
       - name: Test
-        run: cargo test --no-default-features
+        run: cargo test
