@@ -139,13 +139,13 @@ dependencies = [
 [[package]]
 name = "ark-pcs-bench-templates"
 version = "0.4.0"
-source = "git+https://github.com/HungryCatsStudio/poly-commit?branch=brakedown-com-absorb#95fc96c5af94ad3cb6b83a5133810a2954336bc7"
+source = "git+https://github.com/HungryCatsStudio/poly-commit?branch=ligero-uni-and-ml-absorb#fe882348c748a64f14b99853a8fc3aeb346843f0"
 dependencies = [
  "ark-crypto-primitives",
  "ark-ec",
  "ark-ff",
  "ark-poly",
- "ark-poly-commit 0.4.0 (git+https://github.com/HungryCatsStudio/poly-commit?branch=brakedown-com-absorb)",
+ "ark-poly-commit",
  "ark-serialize",
  "ark-std",
  "criterion",
@@ -163,22 +163,6 @@ dependencies = [
  "ark-std",
  "derivative",
  "hashbrown",
-]
-
-[[package]]
-name = "ark-poly-commit"
-version = "0.4.0"
-source = "git+https://github.com/HungryCatsStudio/poly-commit?branch=brakedown-com-absorb#95fc96c5af94ad3cb6b83a5133810a2954336bc7"
-dependencies = [
- "ark-crypto-primitives",
- "ark-ec",
- "ark-ff",
- "ark-poly",
- "ark-serialize",
- "ark-std",
- "derivative",
- "digest",
- "num-traits",
 ]
 
 [[package]]
@@ -260,7 +244,7 @@ dependencies = [
  "ark-crypto-primitives",
  "ark-ff",
  "ark-poly",
- "ark-poly-commit 0.4.0 (git+https://github.com/HungryCatsStudio/poly-commit?branch=ligero-uni-and-ml-absorb)",
+ "ark-poly-commit",
  "ark-serialize",
  "ark-std",
  "hashbrown",
@@ -829,7 +813,7 @@ dependencies = [
  "ark-ff",
  "ark-pcs-bench-templates",
  "ark-poly",
- "ark-poly-commit 0.4.0 (git+https://github.com/HungryCatsStudio/poly-commit?branch=ligero-uni-and-ml-absorb)",
+ "ark-poly-commit",
  "ark-serialize",
  "ark-std",
  "ark-sumcheck",
