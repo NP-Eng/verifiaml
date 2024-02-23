@@ -245,7 +245,7 @@ where
 
     let output_node_com = node_value_commitments.last().unwrap();
     // TODO maybe it's better to save this as F in the proof?
-    let output_node_f: Vec<F> = match &inputs_outputs[0] {
+    let output_node_f: Vec<F> = match &inputs_outputs[1] {
         QTypeArray::S(o) => o.values().iter().map(|x| F::from(*x)).collect(),
         _ => panic!("Model output should be QTypeArray::S"),
     };
