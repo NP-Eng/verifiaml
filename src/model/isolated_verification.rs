@@ -114,6 +114,8 @@ where
         return false;
     }
 
+    // TODO: b and o are opened at the same point, so they could be verified
+    // with a single call to PCS::check
     if !PCS::check(
         vk,
         [bias_com],
