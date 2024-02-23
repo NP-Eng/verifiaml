@@ -26,6 +26,7 @@ fn verify_bmm_node<F, S, PCS>(
     output_com: &LabeledCommitment<PCS::Commitment>,
     proof: NodeProof<F, S, PCS>,
     padded_dims_log: (usize, usize),
+    zero_point: F, // This argument will not be here in the final code
 ) -> bool
 where
     F: PrimeField + Absorb,
@@ -102,10 +103,7 @@ where
     if !PCS::check(
         vk,
         [weight_com],
-        &oracle_point
-            .into_iter()
-            .chain(r.clone().into_iter())
-            .collect(),
+        &r.clone().into_iter().chain(oracle_point).collect(),
         [weight_opening_value],
         &weight_opening_proof,
         sponge,
@@ -150,6 +148,7 @@ fn verify_node<F, S, PCS>(
     output_com: &LabeledCommitment<PCS::Commitment>,
     proof: NodeProof<F, S, PCS>,
     padded_dims_log: Option<(usize, usize)>,
+    zero_point: Option<F>,
 ) -> bool
 where
     F: PrimeField + Absorb,
@@ -165,6 +164,7 @@ where
             output_com,
             proof,
             padded_dims_log.unwrap(),
+            zero_point.unwrap(),
         ),
         _ => true,
     }
@@ -204,11 +204,14 @@ where
         .zip(node_proofs.into_iter())
     {
         // This will not be necessary in the actual code, as the BMM dimensions
-        // will be contained in the hidden BMMNode and therefore won't be
-        // passed to the proving method
-        let get_padded_dims_log = match node {
-            Node::BMM(bmm) => Some(bmm.get_padded_dims_log()),
-            _ => None,
+        // and zero point  will be contained in the (possibly hidden) BMMNode
+        // and therefore won't be passed to the proving method
+        let (padded_dims_log, input_zero_point) = match node {
+            Node::BMM(bmm) => (
+                Some(bmm.padded_dims_log()),
+                Some(F::from(bmm.input_zero_point())),
+            ),
+            _ => (None, None),
         };
 
         if !verify_node(
@@ -218,9 +221,10 @@ where
             &io_com[0],
             &io_com[1],
             node_proof,
-            get_padded_dims_log,
+            padded_dims_log,
+            input_zero_point,
         ) {
-            // pass return false;
+            return false;
         }
     }
 

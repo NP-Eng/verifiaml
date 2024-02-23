@@ -289,7 +289,10 @@ where
         // commitments in Model::prove_inference
         let r: Vec<F> = sponge.squeeze_field_elements(self.padded_dims_log.1);
 
-        let input_mle = input.polynomial().clone();
+        let shifted_input_mle = Poly::from_evaluations_vec(
+            input.num_vars(),
+            input.polynomial().iter().map(|x| F::from(*x)).collect(),
+        );
 
         // TODO consider whether this can be done once and stored
         let weights_f = self.padded_weights.iter().map(|w| F::from(*w)).collect();
@@ -315,7 +318,7 @@ where
 
         // TODO we are cloning the input here, can we do better?
         big_poly.add_product(
-            vec![input_mle, bound_weight_mle]
+            vec![shifted_input_mle, bound_weight_mle]
                 .into_iter()
                 .map(Rc::new)
                 .collect::<Vec<_>>(),
@@ -359,10 +362,9 @@ where
                 None,
             )],
             [weight_com],
-            &prover_state
-                .randomness
+            &r.clone()
                 .into_iter()
-                .chain(r.clone().into_iter())
+                .chain(prover_state.randomness)
                 .collect(),
             sponge,
             [weight_com_state],
@@ -466,8 +468,12 @@ where
         }
     }
 
-    pub(crate) fn get_padded_dims_log(&self) -> (usize, usize) {
+    pub(crate) fn padded_dims_log(&self) -> (usize, usize) {
         self.padded_dims_log
+    }
+
+    pub(crate) fn input_zero_point(&self) -> QSmallType {
+        self.input_zero_point
     }
 }
 // TODO in constructor, add quantisation information checks? (s_bias = s_input * s_weight, z_bias = 0, z_weight = 0, etc.)
