@@ -53,6 +53,4 @@ jobs:
           ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
 
       - name: Test
-        uses: actions-rs/cargo@v1
-        with:
-            command: test
+        run: cargo test --no-default-features
