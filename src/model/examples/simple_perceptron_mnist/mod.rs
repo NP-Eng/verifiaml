@@ -17,7 +17,7 @@ use input::*;
 use parameters::*;
 
 const INPUT_DIMS: &[usize] = &[28, 28];
-const OUTPUT_DIMS: &[usize] = &[10];
+const OUTPUT_DIMS: usize = 10;
 
 // TODO this is incorrect now that we have switched to logs
 fn build_simple_perceptron_mnist<F, S, PCS>() -> Model<F, S, PCS>
@@ -34,12 +34,12 @@ where
     let bmm: BMMNode<F, S, PCS> = BMMNode::new(
         WEIGHTS.to_vec(),
         BIAS.to_vec(),
-        (flat_dim, OUTPUT_DIMS[0]),
+        (flat_dim, OUTPUT_DIMS),
         Z_I,
     );
 
     let req_bmm: RequantiseBMMNode<F, S, PCS> = RequantiseBMMNode::new(
-        OUTPUT_DIMS[0],
+        OUTPUT_DIMS,
         S_I,
         Z_I,
         S_W,
@@ -150,7 +150,7 @@ fn prove_inference_simple_perceptron_mnist() {
     let output_u8 = (output_i8.cast::<i32>() + 128).cast::<u8>();
 
     println!("Padded output: {:?}", output_u8.values());
-    assert_eq!(output_u8.move_values()[0..OUTPUT_DIMS[0]], expected_output);
+    assert_eq!(output_u8.move_values()[0..OUTPUT_DIMS], expected_output);
 }
 
 
@@ -207,5 +207,5 @@ fn verify_inference_simple_perceptron_mnist() {
     let output_u8 = (output_i8.cast::<i32>() + 128).cast::<u8>();
 
     println!("Padded output: {:?}", output_u8.values());
-    assert_eq!(output_u8.move_values()[0..OUTPUT_DIMS[0]], expected_output);
+    assert_eq!(output_u8.move_values()[0..OUTPUT_DIMS], expected_output);
 }
