@@ -176,7 +176,6 @@ fn verify_inference_simple_perceptron_mnist() {
 
     let mut sponge: PoseidonSponge<Fr> = test_sponge();
 
-    //let (hidden_nodes, com_states) = perceptron.commit(&ck, None).iter().unzip();
     let (node_coms, node_com_states): (Vec<_>, Vec<_>) = perceptron.commit(&ck, None).into_iter().unzip();
 
     let inference_proof = perceptron.prove_inference(
@@ -192,13 +191,13 @@ fn verify_inference_simple_perceptron_mnist() {
 
     let mut sponge: PoseidonSponge<Fr> = test_sponge();
     
-    verify_inference(
+    assert!(verify_inference(
         &vk,
         &mut sponge,
         &perceptron,
         &node_coms,
         inference_proof
-    );
+    ));
 
     let output_i8 = match output_qtypearray {
         QTypeArray::S(o) => o,

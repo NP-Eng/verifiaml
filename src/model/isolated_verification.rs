@@ -26,7 +26,7 @@ fn verify_bmm_node<F, S, PCS>(
     output_com: &LabeledCommitment<PCS::Commitment>,
     proof: NodeProof<F, S, PCS>,
     padded_dims_log: (usize, usize),
-    zero_point: F, // This argument will not be here in the final code
+    input_zero_point: F, // This argument will not be here in the final code
 ) -> bool
 where
     F: PrimeField + Absorb,
@@ -80,7 +80,7 @@ where
         expected_evaluation: oracle_evaluation,
     } = subclaim;
 
-    if oracle_evaluation != input_opening_value * weight_opening_value {
+    if oracle_evaluation != (input_opening_value - input_zero_point) * weight_opening_value {
         return false;
     }
 
@@ -148,7 +148,7 @@ fn verify_node<F, S, PCS>(
     output_com: &LabeledCommitment<PCS::Commitment>,
     proof: NodeProof<F, S, PCS>,
     padded_dims_log: Option<(usize, usize)>,
-    zero_point: Option<F>,
+    input_zero_point: Option<F>,
 ) -> bool
 where
     F: PrimeField + Absorb,
@@ -164,7 +164,7 @@ where
             output_com,
             proof,
             padded_dims_log.unwrap(),
-            zero_point.unwrap(),
+            input_zero_point.unwrap(),
         ),
         _ => true,
     }

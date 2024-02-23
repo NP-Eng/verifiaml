@@ -289,9 +289,11 @@ where
         // commitments in Model::prove_inference
         let r: Vec<F> = sponge.squeeze_field_elements(self.padded_dims_log.1);
 
+        let i_z_p_f = F::from(self.input_zero_point);
+
         let shifted_input_mle = Poly::from_evaluations_vec(
             input.num_vars(),
-            input.polynomial().iter().map(|x| F::from(*x)).collect(),
+            input.polynomial().iter().map(|x| *x - i_z_p_f).collect(),
         );
 
         // TODO consider whether this can be done once and stored
@@ -341,6 +343,10 @@ where
             .iter()
             .map(|x| x.evaluate(&prover_state.randomness))
             .collect();
+
+        // Recall that the first MLE in big_poly was the *shifted* input
+        let input_opening_value = claimed_evaluations[0] + i_z_p_f;
+        let weight_opening_value = claimed_evaluations[1];
 
         let input_opening_proof = PCS::open(
             &ck,
@@ -402,9 +408,9 @@ where
         NodeProof::BMM(BMMNodeProof {
             sumcheck_proof,
             input_opening_proof,
-            input_opening_value: claimed_evaluations[0],
+            input_opening_value,
             weight_opening_proof,
-            weight_opening_value: claimed_evaluations[1],
+            weight_opening_value,
             bias_opening_proof,
             bias_opening_value,
             output_opening_proof,
