@@ -7,11 +7,8 @@ use hcs_common::{
     QTypeArray,
 };
 
-mod bmm;
 mod model;
-mod relu;
-mod requantise_bmm;
-mod reshape;
+mod nodes;
 
 pub use model::EvaluateModel;
 
