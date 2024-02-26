@@ -1,16 +1,11 @@
-use std::vec;
-
 use crate::NodeOpsSNARKVerify;
 use ark_crypto_primitives::sponge::{Absorb, CryptographicSponge};
 use ark_ff::PrimeField;
-use ark_poly::{DenseMultilinearExtension, Polynomial};
-use ark_poly_commit::{LabeledCommitment, PolynomialCommitment};
+use ark_poly::Polynomial;
+use ark_poly_commit::PolynomialCommitment;
 use ark_std::log2;
-use ark_sumcheck::ml_sumcheck::{
-    protocol::{verifier::SubClaim, PolynomialInfo},
-    MLSumcheck,
-};
-use hcs_common::{InferenceProof, Model, Node, NodeCommitment, Poly, QTypeArray};
+
+use hcs_common::{InferenceProof, Model, NodeCommitment, Poly, QTypeArray};
 
 pub trait VerifyModel<F, S, PCS>
 where

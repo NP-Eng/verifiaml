@@ -1,6 +1,3 @@
-use ark_std::rc::Rc;
-
-use ark_poly::{MultilinearExtension, Polynomial};
 use ark_std::marker::PhantomData;
 
 use ark_crypto_primitives::sponge::{Absorb, CryptographicSponge};
@@ -8,15 +5,15 @@ use ark_ff::PrimeField;
 use ark_poly_commit::{LabeledCommitment, LabeledPolynomial, PolynomialCommitment};
 use ark_std::log2;
 use ark_std::rand::RngCore;
-use ark_sumcheck::ml_sumcheck::protocol::ListOfProductsOfPolynomials;
-use ark_sumcheck::ml_sumcheck::{MLSumcheck, Proof};
+
+use ark_sumcheck::ml_sumcheck::Proof;
 
 use crate::model::qarray::{QArray, QTypeArray};
-use crate::model::{LabeledPoly, Poly};
-use crate::quantization::{BMMQInfo, QInfo, QLargeType, QScaleType, QSmallType};
+use crate::model::Poly;
+use crate::quantization::{QLargeType, QSmallType};
 use crate::{Commitment, CommitmentState};
 
-use super::{NodeCommitment, NodeCommitmentState, NodeOps, NodeOpsSNARK, NodeProof};
+use super::{NodeCommitment, NodeCommitmentState, NodeOps, NodeOpsSNARK};
 
 // TODO convention: input, bias and output are rows, the op is vec-by-mat (in that order)
 

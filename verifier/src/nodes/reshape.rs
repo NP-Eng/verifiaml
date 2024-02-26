@@ -13,12 +13,12 @@ where
 {
     fn verify(
         &self,
-        vk: &PCS::VerifierKey,
-        sponge: &mut S,
-        node_com: &NodeCommitment<F, S, PCS>,
-        input_com: &LabeledCommitment<PCS::Commitment>,
-        output_com: &LabeledCommitment<PCS::Commitment>,
-        proof: NodeProof<F, S, PCS>,
+        _vk: &PCS::VerifierKey,
+        _sponge: &mut S,
+        _node_com: &NodeCommitment<F, S, PCS>,
+        _input_com: &LabeledCommitment<PCS::Commitment>,
+        _output_com: &LabeledCommitment<PCS::Commitment>,
+        _proof: NodeProof<F, S, PCS>,
     ) -> bool {
         true
     }

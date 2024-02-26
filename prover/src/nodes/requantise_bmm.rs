@@ -1,10 +1,7 @@
-use ark_std::marker::PhantomData;
-
 use ark_crypto_primitives::sponge::{Absorb, CryptographicSponge};
 use ark_ff::PrimeField;
-use ark_poly_commit::{LabeledCommitment, LabeledPolynomial, PolynomialCommitment};
-use ark_std::log2;
-use ark_std::rand::RngCore;
+use ark_poly_commit::{LabeledCommitment, PolynomialCommitment};
+
 use hcs_common::{
     requantise_fc, LabeledPoly, NodeCommitment, NodeCommitmentState, NodeProof, Poly, QArray,
     QSmallType, QTypeArray, RequantiseBMMNode, RequantiseBMMNodeProof, RoundingScheme,
@@ -54,16 +51,16 @@ where
 
     fn prove(
         &self,
-        ck: &PCS::CommitterKey,
-        s: &mut S,
-        node_com: &NodeCommitment<F, S, PCS>,
-        node_com_state: &NodeCommitmentState<F, S, PCS>,
-        input: &LabeledPoly<F>,
-        input_com: &LabeledCommitment<PCS::Commitment>,
-        input_com_state: &PCS::CommitmentState,
-        output: &LabeledPoly<F>,
-        output_com: &LabeledCommitment<PCS::Commitment>,
-        output_com_state: &PCS::CommitmentState,
+        _ck: &PCS::CommitterKey,
+        _s: &mut S,
+        _node_com: &NodeCommitment<F, S, PCS>,
+        _node_com_state: &NodeCommitmentState<F, S, PCS>,
+        _input: &LabeledPoly<F>,
+        _input_com: &LabeledCommitment<PCS::Commitment>,
+        _input_com_state: &PCS::CommitmentState,
+        _output: &LabeledPoly<F>,
+        _output_com: &LabeledCommitment<PCS::Commitment>,
+        _output_com_state: &PCS::CommitmentState,
     ) -> NodeProof<F, S, PCS> {
         NodeProof::RequantiseBMM(RequantiseBMMNodeProof {})
     }

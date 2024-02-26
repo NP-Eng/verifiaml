@@ -3,14 +3,13 @@ use ark_std::marker::PhantomData;
 
 use ark_crypto_primitives::sponge::{Absorb, CryptographicSponge};
 use ark_ff::PrimeField;
-use ark_poly_commit::{LabeledCommitment, PolynomialCommitment};
+use ark_poly_commit::PolynomialCommitment;
 use ark_std::rand::RngCore;
 
-use crate::model::qarray::{QArray, QTypeArray};
-use crate::model::{LabeledPoly, NodeCommitmentState, Poly};
-use crate::quantization::QSmallType;
+use crate::model::qarray::QTypeArray;
+use crate::model::{NodeCommitmentState, Poly};
 
-use super::{NodeCommitment, NodeOps, NodeOpsSNARK, NodeProof};
+use super::{NodeCommitment, NodeOps, NodeOpsSNARK};
 
 pub struct ReshapeNode<F, S, PCS>
 where
@@ -73,8 +72,8 @@ where
 
     fn commit(
         &self,
-        ck: &PCS::CommitterKey,
-        rng: Option<&mut dyn RngCore>,
+        _ck: &PCS::CommitterKey,
+        _rng: Option<&mut dyn RngCore>,
     ) -> (NodeCommitment<F, S, PCS>, NodeCommitmentState<F, S, PCS>) {
         (
             NodeCommitment::Reshape(()),

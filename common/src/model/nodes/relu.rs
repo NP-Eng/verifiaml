@@ -3,14 +3,14 @@ use ark_std::marker::PhantomData;
 
 use ark_crypto_primitives::sponge::{Absorb, CryptographicSponge};
 use ark_ff::PrimeField;
-use ark_poly_commit::{LabeledCommitment, PolynomialCommitment};
+use ark_poly_commit::PolynomialCommitment;
 use ark_std::rand::RngCore;
 
-use crate::model::qarray::{QArray, QTypeArray};
-use crate::model::{LabeledPoly, Poly};
+use crate::model::qarray::QTypeArray;
+use crate::model::Poly;
 use crate::quantization::QSmallType;
 
-use super::{NodeCommitment, NodeCommitmentState, NodeOps, NodeOpsSNARK, NodeProof};
+use super::{NodeCommitment, NodeCommitmentState, NodeOps, NodeOpsSNARK};
 
 // Rectified linear unit node performing x |-> max(0, x).
 pub struct ReLUNode<F, S, PCS>
@@ -63,8 +63,8 @@ where
 
     fn commit(
         &self,
-        ck: &PCS::CommitterKey,
-        rng: Option<&mut dyn RngCore>,
+        _ck: &PCS::CommitterKey,
+        _rng: Option<&mut dyn RngCore>,
     ) -> (NodeCommitment<F, S, PCS>, NodeCommitmentState<F, S, PCS>) {
         (NodeCommitment::ReLU(()), NodeCommitmentState::ReLU(()))
     }

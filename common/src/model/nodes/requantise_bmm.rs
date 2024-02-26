@@ -2,18 +2,16 @@ use ark_std::marker::PhantomData;
 
 use ark_crypto_primitives::sponge::{Absorb, CryptographicSponge};
 use ark_ff::PrimeField;
-use ark_poly_commit::{LabeledCommitment, LabeledPolynomial, PolynomialCommitment};
+use ark_poly_commit::PolynomialCommitment;
 use ark_std::log2;
 use ark_std::rand::RngCore;
 
 use crate::model::qarray::{QArray, QTypeArray};
-use crate::model::{LabeledPoly, Poly};
-use crate::quantization::{
-    requantise_fc, BMMQInfo, QInfo, QLargeType, QScaleType, QSmallType, RoundingScheme,
-};
+use crate::model::Poly;
+use crate::quantization::{requantise_fc, BMMQInfo, QInfo, QScaleType, QSmallType, RoundingScheme};
 use crate::{Commitment, CommitmentState};
 
-use super::{NodeCommitment, NodeCommitmentState, NodeOps, NodeOpsSNARK, NodeProof};
+use super::{NodeCommitment, NodeCommitmentState, NodeOps, NodeOpsSNARK};
 
 // TODO convention: input, bias and output are rows, the op is vec-by-mat (in that order)
 
@@ -75,7 +73,7 @@ where
         );
 
         let output: QArray<QSmallType> = requantise_fc(
-            &input.values(),
+            input.values(),
             &self.q_info,
             RoundingScheme::NearestTiesEven,
         )
@@ -101,8 +99,8 @@ where
 
     fn commit(
         &self,
-        ck: &PCS::CommitterKey,
-        rng: Option<&mut dyn RngCore>,
+        _ck: &PCS::CommitterKey,
+        _rng: Option<&mut dyn RngCore>,
     ) -> (NodeCommitment<F, S, PCS>, NodeCommitmentState<F, S, PCS>) {
         (
             NodeCommitment::RequantiseBMM(RequantiseBMMNodeCommitment()),

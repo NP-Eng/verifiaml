@@ -1,8 +1,8 @@
-use ark_std::{log2, rand::RngCore};
+use ark_std::rand::RngCore;
 
 use ark_crypto_primitives::sponge::{Absorb, CryptographicSponge};
 use ark_ff::PrimeField;
-use ark_poly::{DenseMultilinearExtension, MultilinearExtension};
+use ark_poly::DenseMultilinearExtension;
 use ark_poly_commit::{LabeledCommitment, LabeledPolynomial, PolynomialCommitment};
 
 use crate::model::nodes::{NodeOps, NodeOpsSNARK};
@@ -105,7 +105,7 @@ where
     pub fn commit(
         &self,
         ck: &PCS::CommitterKey,
-        rng: Option<&mut dyn RngCore>,
+        _rng: Option<&mut dyn RngCore>,
     ) -> Vec<(NodeCommitment<F, S, PCS>, NodeCommitmentState<F, S, PCS>)> {
         // TODO blindly passing None, likely need to change to get hiding
         self.nodes.iter().map(|n| n.commit(ck, None)).collect()

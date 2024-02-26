@@ -2,13 +2,10 @@ use ark_std::{log2, rand::RngCore};
 
 use ark_crypto_primitives::sponge::{Absorb, CryptographicSponge};
 use ark_ff::PrimeField;
-use ark_poly::{DenseMultilinearExtension, MultilinearExtension};
-use ark_poly_commit::{LabeledCommitment, LabeledPolynomial, PolynomialCommitment};
-use hcs_common::{
-    requantise_fc, LabeledPoly, NodeCommitment, NodeCommitmentState, NodeProof, Poly, QArray,
-    QSmallType, QTypeArray, RequantiseBMMNode, RequantiseBMMNodeProof, ReshapeNode, RoundingScheme,
-};
+use ark_poly::MultilinearExtension;
+use ark_poly_commit::{LabeledPolynomial, PolynomialCommitment};
 use hcs_common::{InferenceProof, Model};
+use hcs_common::{NodeCommitment, NodeCommitmentState, Poly, QArray, QSmallType, QTypeArray};
 
 use crate::NodeOpsSNARKProve;
 pub trait ProveModel<F, S, PCS>
@@ -148,8 +145,8 @@ where
             node_proofs.push(node.prove(
                 ck,
                 sponge,
-                &node_com,
-                &node_com_state,
+                node_com,
+                node_com_state,
                 &values[0],
                 &l_v_coms[0],
                 &v_coms_states[0],

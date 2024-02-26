@@ -100,7 +100,7 @@ impl<T: InnerType> QArray<T> {
 
     // Internal constructor that computes cumulative dimensions
     pub fn new(flattened: Vec<T>, shape: Vec<usize>) -> Self {
-        assert!(shape.len() > 0, "Arrays cannot be zero-dimensional");
+        assert!(!shape.is_empty(), "Arrays cannot be zero-dimensional");
         assert_eq!(
             flattened.len(),
             shape.iter().product::<usize>(),
@@ -175,7 +175,7 @@ impl<T: InnerType> QArray<T> {
 
         let flattened = compact_resize_internal(
             &self.flattened,
-            &old_shape,
+            old_shape,
             &new_shape,
             &self.cumulative_dimensions,
             &new_cumulative_dimensions,
@@ -348,7 +348,7 @@ impl<T: InnerType> fmt::Display for QArray<T> {
             return write!(f, " {:?}", self.flattened);
         }
 
-        writeln!(f, "")?;
+        writeln!(f)?;
 
         print_flat_data(
             f,
@@ -390,7 +390,7 @@ fn print_flat_data<T: InnerType>(
     for subarray in subarrays {
         print_flat_data(
             f,
-            &subarray,
+            subarray,
             &cumulative_dimensions[1..],
             len - 1,
             original_len,

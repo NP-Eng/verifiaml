@@ -164,7 +164,7 @@ where
         let weight_opening_value = claimed_evaluations[1];
 
         let input_opening_proof = PCS::open(
-            &ck,
+            ck,
             [input],
             [input_com],
             &prover_state.randomness,
@@ -175,7 +175,7 @@ where
         .unwrap();
 
         let weight_opening_proof = PCS::open(
-            &ck,
+            ck,
             [&LabeledPolynomial::new(
                 "weight_mle".to_string(),
                 weight_mle,
@@ -196,7 +196,7 @@ where
         // TODO: b and o are opened at the same point, so they could be opened
         // with a single call to PCS::open
         let output_bias_opening_proof = PCS::open(
-            &ck,
+            ck,
             [
                 output,
                 &LabeledPolynomial::new("bias_mle".to_string(), bias_mle, Some(1), None),

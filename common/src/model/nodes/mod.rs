@@ -1,14 +1,11 @@
 use ark_crypto_primitives::sponge::Absorb;
 use ark_ff::PrimeField;
-use ark_poly_commit::{LabeledCommitment, LabeledPolynomial, PolynomialCommitment};
+use ark_poly_commit::PolynomialCommitment;
 use ark_std::rand::RngCore;
 
-use crate::{
-    model::{
-        nodes::{bmm::BMMNode, relu::ReLUNode},
-        CryptographicSponge, Poly,
-    },
-    quantization::QSmallType,
+use crate::model::{
+    nodes::{bmm::BMMNode, relu::ReLUNode},
+    CryptographicSponge, Poly,
 };
 
 use self::{
@@ -20,10 +17,7 @@ use self::{
     reshape::ReshapeNode,
 };
 
-use super::{
-    qarray::{QArray, QTypeArray},
-    LabeledPoly,
-};
+use super::qarray::QTypeArray;
 
 pub(crate) mod bmm;
 pub(crate) mod relu;
@@ -176,7 +170,7 @@ where
     pub(crate) fn type_name(&self) -> &'static str {
         match self {
             Node::BMM(_) => "BMM",
-            Node::RequantiseBMM(r) => "RequantiseBMM",
+            Node::RequantiseBMM(_r) => "RequantiseBMM",
             Node::ReLU(_) => "ReLU",
             Node::Reshape(_) => "Reshape",
         }

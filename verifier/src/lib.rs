@@ -1,11 +1,8 @@
 use ark_crypto_primitives::sponge::{Absorb, CryptographicSponge};
 use ark_ff::PrimeField;
 use ark_poly_commit::{LabeledCommitment, PolynomialCommitment};
-use ark_std::rand::RngCore;
-use hcs_common::{
-    LabeledPoly, Node, NodeCommitment, NodeCommitmentState, NodeOpsSNARK, NodeProof, Poly,
-    QTypeArray,
-};
+
+use hcs_common::{Node, NodeCommitment, NodeOpsSNARK, NodeProof, Poly};
 
 mod model;
 mod nodes;
