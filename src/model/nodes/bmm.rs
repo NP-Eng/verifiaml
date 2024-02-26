@@ -40,6 +40,8 @@ pub(crate) struct BMMNode<F, S, PCS> {
     phantom: PhantomData<(F, S, PCS)>,
 }
 
+/// Commitment to a BMM node, consisting of a commitment to the *dual* of the
+/// weight MLE and one to the *dual* of the bias MLE
 pub(crate) struct BMMNodeCommitment<F, S, PCS>
 where
     F: PrimeField,
@@ -58,6 +60,8 @@ where
 {
 }
 
+/// Commitment states associated to a BMMNodeCommitment: one for the weight and
+/// one for the bias
 pub(crate) struct BMMNodeCommitmentState<F, S, PCS>
 where
     F: PrimeField,
@@ -76,18 +80,35 @@ where
 {
 }
 
+/// Proof of execution of a BMM node, consisting of a sumcheck proof and four
+/// PCS opening proofs
 pub(crate) struct BMMNodeProof<
     F: PrimeField + Absorb,
     S: CryptographicSponge,
     PCS: PolynomialCommitment<F, Poly<F>, S>,
 > {
+    /// Sumcheck protocol proof for the polynomial
+    /// g(x) = (input - zero_point)^(x) * W^(r, x),
+    /// where v^ denotes the dual of the MLE of v and r is a challenge point
     pub(crate) sumcheck_proof: Proof<F>,
+
+    /// Value of the *dual* of the input MLE at the challenge point and proof of
+    /// opening
     pub(crate) input_opening_proof: PCS::Proof,
     pub(crate) input_opening_value: F,
+
+    /// Value of the *dual* of the weight MLE at the challenge point and proof of
+    /// opening
     pub(crate) weight_opening_proof: PCS::Proof,
     pub(crate) weight_opening_value: F,
+
+    /// Value of the *dual* of the bias MLE at the challenge point and proof of
+    /// opening
     pub(crate) bias_opening_proof: PCS::Proof,
     pub(crate) bias_opening_value: F,
+
+    /// Value of the *dual* of the output MLE at the challenge point and proof of
+    /// opening
     pub(crate) output_opening_proof: PCS::Proof,
     pub(crate) output_opening_value: F,
 }
@@ -285,12 +306,13 @@ where
             ),
         };
 
-        // we can squeeze directly, since the sponge has already absorbed all the
+        // We can squeeze directly, since the sponge has already absorbed all the
         // commitments in Model::prove_inference
         let r: Vec<F> = sponge.squeeze_field_elements(self.padded_dims_log.1);
 
         let i_z_p_f = F::from(self.input_zero_point);
 
+        /// (f - zero-point)^
         let shifted_input_mle = Poly::from_evaluations_vec(
             input.num_vars(),
             input.polynomial().iter().map(|x| *x - i_z_p_f).collect(),
@@ -298,12 +320,13 @@ where
 
         // TODO consider whether this can be done once and stored
         let weights_f = self.padded_weights.iter().map(|w| F::from(*w)).collect();
-        // TODO this might need LE -> BE conversion
+
+        // Dual of the MLE of the row-major flattening of the weight matrix
         let weight_mle = Poly::from_evaluations_vec(self.com_num_vars(), weights_f);
 
         // TODO consider whether this can be done once and stored
         let bias_f = self.padded_bias.iter().map(|w| F::from(*w)).collect();
-        // TODO this might need LE -> BE conversion
+        // Dual of the MLE of the bias vector
         let bias_mle = Poly::from_evaluations_vec(self.padded_dims_log.1, bias_f);
 
         // TODO is output_opening_value directly available from the output of sumcheck?
@@ -311,15 +334,13 @@ where
         let bias_opening_value = bias_mle.evaluate(&r);
         let output_opening_value = output.evaluate(&r);
 
-        // TODO we actually need fix_variables_last
-        let bound_weight_mle = weight_mle.fix_variables(&r);
-
         // Constructing the sumcheck polynomial
-        // big_poly(x) := input(x) * weights(x, r)
-        let mut big_poly = ListOfProductsOfPolynomials::new(self.padded_dims_log.0);
+        // g(x) = (input - zero_point)^(x) * W^(r, x),
+        let bound_weight_mle = weight_mle.fix_variables(&r);
+        let mut g = ListOfProductsOfPolynomials::new(self.padded_dims_log.0);
 
         // TODO we are cloning the input here, can we do better?
-        big_poly.add_product(
+        g.add_product(
             vec![shifted_input_mle, bound_weight_mle]
                 .into_iter()
                 .map(Rc::new)
@@ -328,23 +349,24 @@ where
         );
 
         let (sumcheck_proof, prover_state) =
-            MLSumcheck::<F, S>::prove_as_subprotocol(&big_poly, sponge).unwrap();
+            MLSumcheck::<F, S>::prove_as_subprotocol(&g, sponge).unwrap();
 
         // The prover computes the claimed evaluations of weight_mle and
         // input_mle at the random challenge point
-        // s:= `prover_state.randomness`, the list of random values sampled by
-        // the verifier duriing sumcheck. Note that this is different from `r`
+        // s := prover_state.randomness, the list of random values sampled by
+        // the verifier during sumcheck. Note that this is different from r
         // above.
         //
-        // We need to open input_mle(s) * weight_mle(s, r) as well as
-        // output_mle(r)
-        let claimed_evaluations: Vec<F> = big_poly
+        // We need to reveal g(s) by opening input^ at s and weight^ at s || r;
+        // and also open output^ and bias^ at r
+        let claimed_evaluations: Vec<F> = g
             .flattened_ml_extensions
             .iter()
             .map(|x| x.evaluate(&prover_state.randomness))
             .collect();
 
-        // Recall that the first MLE in big_poly was the *shifted* input
+        // Recall that the first factor of g was the *shifted* dual input
+        // (input - zero_point)^
         let input_opening_value = claimed_evaluations[0] + i_z_p_f;
         let weight_opening_value = claimed_evaluations[1];
 
@@ -378,6 +400,8 @@ where
         )
         .unwrap();
 
+        // TODO: b and o are opened at the same point, so they could be opened
+        // with a single call to PCS::open
         let bias_opening_proof = PCS::open(
             &ck,
             [&LabeledPolynomial::new(
