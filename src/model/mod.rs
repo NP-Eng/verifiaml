@@ -18,7 +18,6 @@ mod examples;
 mod isolated_verification;
 mod nodes;
 mod qarray;
-mod reshaping;
 
 pub(crate) type Poly<F> = DenseMultilinearExtension<F>;
 pub(crate) type LabeledPoly<F> = LabeledPolynomial<F, DenseMultilinearExtension<F>>;
