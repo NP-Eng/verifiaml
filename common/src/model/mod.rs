@@ -14,7 +14,6 @@ use self::{
     qarray::QArray,
 };
 
-// mod examples;
 pub mod isolated_verification;
 pub mod nodes;
 pub mod qarray;

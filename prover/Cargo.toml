@@ -25,12 +25,10 @@ ark-pcs-bench-templates = { workspace = true }
 [[example]]
 name = "simple_perceptron_mnist"
 required-features = [ "test-types" ]
-# path = "examples/simple_perceptron_mnist"
 
 [[example]]
 name = "two_layer_perceptron_mnist"
 required-features = [ "test-types" ]
-# path = "examples/two_layer_perceptron_mnist"
 
 [features]
 default = [ "std", "parallel" ]
