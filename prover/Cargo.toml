@@ -1,0 +1,39 @@
+[package]
+name = "hcs-prover"
+version = "0.1.0"
+edition = "2021"
+
+
+[dependencies]
+ark-std = { workspace = true }
+ark-ff = { workspace = true }
+ark-ec = { workspace = true }
+ark-serialize = { workspace = true, features = [ "derive" ] }
+ark-poly = { workspace = true }
+ark-poly-commit = { workspace = true }
+ark-crypto-primitives = { workspace = true }
+ark-sumcheck = { workspace = true }
+rayon = { workspace = true, optional = true }
+hcs-common = { path = "../common" }
+
+[dev-dependencies]
+ark-bn254 = { workspace = true, features = [ "curve" ] }
+blake2 = { workspace = true }
+serde_json = { workspace = true }
+ark-pcs-bench-templates = { workspace = true }
+
+[[example]]
+name = "simple_perceptron_mnist"
+required-features = [ "test-types" ]
+# path = "examples/simple_perceptron_mnist"
+
+[[example]]
+name = "two_layer_perceptron_mnist"
+required-features = [ "test-types" ]
+# path = "examples/two_layer_perceptron_mnist"
+
+[features]
+default = [ "std", "parallel" ]
+std = [ "ark-ff/std", "ark-ec/std", "ark-poly/std", "ark-serialize/std", "ark-crypto-primitives/std", "ark-poly-commit/std", "ark-sumcheck/std" ]
+parallel = [ "std", "ark-ff/parallel", "ark-ec/parallel", "ark-poly/parallel", "ark-std/parallel", "ark-poly-commit/parallel", "ark-sumcheck/parallel", "rayon" ]
+test-types = [ "hcs-common/test-types" ]
