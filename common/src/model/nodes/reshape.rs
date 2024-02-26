@@ -9,7 +9,7 @@ use ark_std::rand::RngCore;
 use crate::model::qarray::QTypeArray;
 use crate::model::{NodeCommitmentState, Poly};
 
-use super::{NodeCommitment, NodeOps, NodeOpsSNARK};
+use super::{NodeCommitment, NodeOpsCommon, NodeOpsNative};
 
 pub struct ReshapeNode<F, S, PCS>
 where
@@ -24,7 +24,7 @@ where
     phantom: PhantomData<(F, S, PCS)>,
 }
 
-impl<F, S, PCS> NodeOps for ReshapeNode<F, S, PCS>
+impl<F, S, PCS> NodeOpsNative for ReshapeNode<F, S, PCS>
 where
     F: PrimeField,
     S: CryptographicSponge,
@@ -56,7 +56,7 @@ where
     }
 }
 
-impl<F, S, PCS> NodeOpsSNARK<F, S, PCS> for ReshapeNode<F, S, PCS>
+impl<F, S, PCS> NodeOpsCommon<F, S, PCS> for ReshapeNode<F, S, PCS>
 where
     F: PrimeField + Absorb,
     S: CryptographicSponge,

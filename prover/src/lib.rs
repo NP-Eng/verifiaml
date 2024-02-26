@@ -3,7 +3,7 @@ use ark_ff::PrimeField;
 use ark_poly_commit::{LabeledCommitment, PolynomialCommitment};
 
 use hcs_common::{
-    LabeledPoly, Node, NodeCommitment, NodeCommitmentState, NodeOpsSNARK, NodeProof, Poly,
+    LabeledPoly, Node, NodeCommitment, NodeCommitmentState, NodeOpsCommon, NodeProof, Poly,
     QTypeArray,
 };
 
@@ -12,7 +12,7 @@ mod nodes;
 
 pub use model::ProveModel;
 
-pub trait NodeOpsSNARKProve<F, S, PCS>: NodeOpsSNARK<F, S, PCS>
+pub trait NodeOpsProve<F, S, PCS>: NodeOpsCommon<F, S, PCS>
 where
     F: PrimeField + Absorb,
     S: CryptographicSponge,
@@ -37,7 +37,7 @@ where
     ) -> NodeProof<F, S, PCS>;
 }
 
-fn node_as_node_ops_snark<F, S, PCS>(node: &Node<F, S, PCS>) -> &dyn NodeOpsSNARKProve<F, S, PCS>
+fn node_as_node_ops_snark<F, S, PCS>(node: &Node<F, S, PCS>) -> &dyn NodeOpsProve<F, S, PCS>
 where
     F: PrimeField + Absorb,
     S: CryptographicSponge,
@@ -51,7 +51,7 @@ where
     }
 }
 
-impl<F, S, PCS> NodeOpsSNARKProve<F, S, PCS> for Node<F, S, PCS>
+impl<F, S, PCS> NodeOpsProve<F, S, PCS> for Node<F, S, PCS>
 where
     F: PrimeField + Absorb,
     S: CryptographicSponge,

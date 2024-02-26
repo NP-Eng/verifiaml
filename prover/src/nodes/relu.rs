@@ -6,9 +6,9 @@ use hcs_common::{
     LabeledPoly, NodeCommitment, NodeCommitmentState, NodeProof, Poly, QTypeArray, ReLUNode,
 };
 
-use crate::NodeOpsSNARKProve;
+use crate::NodeOpsProve;
 
-impl<F, S, PCS> NodeOpsSNARKProve<F, S, PCS> for ReLUNode<F, S, PCS>
+impl<F, S, PCS> NodeOpsProve<F, S, PCS> for ReLUNode<F, S, PCS>
 where
     F: PrimeField + Absorb,
     S: CryptographicSponge,

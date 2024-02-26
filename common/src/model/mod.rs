@@ -5,7 +5,7 @@ use ark_ff::PrimeField;
 use ark_poly::DenseMultilinearExtension;
 use ark_poly_commit::{LabeledCommitment, LabeledPolynomial, PolynomialCommitment};
 
-use crate::model::nodes::{NodeOps, NodeOpsSNARK};
+use crate::model::nodes::{NodeOpsCommon, NodeOpsNative};
 use crate::{model::nodes::Node, quantization::QSmallType};
 
 use self::qarray::QTypeArray;

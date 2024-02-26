@@ -7,9 +7,9 @@ use ark_sumcheck::ml_sumcheck::{
 };
 use hcs_common::{BMMNode, BMMNodeCommitment, BMMNodeProof, NodeCommitment, NodeProof, Poly};
 
-use crate::NodeOpsSNARKVerify;
+use crate::NodeOpsVerify;
 
-impl<F, S, PCS> NodeOpsSNARKVerify<F, S, PCS> for BMMNode<F, S, PCS>
+impl<F, S, PCS> NodeOpsVerify<F, S, PCS> for BMMNode<F, S, PCS>
 where
     F: PrimeField + Absorb,
     S: CryptographicSponge,

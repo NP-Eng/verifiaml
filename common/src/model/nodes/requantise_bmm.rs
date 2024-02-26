@@ -11,7 +11,7 @@ use crate::model::Poly;
 use crate::quantization::{requantise_fc, BMMQInfo, QInfo, QScaleType, QSmallType, RoundingScheme};
 use crate::{Commitment, CommitmentState};
 
-use super::{NodeCommitment, NodeCommitmentState, NodeOps, NodeOpsSNARK};
+use super::{NodeCommitment, NodeCommitmentState, NodeOpsCommon, NodeOpsNative};
 
 // TODO convention: input, bias and output are rows, the op is vec-by-mat (in that order)
 
@@ -41,7 +41,7 @@ pub struct RequantiseBMMNodeProof {
     // this will be the sumcheck proof
 }
 
-impl<F, S, PCS> NodeOps for RequantiseBMMNode<F, S, PCS>
+impl<F, S, PCS> NodeOpsNative for RequantiseBMMNode<F, S, PCS>
 where
     F: PrimeField,
     S: CryptographicSponge,
@@ -83,7 +83,7 @@ where
     }
 }
 
-impl<F, S, PCS> NodeOpsSNARK<F, S, PCS> for RequantiseBMMNode<F, S, PCS>
+impl<F, S, PCS> NodeOpsCommon<F, S, PCS> for RequantiseBMMNode<F, S, PCS>
 where
     F: PrimeField + Absorb,
     S: CryptographicSponge,

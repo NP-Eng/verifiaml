@@ -3,9 +3,9 @@ use ark_ff::PrimeField;
 use ark_poly_commit::{LabeledCommitment, PolynomialCommitment};
 use hcs_common::{NodeCommitment, NodeProof, Poly, RequantiseBMMNode};
 
-use crate::NodeOpsSNARKVerify;
+use crate::NodeOpsVerify;
 
-impl<F, S, PCS> NodeOpsSNARKVerify<F, S, PCS> for RequantiseBMMNode<F, S, PCS>
+impl<F, S, PCS> NodeOpsVerify<F, S, PCS> for RequantiseBMMNode<F, S, PCS>
 where
     F: PrimeField + Absorb,
     S: CryptographicSponge,

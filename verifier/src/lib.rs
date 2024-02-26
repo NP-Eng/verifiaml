@@ -2,14 +2,14 @@ use ark_crypto_primitives::sponge::{Absorb, CryptographicSponge};
 use ark_ff::PrimeField;
 use ark_poly_commit::{LabeledCommitment, PolynomialCommitment};
 
-use hcs_common::{Node, NodeCommitment, NodeOpsSNARK, NodeProof, Poly};
+use hcs_common::{Node, NodeCommitment, NodeOpsCommon, NodeProof, Poly};
 
 mod model;
 mod nodes;
 
 pub use model::VerifyModel;
 
-pub trait NodeOpsSNARKVerify<F, S, PCS>: NodeOpsSNARK<F, S, PCS>
+pub trait NodeOpsVerify<F, S, PCS>: NodeOpsCommon<F, S, PCS>
 where
     F: PrimeField + Absorb,
     S: CryptographicSponge,
@@ -26,7 +26,7 @@ where
     ) -> bool;
 }
 
-impl<F, S, PCS> NodeOpsSNARKVerify<F, S, PCS> for Node<F, S, PCS>
+impl<F, S, PCS> NodeOpsVerify<F, S, PCS> for Node<F, S, PCS>
 where
     F: PrimeField + Absorb,
     S: CryptographicSponge,
@@ -45,7 +45,7 @@ where
     }
 }
 
-fn node_as_node_ops_snark<F, S, PCS>(node: &Node<F, S, PCS>) -> &dyn NodeOpsSNARKVerify<F, S, PCS>
+fn node_as_node_ops_snark<F, S, PCS>(node: &Node<F, S, PCS>) -> &dyn NodeOpsVerify<F, S, PCS>
 where
     F: PrimeField + Absorb,
     S: CryptographicSponge,

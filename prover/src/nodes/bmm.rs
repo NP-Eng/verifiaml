@@ -7,12 +7,12 @@ use ark_poly_commit::{LabeledCommitment, LabeledPolynomial, PolynomialCommitment
 use ark_sumcheck::ml_sumcheck::{protocol::ListOfProductsOfPolynomials, MLSumcheck};
 use hcs_common::{
     BMMNode, BMMNodeCommitment, BMMNodeCommitmentState, BMMNodeProof, LabeledPoly, NodeCommitment,
-    NodeCommitmentState, NodeOpsSNARK, NodeProof, Poly, QArray, QLargeType, QTypeArray,
+    NodeCommitmentState, NodeOpsCommon, NodeProof, Poly, QArray, QLargeType, QTypeArray,
 };
 
-use crate::NodeOpsSNARKProve;
+use crate::NodeOpsProve;
 
-impl<F, S, PCS> NodeOpsSNARKProve<F, S, PCS> for BMMNode<F, S, PCS>
+impl<F, S, PCS> NodeOpsProve<F, S, PCS> for BMMNode<F, S, PCS>
 where
     F: PrimeField + Absorb,
     S: CryptographicSponge,

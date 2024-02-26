@@ -13,7 +13,7 @@ use crate::model::Poly;
 use crate::quantization::{QLargeType, QSmallType};
 use crate::{Commitment, CommitmentState};
 
-use super::{NodeCommitment, NodeCommitmentState, NodeOps, NodeOpsSNARK};
+use super::{NodeCommitment, NodeCommitmentState, NodeOpsCommon, NodeOpsNative};
 
 // TODO convention: input, bias and output are rows, the op is vec-by-mat (in that order)
 
@@ -109,7 +109,7 @@ pub struct BMMNodeProof<
     pub bias_opening_value: F,
 }
 
-impl<F, S, PCS> NodeOps for BMMNode<F, S, PCS>
+impl<F, S, PCS> NodeOpsNative for BMMNode<F, S, PCS>
 where
     F: PrimeField,
     S: CryptographicSponge,
@@ -165,7 +165,7 @@ where
     }
 }
 
-impl<F, S, PCS> NodeOpsSNARK<F, S, PCS> for BMMNode<F, S, PCS>
+impl<F, S, PCS> NodeOpsCommon<F, S, PCS> for BMMNode<F, S, PCS>
 where
     F: PrimeField + Absorb,
     S: CryptographicSponge,

@@ -7,7 +7,7 @@ use ark_poly_commit::{LabeledPolynomial, PolynomialCommitment};
 use hcs_common::{InferenceProof, Model};
 use hcs_common::{NodeCommitment, NodeCommitmentState, Poly, QArray, QSmallType, QTypeArray};
 
-use crate::NodeOpsSNARKProve;
+use crate::NodeOpsProve;
 pub trait ProveModel<F, S, PCS>
 where
     F: PrimeField + Absorb,

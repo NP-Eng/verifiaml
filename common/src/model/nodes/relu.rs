@@ -10,7 +10,7 @@ use crate::model::qarray::QTypeArray;
 use crate::model::Poly;
 use crate::quantization::QSmallType;
 
-use super::{NodeCommitment, NodeCommitmentState, NodeOps, NodeOpsSNARK};
+use super::{NodeCommitment, NodeCommitmentState, NodeOpsCommon, NodeOpsNative};
 
 // Rectified linear unit node performing x |-> max(0, x).
 pub struct ReLUNode<F, S, PCS>
@@ -25,7 +25,7 @@ where
     phantom: PhantomData<(F, S, PCS)>,
 }
 
-impl<F, S, PCS> NodeOps for ReLUNode<F, S, PCS>
+impl<F, S, PCS> NodeOpsNative for ReLUNode<F, S, PCS>
 where
     F: PrimeField,
     S: CryptographicSponge,
@@ -47,7 +47,7 @@ where
 }
 
 // impl NodeOpsSnark
-impl<F, S, PCS> NodeOpsSNARK<F, S, PCS> for ReLUNode<F, S, PCS>
+impl<F, S, PCS> NodeOpsCommon<F, S, PCS> for ReLUNode<F, S, PCS>
 where
     F: PrimeField + Absorb,
     S: CryptographicSponge,

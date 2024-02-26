@@ -34,7 +34,7 @@ pub(crate) mod reshape;
 /// It stores information about the transition (such as a matrix and bias, if
 /// applicable), but not about about the specific values of its nodes: these
 /// are handled by the methods only.
-pub(crate) trait NodeOps {
+pub(crate) trait NodeOpsNative {
     /// Returns the shape of the node's output tensor
     fn shape(&self) -> Vec<usize>;
 
@@ -48,7 +48,7 @@ pub(crate) trait NodeOps {
     fn evaluate(&self, input: &QTypeArray) -> QTypeArray;
 }
 
-pub trait NodeOpsSNARK<F, S, PCS>
+pub trait NodeOpsCommon<F, S, PCS>
 where
     F: PrimeField + Absorb,
     S: CryptographicSponge,
@@ -148,7 +148,7 @@ where
     S: CryptographicSponge,
     PCS: PolynomialCommitment<F, Poly<F>, S>,
 {
-    fn as_node_ops(&self) -> &dyn NodeOps {
+    fn as_node_ops(&self) -> &dyn NodeOpsNative {
         match self {
             Node::BMM(fc) => fc,
             Node::RequantiseBMM(r) => r,
@@ -157,7 +157,7 @@ where
         }
     }
 
-    pub fn as_node_ops_snark(&self) -> &dyn NodeOpsSNARK<F, S, PCS> {
+    pub fn as_node_ops_snark(&self) -> &dyn NodeOpsCommon<F, S, PCS> {
         match self {
             Node::BMM(fc) => fc,
             Node::RequantiseBMM(r) => r,
@@ -179,7 +179,7 @@ where
 }
 // A lot of this overlaps with the NodeOps trait and could be handled more
 // elegantly by simply implementing the trait
-impl<F, S, PCS> NodeOps for Node<F, S, PCS>
+impl<F, S, PCS> NodeOpsNative for Node<F, S, PCS>
 where
     F: PrimeField + Absorb,
     S: CryptographicSponge,
@@ -201,7 +201,7 @@ where
     }
 }
 
-impl<F, S, PCS> NodeOpsSNARK<F, S, PCS> for Node<F, S, PCS>
+impl<F, S, PCS> NodeOpsCommon<F, S, PCS> for Node<F, S, PCS>
 where
     F: PrimeField + Absorb,
     S: CryptographicSponge,

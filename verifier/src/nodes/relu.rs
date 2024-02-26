@@ -3,9 +3,9 @@ use ark_ff::PrimeField;
 use ark_poly_commit::{LabeledCommitment, PolynomialCommitment};
 use hcs_common::{NodeCommitment, NodeProof, Poly, ReLUNode};
 
-use crate::NodeOpsSNARKVerify;
+use crate::NodeOpsVerify;
 
-impl<F, S, PCS> NodeOpsSNARKVerify<F, S, PCS> for ReLUNode<F, S, PCS>
+impl<F, S, PCS> NodeOpsVerify<F, S, PCS> for ReLUNode<F, S, PCS>
 where
     F: PrimeField + Absorb,
     S: CryptographicSponge,

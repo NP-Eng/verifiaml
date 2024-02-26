@@ -7,9 +7,9 @@ use hcs_common::{
     QSmallType, QTypeArray, RequantiseBMMNode, RequantiseBMMNodeProof, RoundingScheme,
 };
 
-use crate::NodeOpsSNARKProve;
+use crate::NodeOpsProve;
 
-impl<F, S, PCS> NodeOpsSNARKProve<F, S, PCS> for RequantiseBMMNode<F, S, PCS>
+impl<F, S, PCS> NodeOpsProve<F, S, PCS> for RequantiseBMMNode<F, S, PCS>
 where
     F: PrimeField + Absorb,
     S: CryptographicSponge,

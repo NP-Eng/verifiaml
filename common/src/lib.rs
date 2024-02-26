@@ -13,7 +13,7 @@ pub use model::nodes::{
     relu::ReLUNode,
     requantise_bmm::{RequantiseBMMNode, RequantiseBMMNodeProof},
     reshape::ReshapeNode,
-    Node, NodeCommitment, NodeCommitmentState, NodeOpsSNARK, NodeProof,
+    Node, NodeCommitment, NodeCommitmentState, NodeOpsCommon, NodeProof,
 };
 pub use model::qarray::{QArray, QTypeArray};
 pub use model::{InferenceProof, Model};
