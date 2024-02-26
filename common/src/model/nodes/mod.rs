@@ -44,6 +44,7 @@ pub(crate) trait NodeOps {
     }
 
     /// Evaluate the node natively (without padding)
+    /// TODO decide whether this method should stay on `NodeOps`, or maybe go to `NodeOpsSNARKVerify`
     fn evaluate(&self, input: &QTypeArray) -> QTypeArray;
 }
 
