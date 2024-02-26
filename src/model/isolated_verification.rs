@@ -56,20 +56,23 @@ where
         _ => panic!("Expected BMMNodeProof"),
     };
 
+    // Squeezing random challenge r to bind the first variables of W^ to
     let r: Vec<F> = sponge.squeeze_field_elements(padded_dims_log.1);
 
-    // The value proved in sumcheck should be the difference between the output
-    // and the bias
+    // The hypercube sum proved in sumcheck should be the difference between
+    // the output and the bias
     let sumcheck_evaluation = output_opening_value - bias_opening_value;
 
-    // Information about the polynomial f(s) = input_mle(s) * weight_mle(s, r)
-    // to which sumcheck is applied
+    // Public information about the sumchecked polynomial
+    // g(x) = (input - zero_point)^(x) * W^(r, x),
     let info = PolynomialInfo {
         max_multiplicands: 2,
         num_variables: padded_dims_log.0,
         products: vec![(F::one(), vec![0, 1])],
     };
 
+    // Verify the sumcheck proof for g and obtaining the oracle-call point s
+    // and claimed evaluation g(s)
     let Ok(subclaim) = MLSumcheck::verify(&info, sumcheck_evaluation, &sumcheck_proof, sponge)
     else {
         return false;
@@ -80,10 +83,14 @@ where
         expected_evaluation: oracle_evaluation,
     } = subclaim;
 
+    // Verify g(s) agrees with the claims for (input - zero_point)^(s) and
+    // W^(r, s)
     if oracle_evaluation != (input_opening_value - input_zero_point) * weight_opening_value {
         return false;
     }
 
+    // Verify that the opening of input^ at s agrees with the claimed value for
+    // (input - zero_point)^(s)
     // TODO possibly rng, not None
     if !PCS::check(
         vk,
@@ -99,6 +106,8 @@ where
         return false;
     }
 
+    // Verify the openings of W^ at r || s and b and o at r match the claimed
+    // values
     // TODO possibly rng, not None
     if !PCS::check(
         vk,
@@ -277,6 +286,8 @@ where
         Poly::from_evaluations_vec(log2(output_node_f.len()) as usize, output_node_f)
             .evaluate(&output_challenge_point);
 
+    // The computed values should match the openings of the corresponding
+    // vectors
     // TODO rng, None
     if !PCS::check(
         vk,
