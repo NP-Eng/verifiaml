@@ -92,25 +92,24 @@ pub(crate) struct BMMNodeProof<
     /// where v^ denotes the dual of the MLE of v and r is a challenge point
     pub(crate) sumcheck_proof: Proof<F>,
 
-    /// Value of the *dual* of the input MLE at the challenge point and proof of
-    /// opening
+    /// Value of the *dual* of the input MLE at the challenge point s and proof
+    /// of opening
     pub(crate) input_opening_proof: PCS::Proof,
     pub(crate) input_opening_value: F,
 
-    /// Value of the *dual* of the weight MLE at the challenge point and proof of
+    /// Value of the *dual* of the weight MLE at the challenge point r || s and proof of
     /// opening
     pub(crate) weight_opening_proof: PCS::Proof,
     pub(crate) weight_opening_value: F,
 
-    /// Value of the *dual* of the bias MLE at the challenge point and proof of
-    /// opening
-    pub(crate) bias_opening_proof: PCS::Proof,
-    pub(crate) bias_opening_value: F,
+    /// Proof of opening of the *duals* of the output and bias MLEs at the
+    // challenge point
+    pub(crate) output_bias_opening_proof: PCS::Proof,
 
-    /// Value of the *dual* of the output MLE at the challenge point and proof of
+    /// Value of the *dual* of the weight MLE at the challenge point and proof of
     /// opening
-    pub(crate) output_opening_proof: PCS::Proof,
     pub(crate) output_opening_value: F,
+    pub(crate) bias_opening_value: F,
 }
 
 impl<F, S, PCS> NodeOps for BMMNode<F, S, PCS>
@@ -329,8 +328,6 @@ where
         // Dual of the MLE of the bias vector
         let bias_mle = Poly::from_evaluations_vec(self.padded_dims_log.1, bias_f);
 
-        // TODO is output_opening_value directly available from the output of sumcheck?
-        // It doesn't need to be used until the end of the method
         let bias_opening_value = bias_mle.evaluate(&r);
         let output_opening_value = output.evaluate(&r);
 
@@ -402,29 +399,16 @@ where
 
         // TODO: b and o are opened at the same point, so they could be opened
         // with a single call to PCS::open
-        let bias_opening_proof = PCS::open(
+        let output_bias_opening_proof = PCS::open(
             &ck,
-            [&LabeledPolynomial::new(
-                "bias_mle".to_string(),
-                bias_mle,
-                Some(1),
-                None,
-            )],
-            [bias_com],
+            [
+                output,
+                &LabeledPolynomial::new("bias_mle".to_string(), bias_mle, Some(1), None),
+            ],
+            [output_com, bias_com],
             &r,
             sponge,
-            [bias_com_state],
-            None,
-        )
-        .unwrap();
-
-        let output_opening_proof = PCS::open(
-            &ck,
-            [output],
-            [output_com],
-            &r,
-            sponge,
-            [output_com_state],
+            [output_com_state, bias_com_state],
             None,
         )
         .unwrap();
@@ -435,10 +419,9 @@ where
             input_opening_value,
             weight_opening_proof,
             weight_opening_value,
-            bias_opening_proof,
-            bias_opening_value,
-            output_opening_proof,
+            output_bias_opening_proof,
             output_opening_value,
+            bias_opening_value,
         })
     }
 }

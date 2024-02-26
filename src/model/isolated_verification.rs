@@ -47,10 +47,9 @@ where
         input_opening_value,
         weight_opening_proof,
         weight_opening_value,
-        bias_opening_proof,
-        bias_opening_value,
-        output_opening_proof,
+        output_bias_opening_proof,
         output_opening_value,
+        bias_opening_value,
     } = match proof {
         NodeProof::BMM(p) => p,
         _ => panic!("Expected BMMNodeProof"),
@@ -123,28 +122,12 @@ where
         return false;
     }
 
-    // TODO: b and o are opened at the same point, so they could be verified
-    // with a single call to PCS::check
-    if !PCS::check(
-        vk,
-        [bias_com],
-        &r,
-        [bias_opening_value],
-        &bias_opening_proof,
-        sponge,
-        None,
-    )
-    .unwrap()
-    {
-        return false;
-    }
-
     PCS::check(
         vk,
-        [output_com],
+        [output_com, bias_com],
         &r,
-        [output_opening_value],
-        &output_opening_proof,
+        [output_opening_value, bias_opening_value],
+        &output_bias_opening_proof,
         sponge,
         None,
     )
