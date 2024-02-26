@@ -31,11 +31,11 @@ pub struct RequantiseBMMNode<F, S, PCS> {
     phantom: PhantomData<(F, S, PCS)>,
 }
 
-pub(crate) struct RequantiseBMMNodeCommitment();
+pub struct RequantiseBMMNodeCommitment();
 
 impl Commitment for RequantiseBMMNodeCommitment {}
 
-pub(crate) struct RequantiseBMMNodeCommitmentState();
+pub struct RequantiseBMMNodeCommitmentState();
 
 impl CommitmentState for RequantiseBMMNodeCommitmentState {}
 
