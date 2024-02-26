@@ -11,9 +11,8 @@ use ark_std::rand::RngCore;
 use ark_sumcheck::ml_sumcheck::protocol::ListOfProductsOfPolynomials;
 use ark_sumcheck::ml_sumcheck::{MLSumcheck, Proof};
 
-use crate::model::qarray::{QArray, QTypeArray};
+use crate::model::qarray::{InnerType, QArray, QTypeArray};
 use crate::model::{LabeledPoly, Poly};
-use crate::quantization::{BMMQInfo, QInfo, QLargeType, QScaleType, QSmallType};
 use crate::{Commitment, CommitmentState};
 
 use super::{NodeCommitment, NodeCommitmentState, NodeOps, NodeOpsSNARK, NodeProof};
@@ -21,21 +20,21 @@ use super::{NodeCommitment, NodeCommitmentState, NodeOps, NodeOpsSNARK, NodeProo
 // TODO convention: input, bias and output are rows, the op is vec-by-mat (in that order)
 
 /// Start with 2D matrices, and Mat-by-vector multiplication only
-pub(crate) struct BMMNode<F, S, PCS> {
+pub(crate) struct BMMNode<F, S, PCS, ST, LT> {
     /// The row-major flattened unpadded vector of weights
-    weights: Vec<QSmallType>,
+    weights: Vec<ST>,
     /// The padded weight vector
-    padded_weights: Vec<QSmallType>,
+    padded_weights: Vec<ST>,
     /// The unpadded vector of biases
-    bias: Vec<QLargeType>,
+    bias: Vec<LT>,
     /// The padded bias vector
-    padded_bias: Vec<QLargeType>,
+    padded_bias: Vec<LT>,
     /// Unpadded imensions (rows, columns)
     dims: (usize, usize),
     /// The logarithm of the padded dimensions (rows, columns)
     padded_dims_log: (usize, usize),
     /// Zero-point quantisation parameter of the input
-    input_zero_point: QSmallType,
+    input_zero_point: ST,
 
     phantom: PhantomData<(F, S, PCS)>,
 }
@@ -112,17 +111,19 @@ pub(crate) struct BMMNodeProof<
     pub(crate) bias_opening_value: F,
 }
 
-impl<F, S, PCS> NodeOps for BMMNode<F, S, PCS>
+impl<F, S, PCS, ST, LT> NodeOps<ST, LT> for BMMNode<F, S, PCS, ST, LT>
 where
     F: PrimeField,
     S: CryptographicSponge,
     PCS: PolynomialCommitment<F, Poly<F>, S>,
+    ST: InnerType + TryFrom<LT>,
+    LT: InnerType + From<ST>,
 {
     fn shape(&self) -> Vec<usize> {
         vec![self.dims.1]
     }
 
-    fn evaluate(&self, input: &QTypeArray) -> QTypeArray {
+    fn evaluate(&self, input: &QTypeArray<ST, LT>) -> QTypeArray<ST, LT> {
         // Sanity checks
         // TODO systematise
         let input = match input {
@@ -143,11 +144,11 @@ where
             input.len()
         );
 
-        let input: QArray<QLargeType> = input.cast();
+        let input: QArray<LT> = input.cast();
 
         // TODO this is a bigger question: can this overflow an i8? Supposedly the point of quantisation
         // is that input-by-weight products can be computed in i8. To be safe, let us use the large type here
-        let shifted_input = input - self.input_zero_point as QLargeType;
+        let shifted_input = input - LT::from(self.input_zero_point);
 
         let mut accumulators = self.bias.clone();
 
@@ -158,7 +159,7 @@ where
             // TODO does the compiler realise it doesn't need to access accumulators[col] on every iteration of the inner loop? ow change
             for row in 0..self.dims.0 {
                 accumulators[col] +=
-                    shifted_input[row] * (self.weights[row * self.dims.1 + col] as QLargeType)
+                    shifted_input[row] * LT::from(self.weights[row * self.dims.1 + col])
             }
         }
 
@@ -168,11 +169,13 @@ where
     }
 }
 
-impl<F, S, PCS> NodeOpsSNARK<F, S, PCS> for BMMNode<F, S, PCS>
+impl<F, S, PCS, ST, LT> NodeOpsSNARK<F, S, PCS, ST, LT> for BMMNode<F, S, PCS, ST, LT>
 where
-    F: PrimeField + Absorb,
+    F: PrimeField + Absorb + From<ST> + From<LT>,
     S: CryptographicSponge,
     PCS: PolynomialCommitment<F, Poly<F>, S>,
+    ST: InnerType + TryFrom<LT>,
+    LT: InnerType + From<ST>,
 {
     fn padded_shape_log(&self) -> Vec<usize> {
         vec![self.padded_dims_log.1]
@@ -186,7 +189,7 @@ where
     // meant to exactly mirror the proof-system multiplication proved by the
     // sumcheck argument. Requantisation and shifting are also applied to these
     // trivial entries, as the proof system does.
-    fn padded_evaluate(&self, input: &QTypeArray) -> QTypeArray {
+    fn padded_evaluate(&self, input: &QTypeArray<ST, LT>) -> QTypeArray<ST, LT> {
         let input = match input {
             QTypeArray::S(i) => i,
             _ => panic!("BMM node expects QSmallType as its QArray input type"),
@@ -210,11 +213,11 @@ where
             input.len()
         );
 
-        let input: QArray<QLargeType> = input.cast();
+        let input: QArray<LT> = input.cast();
 
         // TODO this is a bigger question: can this overflow an i8? Supposedly the point of quantisation
         // is that input-by-weight products can be computed in i8. To be safe, let us use the large type here
-        let shifted_input = input - self.input_zero_point as QLargeType;
+        let shifted_input = input - LT::from(self.input_zero_point);
 
         let mut accumulators = self.padded_bias.clone();
 
@@ -224,8 +227,8 @@ where
         for col in 0..padded_dims.1 {
             // TODO does the compiler realise it doesn't need to access accumulators[col] on every iteration of the inner loop? ow change
             for row in 0..padded_dims.0 {
-                accumulators[col] += shifted_input[row]
-                    * (self.padded_weights[row * padded_dims.1 + col] as QLargeType)
+                accumulators[col] +=
+                    shifted_input[row] * LT::from(self.padded_weights[row * padded_dims.1 + col])
             }
         }
 
@@ -426,17 +429,19 @@ where
     }
 }
 
-impl<F, S, PCS> BMMNode<F, S, PCS>
+impl<F, S, PCS, ST, LT> BMMNode<F, S, PCS, ST, LT>
 where
     F: PrimeField,
     S: CryptographicSponge,
     PCS: PolynomialCommitment<F, Poly<F>, S>,
+    ST: InnerType + TryFrom<LT>,
+    LT: InnerType + From<ST>,
 {
     pub(crate) fn new(
-        weights: Vec<QSmallType>,
-        bias: Vec<QLargeType>,
+        weights: Vec<ST>,
+        bias: Vec<LT>,
         dims: (usize, usize),
-        input_zero_point: QSmallType,
+        input_zero_point: ST,
     ) -> Self {
         assert_eq!(
             weights.len(),
@@ -461,13 +466,13 @@ where
         let padded_weights = weight_array
             .compact_resize(
                 vec![dims.0.next_power_of_two(), dims.1.next_power_of_two()],
-                0,
+                ST::ZERO,
             )
             .move_values();
 
         // Padding the bias
         let mut padded_bias = bias.clone();
-        padded_bias.resize(dims.1.next_power_of_two(), 0);
+        padded_bias.resize(dims.1.next_power_of_two(), LT::ZERO);
 
         Self {
             weights,
@@ -485,7 +490,7 @@ where
         self.padded_dims_log
     }
 
-    pub(crate) fn input_zero_point(&self) -> QSmallType {
+    pub(crate) fn input_zero_point(&self) -> ST {
         self.input_zero_point
     }
 }

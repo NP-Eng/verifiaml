@@ -1,7 +1,7 @@
 use crate::{
     model::{
         isolated_verification::verify_inference, nodes::{bmm::BMMNode, relu::ReLUNode, requantise_bmm::RequantiseBMMNode, reshape::ReshapeNode, Node}, qarray::{QArray, QTypeArray}, Model, Poly
-    }, quantization::{quantise_f32_u8_nne, QSmallType}, utils::{pcs_types::Ligero, test_sponge::test_sponge}
+    }, quantization::quantise_f32_u8_nne, utils::{pcs_types::Ligero, test_sponge::test_sponge}
 };
 
 use ark_crypto_primitives::sponge::{poseidon::PoseidonSponge, Absorb, CryptographicSponge};
@@ -21,7 +21,7 @@ const INTER_DIM: usize = 28;
 const OUTPUT_DIM: usize = 10;
 
 // TODO this is incorrect now that we have switched to logs
-fn build_two_layer_perceptron_mnist<F, S, PCS>() -> Model<F, S, PCS>
+fn build_two_layer_perceptron_mnist<F, S, PCS>() -> Model<F, S, PCS, i8, i32>
 where
     F: PrimeField + Absorb,
     S: CryptographicSponge,
@@ -30,16 +30,16 @@ where
 
     let flat_dim = INPUT_DIMS.iter().product();
 
-    let reshape: ReshapeNode<F, S, PCS> = ReshapeNode::new(INPUT_DIMS.to_vec(), vec![flat_dim]);
+    let reshape: ReshapeNode<F, S, PCS, i8, i32> = ReshapeNode::new(INPUT_DIMS.to_vec(), vec![flat_dim]);
 
-    let bmm_1: BMMNode<F, S, PCS> = BMMNode::new(
+    let bmm_1: BMMNode<F, S, PCS, i8, i32> = BMMNode::new(
         WEIGHTS_1.to_vec(),
         BIAS_1.to_vec(),
         (flat_dim, INTER_DIM),
         Z_1_I,
     );
 
-    let req_bmm_1: RequantiseBMMNode<F, S, PCS> = RequantiseBMMNode::new(
+    let req_bmm_1: RequantiseBMMNode<F, S, PCS, i8, i32> = RequantiseBMMNode::new(
         INTER_DIM,
         S_1_I,
         Z_1_I,
@@ -49,16 +49,16 @@ where
         Z_1_O,
     );
 
-    let relu: ReLUNode<F, S, PCS> = ReLUNode::new(28, Z_1_O);
+    let relu: ReLUNode<F, S, PCS, i8, i32> = ReLUNode::new(28, Z_1_O);
 
-    let bmm_2: BMMNode<F, S, PCS> = BMMNode::new(
+    let bmm_2: BMMNode<F, S, PCS, i8, i32> = BMMNode::new(
         WEIGHTS_2.to_vec(),
         BIAS_2.to_vec(),
         (INTER_DIM, OUTPUT_DIM),
         Z_2_I,
     );
 
-    let req_bmm_2: RequantiseBMMNode<F, S, PCS> = RequantiseBMMNode::new(
+    let req_bmm_2: RequantiseBMMNode<F, S, PCS, i8, i32> = RequantiseBMMNode::new(
         OUTPUT_DIM,
         S_2_I,
         Z_2_I,
@@ -93,7 +93,7 @@ fn run_native_two_layer_perceptron_mnist() {
         .collect::<Vec<Vec<u8>>>()
         .into();
 
-    let input_i8 = (quantised_input.cast::<i32>() - 128).cast::<QSmallType>();
+    let input_i8 = (quantised_input.cast::<i32>() - 128).cast::<i8>();
 
     let output_i8 = perceptron.evaluate(input_i8);
 
@@ -118,7 +118,7 @@ fn run_padded_two_layer_perceptron_mnist() {
         .collect::<Vec<Vec<u8>>>()
         .into();
 
-    let input_i8 = (quantised_input.cast::<i32>() - 128).cast::<QSmallType>();
+    let input_i8 = (quantised_input.cast::<i32>() - 128).cast::<i8>();
 
     let output_i8 = perceptron.padded_evaluate(input_i8);
 
@@ -143,7 +143,7 @@ fn prove_inference_two_layer_perceptron_mnist() {
         .collect::<Vec<Vec<u8>>>()
         .into();
 
-    let input_i8 = (quantised_input.cast::<i32>() - 128).cast::<QSmallType>();
+    let input_i8 = (quantised_input.cast::<i32>() - 128).cast::<i8>();
 
     let mut rng = test_rng();
     let (ck, _) = perceptron.setup_keys(&mut rng).unwrap();
@@ -189,7 +189,7 @@ fn verify_inference_two_layer_perceptron_mnist() {
         .collect::<Vec<Vec<u8>>>()
         .into();
 
-    let input_i8 = (quantised_input.cast::<i32>() - 128).cast::<QSmallType>();
+    let input_i8 = (quantised_input.cast::<i32>() - 128).cast::<i8>();
 
     let mut rng = test_rng();
     let (ck, vk) = perceptron.setup_keys(&mut rng).unwrap();

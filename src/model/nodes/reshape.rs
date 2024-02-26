@@ -6,36 +6,39 @@ use ark_ff::PrimeField;
 use ark_poly_commit::{LabeledCommitment, PolynomialCommitment};
 use ark_std::rand::RngCore;
 
-use crate::model::qarray::{QArray, QTypeArray};
+use crate::model::qarray::{InnerType, QArray, QTypeArray};
 use crate::model::{LabeledPoly, NodeCommitmentState, Poly};
-use crate::quantization::QSmallType;
 
 use super::{NodeCommitment, NodeOps, NodeOpsSNARK, NodeProof};
 
-pub(crate) struct ReshapeNode<F, S, PCS>
+pub(crate) struct ReshapeNode<F, S, PCS, ST, LT>
 where
     F: PrimeField,
     S: CryptographicSponge,
     PCS: PolynomialCommitment<F, Poly<F>, S>,
+    ST: InnerType,
+    LT: InnerType,
 {
     input_shape: Vec<usize>,
     output_shape: Vec<usize>,
     padded_input_shape_log: Vec<usize>,
     padded_output_shape_log: Vec<usize>,
-    phantom: PhantomData<(F, S, PCS)>,
+    phantom: PhantomData<(F, S, PCS, ST, LT)>,
 }
 
-impl<F, S, PCS> NodeOps for ReshapeNode<F, S, PCS>
+impl<F, S, PCS, ST, LT> NodeOps<ST, LT> for ReshapeNode<F, S, PCS, ST, LT>
 where
     F: PrimeField,
     S: CryptographicSponge,
     PCS: PolynomialCommitment<F, Poly<F>, S>,
+    ST: InnerType + TryFrom<LT>,
+    LT: InnerType + From<ST>,
 {
     fn shape(&self) -> Vec<usize> {
         self.output_shape.clone()
     }
 
-    fn evaluate(&self, input: &QTypeArray) -> QTypeArray {
+    fn evaluate(&self, input: &QTypeArray<ST, LT>) -> QTypeArray<ST, LT> {
         // Sanity checks
         // TODO systematise
 
@@ -57,11 +60,13 @@ where
     }
 }
 
-impl<F, S, PCS> NodeOpsSNARK<F, S, PCS> for ReshapeNode<F, S, PCS>
+impl<F, S, PCS, ST, LT> NodeOpsSNARK<F, S, PCS, ST, LT> for ReshapeNode<F, S, PCS, ST, LT>
 where
-    F: PrimeField + Absorb,
+    F: PrimeField + Absorb + From<ST> + From<LT>,
     S: CryptographicSponge,
     PCS: PolynomialCommitment<F, Poly<F>, S>,
+    ST: InnerType + TryFrom<LT>,
+    LT: InnerType + From<ST>,
 {
     fn padded_shape_log(&self) -> Vec<usize> {
         self.padded_output_shape_log.clone()
@@ -73,7 +78,7 @@ where
 
     // TODO I think this might be broken due to the failure of commutativity
     // between product and and nearest-geq-power-of-two
-    fn padded_evaluate(&self, input: &QTypeArray) -> QTypeArray {
+    fn padded_evaluate(&self, input: &QTypeArray<ST, LT>) -> QTypeArray<ST, LT> {
         let input = match input {
             QTypeArray::S(i) => i,
             _ => panic!("Reshape node expects QSmallType as its QArray input type"),
@@ -99,11 +104,11 @@ where
             "Received padded input shape does not match node's padded input shape"
         );
 
-        let mut unpadded_input = input.compact_resize(self.input_shape.clone(), 0);
+        let mut unpadded_input = input.compact_resize(self.input_shape.clone(), ST::ZERO);
 
         // TODO only handles 2-to-1 reshapes, I think
         unpadded_input.reshape(self.output_shape.clone());
-        let padded_output = unpadded_input.compact_resize(padded_output_shape, 0);
+        let padded_output = unpadded_input.compact_resize(padded_output_shape, ST::ZERO);
 
         QTypeArray::S(padded_output)
     }
@@ -136,11 +141,13 @@ where
     }
 }
 
-impl<F, S, PCS> ReshapeNode<F, S, PCS>
+impl<F, S, PCS, ST, LT> ReshapeNode<F, S, PCS, ST, LT>
 where
     F: PrimeField,
     S: CryptographicSponge,
     PCS: PolynomialCommitment<F, Poly<F>, S>,
+    ST: InnerType,
+    LT: InnerType,
 {
     pub(crate) fn new(input_shape: Vec<usize>, output_shape: Vec<usize>) -> Self {
         assert_eq!(

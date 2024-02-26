@@ -3,14 +3,13 @@ use ark_std::marker::PhantomData;
 use ark_crypto_primitives::sponge::{Absorb, CryptographicSponge};
 use ark_ff::PrimeField;
 use ark_poly_commit::{LabeledCommitment, LabeledPolynomial, PolynomialCommitment};
+use ark_std::fmt::Debug;
 use ark_std::log2;
 use ark_std::rand::RngCore;
 
-use crate::model::qarray::{QArray, QTypeArray};
+use crate::model::qarray::{InnerType, QArray, QTypeArray};
 use crate::model::{LabeledPoly, Poly};
-use crate::quantization::{
-    requantise_fc, BMMQInfo, QInfo, QLargeType, QScaleType, QSmallType, RoundingScheme,
-};
+use crate::quantization::{requantise_fc, BMMQInfo, QInfo, QScaleType, RoundingScheme};
 use crate::{Commitment, CommitmentState};
 
 use super::{NodeCommitment, NodeCommitmentState, NodeOps, NodeOpsSNARK, NodeProof};
@@ -18,7 +17,10 @@ use super::{NodeCommitment, NodeCommitmentState, NodeOps, NodeOpsSNARK, NodeProo
 // TODO convention: input, bias and output are rows, the op is vec-by-mat (in that order)
 
 /// Apply requantisation after a BMM argument
-pub(crate) struct RequantiseBMMNode<F, S, PCS> {
+pub(crate) struct RequantiseBMMNode<F, S, PCS, ST, LT>
+where
+    ST: InnerType,
+{
     // Number of units
     size: usize,
 
@@ -26,9 +28,9 @@ pub(crate) struct RequantiseBMMNode<F, S, PCS> {
     padded_size_log: usize,
 
     /// Quantisation info associated to the input BMM result
-    q_info: BMMQInfo,
+    q_info: BMMQInfo<ST>,
 
-    phantom: PhantomData<(F, S, PCS)>,
+    phantom: PhantomData<(F, S, PCS, ST, LT)>,
 }
 
 pub(crate) struct RequantiseBMMNodeCommitment();
@@ -43,17 +45,20 @@ pub(crate) struct RequantiseBMMNodeProof {
     // this will be the sumcheck proof
 }
 
-impl<F, S, PCS> NodeOps for RequantiseBMMNode<F, S, PCS>
+impl<F, S, PCS, ST, LT> NodeOps<ST, LT> for RequantiseBMMNode<F, S, PCS, ST, LT>
 where
     F: PrimeField,
     S: CryptographicSponge,
     PCS: PolynomialCommitment<F, Poly<F>, S>,
+    ST: InnerType + TryFrom<LT>,
+    <ST as TryFrom<LT>>::Error: Debug,
+    LT: InnerType + From<ST>,
 {
     fn shape(&self) -> Vec<usize> {
         vec![self.size]
     }
 
-    fn evaluate(&self, input: &QTypeArray) -> QTypeArray {
+    fn evaluate(&self, input: &QTypeArray<ST, LT>) -> QTypeArray<ST, LT> {
         // Sanity checks
         // TODO systematise
         let input = match input {
@@ -74,7 +79,7 @@ where
             input.len()
         );
 
-        let output: QArray<QSmallType> = requantise_fc(
+        let output: QArray<ST> = requantise_fc(
             &input.values(),
             &self.q_info,
             RoundingScheme::NearestTiesEven,
@@ -85,11 +90,14 @@ where
     }
 }
 
-impl<F, S, PCS> NodeOpsSNARK<F, S, PCS> for RequantiseBMMNode<F, S, PCS>
+impl<F, S, PCS, ST, LT> NodeOpsSNARK<F, S, PCS, ST, LT> for RequantiseBMMNode<F, S, PCS, ST, LT>
 where
-    F: PrimeField + Absorb,
+    F: PrimeField + Absorb + From<ST> + From<LT>,
     S: CryptographicSponge,
     PCS: PolynomialCommitment<F, Poly<F>, S>,
+    ST: InnerType + TryFrom<LT>,
+    <ST as TryFrom<LT>>::Error: Debug,
+    LT: InnerType + From<ST>,
 {
     fn padded_shape_log(&self) -> Vec<usize> {
         vec![self.padded_size_log]
@@ -99,7 +107,7 @@ where
         self.padded_size_log
     }
 
-    fn padded_evaluate(&self, input: &QTypeArray) -> QTypeArray {
+    fn padded_evaluate(&self, input: &QTypeArray<ST, LT>) -> QTypeArray<ST, LT> {
         let input = match input {
             QTypeArray::L(i) => i,
             _ => panic!("RequantiseBMM node expects QLargeType as its QArray input type"),
@@ -123,7 +131,7 @@ where
             input.len()
         );
 
-        let output: QArray<QSmallType> = requantise_fc(
+        let output: QArray<ST> = requantise_fc(
             input.values(),
             &self.q_info,
             RoundingScheme::NearestTiesEven,
@@ -161,20 +169,22 @@ where
     }
 }
 
-impl<F, S, PCS> RequantiseBMMNode<F, S, PCS>
+impl<F, S, PCS, ST, LT> RequantiseBMMNode<F, S, PCS, ST, LT>
 where
     F: PrimeField,
     S: CryptographicSponge,
     PCS: PolynomialCommitment<F, Poly<F>, S>,
+    ST: InnerType,
+    LT: InnerType,
 {
     pub(crate) fn new(
         size: usize,
         s_i: QScaleType,
-        z_i: QSmallType,
+        z_i: ST,
         s_w: QScaleType,
-        z_w: QSmallType,
+        z_w: ST,
         s_o: QScaleType,
-        z_o: QSmallType,
+        z_o: ST,
     ) -> Self {
         let padded_size_log = log2(size.next_power_of_two()) as usize;
 

@@ -1,14 +1,12 @@
 use ark_crypto_primitives::sponge::Absorb;
 use ark_ff::PrimeField;
 use ark_poly_commit::{LabeledCommitment, LabeledPolynomial, PolynomialCommitment};
+use ark_std::fmt::Debug;
 use ark_std::rand::RngCore;
 
-use crate::{
-    model::{
-        nodes::{bmm::BMMNode, relu::ReLUNode},
-        CryptographicSponge, Poly,
-    },
-    quantization::QSmallType,
+use crate::model::{
+    nodes::{bmm::BMMNode, relu::ReLUNode},
+    CryptographicSponge, Poly,
 };
 
 use self::{
@@ -21,7 +19,7 @@ use self::{
 };
 
 use super::{
-    qarray::{QArray, QTypeArray},
+    qarray::{InnerType, QArray, QTypeArray},
     LabeledPoly,
 };
 
@@ -40,7 +38,11 @@ pub(crate) mod reshape;
 /// It stores information about the transition (such as a matrix and bias, if
 /// applicable), but not about about the specific values of its nodes: these
 /// are handled by the methods only.
-pub(crate) trait NodeOps {
+pub(crate) trait NodeOps<ST, LT>
+where
+    ST: InnerType + TryFrom<LT>,
+    LT: InnerType + From<ST>,
+{
     /// Returns the shape of the node's output tensor
     fn shape(&self) -> Vec<usize>;
 
@@ -50,14 +52,16 @@ pub(crate) trait NodeOps {
     }
 
     /// Evaluate the node natively (without padding)
-    fn evaluate(&self, input: &QTypeArray) -> QTypeArray;
+    fn evaluate(&self, input: &QTypeArray<ST, LT>) -> QTypeArray<ST, LT>;
 }
 
-pub(crate) trait NodeOpsSNARK<F, S, PCS>
+pub(crate) trait NodeOpsSNARK<F, S, PCS, ST, LT>
 where
-    F: PrimeField + Absorb,
+    F: PrimeField + Absorb + From<ST> + From<LT>,
     S: CryptographicSponge,
     PCS: PolynomialCommitment<F, Poly<F>, S>,
+    ST: InnerType + TryFrom<LT>,
+    LT: InnerType + From<ST>,
 {
     /// Returns the element-wise base-two logarithm of the padded node's
     /// output shape, i.e. the list of numbers of variables of the associated
@@ -90,7 +94,7 @@ where
     fn com_num_vars(&self) -> usize;
 
     /// Evaluate the padded node natively
-    fn padded_evaluate(&self, input: &QTypeArray) -> QTypeArray;
+    fn padded_evaluate(&self, input: &QTypeArray<ST, LT>) -> QTypeArray<ST, LT>;
 
     /// Commit to the node parameters
     fn commit(
@@ -115,16 +119,18 @@ where
     ) -> NodeProof<F, S, PCS>;
 }
 
-pub(crate) enum Node<F, S, PCS>
+pub(crate) enum Node<F, S, PCS, ST, LT>
 where
     F: PrimeField,
     S: CryptographicSponge,
     PCS: PolynomialCommitment<F, Poly<F>, S>,
+    ST: InnerType,
+    LT: InnerType,
 {
-    BMM(BMMNode<F, S, PCS>),
-    RequantiseBMM(RequantiseBMMNode<F, S, PCS>),
-    ReLU(ReLUNode<F, S, PCS>),
-    Reshape(ReshapeNode<F, S, PCS>),
+    BMM(BMMNode<F, S, PCS, ST, LT>),
+    RequantiseBMM(RequantiseBMMNode<F, S, PCS, ST, LT>),
+    ReLU(ReLUNode<F, S, PCS, ST, LT>),
+    Reshape(ReshapeNode<F, S, PCS, ST, LT>),
 }
 
 pub(crate) enum NodeProof<F, S, PCS>
@@ -165,13 +171,16 @@ where
 
 // A lot of this overlaps with the NodeOps trait and could be handled more
 // elegantly by simply implementing the trait
-impl<F, S, PCS> Node<F, S, PCS>
+impl<F, S, PCS, ST, LT> Node<F, S, PCS, ST, LT>
 where
-    F: PrimeField + Absorb,
+    F: PrimeField + Absorb + From<ST> + From<LT>,
     S: CryptographicSponge,
     PCS: PolynomialCommitment<F, Poly<F>, S>,
+    ST: InnerType + TryFrom<LT>,
+    <ST as TryFrom<LT>>::Error: Debug,
+    LT: InnerType + From<ST>,
 {
-    fn as_node_ops(&self) -> &dyn NodeOps {
+    fn as_node_ops(&self) -> &dyn NodeOps<ST, LT> {
         match self {
             Node::BMM(fc) => fc,
             Node::RequantiseBMM(r) => r,
@@ -180,7 +189,7 @@ where
         }
     }
 
-    fn as_node_ops_snark(&self) -> &dyn NodeOpsSNARK<F, S, PCS> {
+    fn as_node_ops_snark(&self) -> &dyn NodeOpsSNARK<F, S, PCS, ST, LT> {
         match self {
             Node::BMM(fc) => fc,
             Node::RequantiseBMM(r) => r,
@@ -202,11 +211,14 @@ where
 }
 // A lot of this overlaps with the NodeOps trait and could be handled more
 // elegantly by simply implementing the trait
-impl<F, S, PCS> NodeOps for Node<F, S, PCS>
+impl<F, S, PCS, ST, LT> NodeOps<ST, LT> for Node<F, S, PCS, ST, LT>
 where
-    F: PrimeField + Absorb,
+    F: PrimeField + Absorb + From<ST> + From<LT>,
     S: CryptographicSponge,
     PCS: PolynomialCommitment<F, Poly<F>, S>,
+    ST: InnerType + TryFrom<LT>,
+    <ST as TryFrom<LT>>::Error: Debug,
+    LT: InnerType + From<ST>,
 {
     /// Returns the shape of the node's output tensor
     fn shape(&self) -> Vec<usize> {
@@ -219,16 +231,19 @@ where
     }
 
     /// Evaluate the node natively (without padding)
-    fn evaluate(&self, input: &QTypeArray) -> QTypeArray {
+    fn evaluate(&self, input: &QTypeArray<ST, LT>) -> QTypeArray<ST, LT> {
         self.as_node_ops().evaluate(input)
     }
 }
 
-impl<F, S, PCS> NodeOpsSNARK<F, S, PCS> for Node<F, S, PCS>
+impl<F, S, PCS, ST, LT> NodeOpsSNARK<F, S, PCS, ST, LT> for Node<F, S, PCS, ST, LT>
 where
-    F: PrimeField + Absorb,
+    F: PrimeField + Absorb + From<ST> + From<LT>,
     S: CryptographicSponge,
     PCS: PolynomialCommitment<F, Poly<F>, S>,
+    ST: InnerType + TryFrom<LT>,
+    <ST as TryFrom<LT>>::Error: Debug,
+    LT: InnerType + From<ST>,
 {
     /// Returns the element-wise base-two logarithm of the padded node's
     /// output shape, i.e. the list of numbers of variables of the associated
@@ -242,7 +257,7 @@ where
     }
 
     /// Evaluate the padded node natively
-    fn padded_evaluate(&self, input: &QTypeArray) -> QTypeArray {
+    fn padded_evaluate(&self, input: &QTypeArray<ST, LT>) -> QTypeArray<ST, LT> {
         self.as_node_ops_snark().padded_evaluate(input)
     }
 

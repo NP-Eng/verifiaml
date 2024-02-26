@@ -6,14 +6,13 @@ use ark_ff::PrimeField;
 use ark_poly_commit::{LabeledCommitment, PolynomialCommitment};
 use ark_std::rand::RngCore;
 
-use crate::model::qarray::{QArray, QTypeArray};
+use crate::model::qarray::{InnerType, QArray, QTypeArray};
 use crate::model::{LabeledPoly, Poly};
-use crate::quantization::QSmallType;
 
 use super::{NodeCommitment, NodeCommitmentState, NodeOps, NodeOpsSNARK, NodeProof};
 
 // Rectified linear unit node performing x |-> max(0, x).
-pub(crate) struct ReLUNode<F, S, PCS>
+pub(crate) struct ReLUNode<F, S, PCS, ST, LT>
 where
     F: PrimeField,
     S: CryptographicSponge,
@@ -21,21 +20,23 @@ where
 {
     num_units: usize,
     log_num_units: usize,
-    zero_point: QSmallType,
-    phantom: PhantomData<(F, S, PCS)>,
+    zero_point: ST,
+    phantom: PhantomData<(F, S, PCS, LT)>,
 }
 
-impl<F, S, PCS> NodeOps for ReLUNode<F, S, PCS>
+impl<F, S, PCS, ST, LT> NodeOps<ST, LT> for ReLUNode<F, S, PCS, ST, LT>
 where
     F: PrimeField,
     S: CryptographicSponge,
     PCS: PolynomialCommitment<F, Poly<F>, S>,
+    ST: InnerType + TryFrom<LT>,
+    LT: InnerType + From<ST>,
 {
     fn shape(&self) -> Vec<usize> {
         vec![self.num_units]
     }
 
-    fn evaluate(&self, input: &QTypeArray) -> QTypeArray {
+    fn evaluate(&self, input: &QTypeArray<ST, LT>) -> QTypeArray<ST, LT> {
         // TODO sanity checks (cf. BMM); systematise
         let input = match input {
             QTypeArray::S(i) => i,
@@ -47,11 +48,13 @@ where
 }
 
 // impl NodeOpsSnark
-impl<F, S, PCS> NodeOpsSNARK<F, S, PCS> for ReLUNode<F, S, PCS>
+impl<F, S, PCS, ST, LT> NodeOpsSNARK<F, S, PCS, ST, LT> for ReLUNode<F, S, PCS, ST, LT>
 where
-    F: PrimeField + Absorb,
+    F: PrimeField + Absorb + From<ST> + From<LT>,
     S: CryptographicSponge,
     PCS: PolynomialCommitment<F, Poly<F>, S>,
+    ST: InnerType + TryFrom<LT>,
+    LT: InnerType + From<ST>,
 {
     fn padded_shape_log(&self) -> Vec<usize> {
         vec![self.log_num_units]
@@ -71,7 +74,7 @@ where
 
     // TODO this is the same as evaluate() for now; the two will likely differ
     // if/when we introduce input size checks
-    fn padded_evaluate(&self, input: &QTypeArray) -> QTypeArray {
+    fn padded_evaluate(&self, input: &QTypeArray<ST, LT>) -> QTypeArray<ST, LT> {
         // TODO sanity checks (cf. BMM); systematise
 
         let input = match input {
@@ -99,13 +102,15 @@ where
     }
 }
 
-impl<F, S, PCS> ReLUNode<F, S, PCS>
+impl<F, S, PCS, ST, LT> ReLUNode<F, S, PCS, ST, LT>
 where
     F: PrimeField,
     S: CryptographicSponge,
     PCS: PolynomialCommitment<F, Poly<F>, S>,
+    ST: InnerType,
+    LT: InnerType,
 {
-    pub(crate) fn new(num_units: usize, zero_point: QSmallType) -> Self {
+    pub(crate) fn new(num_units: usize, zero_point: ST) -> Self {
         let log_num_units = log2(num_units.next_power_of_two()) as usize;
 
         Self {

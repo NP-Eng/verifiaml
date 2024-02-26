@@ -1,3 +1,5 @@
+use std::ops::{AddAssign, DivAssign, MulAssign, SubAssign};
+
 use ark_std::ops::Index;
 
 use ark_std::any::type_name;
@@ -8,24 +10,86 @@ use ark_std::ops::{Add, Div, Mul, Sub};
 use ark_std::vec;
 use ark_std::vec::Vec;
 
-use crate::quantization::{QLargeType, QSmallType};
+use crate::quantization::QScaleType;
 
 const QARRAY_NESTED_TAB: &str = "    ";
 
 #[derive(Clone)]
-pub(crate) enum QTypeArray {
-    S(QArray<QSmallType>),
-    L(QArray<QLargeType>),
+pub(crate) enum QTypeArray<ST: InnerType, LT: InnerType>
+where
+    LT: From<ST>,
+{
+    S(QArray<ST>),
+    L(QArray<LT>),
 }
 
 #[cfg(test)]
 mod tests;
 
-pub(crate) trait InnerType: Copy + Debug {}
+pub(crate) trait InnerType:
+    Copy
+    + Debug
+    + PartialEq
+    + PartialOrd
+    + Ord
+    + Add<Output = Self>
+    + Sub<Output = Self>
+    + Mul<Output = Self>
+    + Div<Output = Self>
+    + AddAssign
+    + SubAssign
+    + MulAssign
+    + DivAssign
+{
+    const ZERO: Self;
+    const MIN: Self;
+    const MAX: Self;
 
-impl InnerType for QSmallType {}
-impl InnerType for QLargeType {}
-impl InnerType for u8 {}
+    // TODO if we decide to make the model generic on the quantisation process
+    // types, this will change
+    fn from_qscaletype(x: QScaleType) -> Self;
+    fn to_qscaletype(&self) -> QScaleType;
+}
+
+impl InnerType for i8 {
+    const ZERO: Self = 0;
+    const MIN: Self = Self::MIN;
+    const MAX: Self = Self::MAX;
+
+    fn from_qscaletype(x: QScaleType) -> Self {
+        x as Self
+    }
+
+    fn to_qscaletype(&self) -> QScaleType {
+        *self as QScaleType
+    }
+}
+impl InnerType for i32 {
+    const ZERO: Self = 0;
+    const MIN: Self = Self::MIN;
+    const MAX: Self = Self::MAX;
+
+    fn from_qscaletype(x: QScaleType) -> Self {
+        x as Self
+    }
+
+    fn to_qscaletype(&self) -> QScaleType {
+        *self as QScaleType
+    }
+}
+impl InnerType for u8 {
+    const ZERO: Self = 0;
+    const MIN: Self = Self::MIN;
+    const MAX: Self = Self::MAX;
+
+    fn from_qscaletype(x: QScaleType) -> Self {
+        x as Self
+    }
+
+    fn to_qscaletype(&self) -> QScaleType {
+        *self as QScaleType
+    }
+}
 
 #[derive(Debug, Clone)]
 pub(crate) struct QArray<T: InnerType> {

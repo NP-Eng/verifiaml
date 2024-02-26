@@ -4,6 +4,7 @@ use ark_crypto_primitives::sponge::{Absorb, CryptographicSponge};
 use ark_ff::PrimeField;
 use ark_poly::{DenseMultilinearExtension, Polynomial};
 use ark_poly_commit::{LabeledCommitment, PolynomialCommitment};
+use ark_std::fmt::Debug;
 use ark_std::log2;
 use ark_sumcheck::ml_sumcheck::{
     protocol::{verifier::SubClaim, PolynomialInfo},
@@ -14,7 +15,7 @@ use crate::model::nodes::bmm::{BMMNodeCommitment, BMMNodeProof};
 
 use super::{
     nodes::{Node, NodeCommitment, NodeProof},
-    qarray::{QArray, QTypeArray},
+    qarray::{InnerType, QArray, QTypeArray},
     InferenceProof, Model, Poly,
 };
 
@@ -164,17 +165,20 @@ where
     }
 }
 
-pub(crate) fn verify_inference<F, S, PCS>(
+pub(crate) fn verify_inference<F, S, PCS, ST, LT>(
     vk: &PCS::VerifierKey,
     sponge: &mut S,
-    model: &Model<F, S, PCS>,
+    model: &Model<F, S, PCS, ST, LT>,
     node_commitments: &Vec<NodeCommitment<F, S, PCS>>,
-    inference_proof: InferenceProof<F, S, PCS>,
+    inference_proof: InferenceProof<F, S, PCS, ST, LT>,
 ) -> bool
 where
-    F: PrimeField + Absorb,
+    F: PrimeField + Absorb + From<ST> + From<LT>,
     S: CryptographicSponge,
     PCS: PolynomialCommitment<F, Poly<F>, S>,
+    ST: InnerType + TryFrom<LT>,
+    <ST as TryFrom<LT>>::Error: Debug,
+    LT: InnerType + From<ST>,
 {
     let InferenceProof {
         inputs_outputs,
@@ -254,8 +258,8 @@ where
     // Verifying that the actual input was honestly padded with zeros
     let padded_input_shape = input_node_qarray.shape().clone();
     let honestly_padded_input = input_node_qarray
-        .compact_resize(model.input_shape().clone(), 0)
-        .compact_resize(padded_input_shape, 0);
+        .compact_resize(model.input_shape().clone(), ST::ZERO)
+        .compact_resize(padded_input_shape, ST::ZERO);
 
     if honestly_padded_input.values() != input_node_qarray.values() {
         return false;
