@@ -1,6 +1,6 @@
 use hcs_common::{
     quantise_f32_u8_nne, test_sponge, BMMNode, Ligero, Model, Node, Poly, QArray, QSmallType,
-    QTypeArray, ReLUNode, RequantiseBMMNode, ReshapeNode,
+    QTypeArray, RequantiseBMMNode, ReshapeNode,
 };
 use hcs_prover::ProveModel;
 use hcs_verifier::VerifyModel;
