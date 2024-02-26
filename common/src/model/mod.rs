@@ -14,7 +14,6 @@ use self::{
     qarray::QArray,
 };
 
-pub mod isolated_verification;
 pub mod nodes;
 pub mod qarray;
 
@@ -73,7 +72,7 @@ where
         }
     }
 
-    pub(crate) fn input_shape(&self) -> &Vec<usize> {
+    pub fn input_shape(&self) -> &Vec<usize> {
         &self.input_shape
     }
 

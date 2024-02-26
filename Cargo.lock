@@ -535,6 +535,27 @@ dependencies = [
  "ark-sumcheck",
  "blake2",
  "hcs-common",
+ "hcs-verifier",
+ "rayon",
+ "serde_json",
+]
+
+[[package]]
+name = "hcs-verifier"
+version = "0.1.0"
+dependencies = [
+ "ark-bn254",
+ "ark-crypto-primitives",
+ "ark-ec",
+ "ark-ff",
+ "ark-pcs-bench-templates",
+ "ark-poly",
+ "ark-poly-commit",
+ "ark-serialize",
+ "ark-std",
+ "ark-sumcheck",
+ "blake2",
+ "hcs-common",
  "rayon",
  "serde_json",
 ]

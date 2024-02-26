@@ -2,7 +2,7 @@
 members = [
     "common", 
     "prover", 
-    # "verifer"
+    "verifier"
 ]
 resolver = "2"
 

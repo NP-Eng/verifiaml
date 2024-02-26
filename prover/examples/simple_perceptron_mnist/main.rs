@@ -1,8 +1,9 @@
 use hcs_common::{
-    quantise_f32_u8_nne, test_sponge, verify_inference, BMMNode, Ligero, Model, Node, Poly, QArray,
-    QSmallType, QTypeArray, ReLUNode, RequantiseBMMNode, ReshapeNode,
+    quantise_f32_u8_nne, test_sponge, BMMNode, Ligero, Model, Node, Poly, QArray, QSmallType,
+    QTypeArray, ReLUNode, RequantiseBMMNode, ReshapeNode,
 };
 use hcs_prover::ProveModel;
+use hcs_verifier::VerifyModel;
 
 use ark_bn254::Fr;
 use ark_crypto_primitives::sponge::{poseidon::PoseidonSponge, Absorb, CryptographicSponge};
@@ -182,13 +183,7 @@ fn verify_inference_simple_perceptron_mnist() {
 
     let mut sponge: PoseidonSponge<Fr> = test_sponge();
 
-    assert!(verify_inference(
-        &vk,
-        &mut sponge,
-        &perceptron,
-        &node_coms,
-        inference_proof
-    ));
+    assert!(perceptron.verify_inference(&vk, &mut sponge, &node_coms, inference_proof));
 
     let output_i8 = match output_qtypearray {
         QTypeArray::S(o) => o,

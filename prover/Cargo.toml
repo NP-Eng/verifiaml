@@ -15,6 +15,7 @@ ark-crypto-primitives = { workspace = true }
 ark-sumcheck = { workspace = true }
 rayon = { workspace = true, optional = true }
 hcs-common = { path = "../common" }
+hcs-verifier = { path = "../verifier", optional = true }
 
 [dev-dependencies]
 ark-bn254 = { workspace = true, features = [ "curve" ] }
@@ -34,4 +35,4 @@ required-features = [ "test-types" ]
 default = [ "std", "parallel" ]
 std = [ "ark-ff/std", "ark-ec/std", "ark-poly/std", "ark-serialize/std", "ark-crypto-primitives/std", "ark-poly-commit/std", "ark-sumcheck/std" ]
 parallel = [ "std", "ark-ff/parallel", "ark-ec/parallel", "ark-poly/parallel", "ark-std/parallel", "ark-poly-commit/parallel", "ark-sumcheck/parallel", "rayon" ]
-test-types = [ "hcs-common/test-types" ]
+test-types = [ "hcs-common/test-types", "hcs-verifier" ]

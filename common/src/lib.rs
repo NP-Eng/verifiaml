@@ -8,7 +8,6 @@ trait CommitmentState {}
 
 trait Proof {}
 
-pub use model::isolated_verification::verify_inference;
 pub use model::nodes::{
     bmm::{BMMNode, BMMNodeCommitment, BMMNodeCommitmentState, BMMNodeProof},
     relu::ReLUNode,
