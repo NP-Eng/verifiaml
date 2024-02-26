@@ -2,7 +2,7 @@ use hcs_common::{
     quantise_f32_u8_nne, test_sponge, verify_inference, BMMNode, Ligero, Model, Node, Poly, QArray,
     QSmallType, QTypeArray, ReLUNode, RequantiseBMMNode, ReshapeNode,
 };
-use hcs_prover::EvaluateModel;
+use hcs_prover::ProveModel;
 
 use ark_bn254::Fr;
 use ark_crypto_primitives::sponge::{poseidon::PoseidonSponge, Absorb, CryptographicSponge};

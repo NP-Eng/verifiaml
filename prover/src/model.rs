@@ -11,7 +11,7 @@ use hcs_common::{
 use hcs_common::{InferenceProof, Model};
 
 use crate::NodeOpsSNARKProve;
-pub trait EvaluateModel<F, S, PCS>
+pub trait ProveModel<F, S, PCS>
 where
     F: PrimeField + Absorb,
     S: CryptographicSponge,
@@ -30,7 +30,7 @@ where
     ) -> InferenceProof<F, S, PCS>;
 }
 
-impl<F, S, PCS> EvaluateModel<F, S, PCS> for Model<F, S, PCS>
+impl<F, S, PCS> ProveModel<F, S, PCS> for Model<F, S, PCS>
 where
     F: PrimeField + Absorb,
     S: CryptographicSponge,

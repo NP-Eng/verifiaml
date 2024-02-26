@@ -10,7 +10,7 @@ use hcs_common::{
 mod model;
 mod nodes;
 
-pub use model::EvaluateModel;
+pub use model::ProveModel;
 
 pub trait NodeOpsSNARKProve<F, S, PCS>: NodeOpsSNARK<F, S, PCS>
 where
