@@ -1,16 +1,16 @@
 use ark_std::log2;
 use ark_std::marker::PhantomData;
 
-use ark_crypto_primitives::sponge::CryptographicSponge;
+use ark_crypto_primitives::sponge::{Absorb, CryptographicSponge};
 use ark_ff::PrimeField;
-use ark_poly_commit::PolynomialCommitment;
+use ark_poly_commit::{LabeledCommitment, PolynomialCommitment};
 use ark_std::rand::RngCore;
 
 use crate::model::qarray::{QArray, QTypeArray};
-use crate::model::Poly;
+use crate::model::{LabeledPoly, Poly};
 use crate::quantization::QSmallType;
 
-use super::{NodeCommitment, NodeCommitmentState, NodeOps, NodeOpsSNARK};
+use super::{NodeCommitment, NodeCommitmentState, NodeOps, NodeOpsSNARK, NodeProof};
 
 // Rectified linear unit node performing x |-> max(0, x).
 pub(crate) struct ReLUNode<F, S, PCS>
@@ -49,7 +49,7 @@ where
 // impl NodeOpsSnark
 impl<F, S, PCS> NodeOpsSNARK<F, S, PCS> for ReLUNode<F, S, PCS>
 where
-    F: PrimeField,
+    F: PrimeField + Absorb,
     S: CryptographicSponge,
     PCS: PolynomialCommitment<F, Poly<F>, S>,
 {
@@ -66,7 +66,7 @@ where
         ck: &PCS::CommitterKey,
         rng: Option<&mut dyn RngCore>,
     ) -> (NodeCommitment<F, S, PCS>, NodeCommitmentState<F, S, PCS>) {
-        todo!()
+        (NodeCommitment::ReLU(()), NodeCommitmentState::ReLU(()))
     }
 
     // TODO this is the same as evaluate() for now; the two will likely differ
@@ -84,14 +84,18 @@ where
 
     fn prove(
         &self,
+        ck: &PCS::CommitterKey,
         s: &mut S,
         node_com: &NodeCommitment<F, S, PCS>,
-        input: QTypeArray,
-        input_com: &PCS::Commitment,
-        output: QTypeArray,
-        output_com: &PCS::Commitment,
-    ) -> super::NodeProof {
-        todo!()
+        node_com_state: &NodeCommitmentState<F, S, PCS>,
+        input: &LabeledPoly<F>,
+        input_com: &LabeledCommitment<PCS::Commitment>,
+        input_com_state: &PCS::CommitmentState,
+        output: &LabeledPoly<F>,
+        output_com: &LabeledCommitment<PCS::Commitment>,
+        output_com_state: &PCS::CommitmentState,
+    ) -> NodeProof<F, S, PCS> {
+        NodeProof::ReLU(())
     }
 }
 

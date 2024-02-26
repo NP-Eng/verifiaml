@@ -2,8 +2,8 @@ use ark_std::{log2, rand::RngCore};
 
 use ark_crypto_primitives::sponge::{Absorb, CryptographicSponge};
 use ark_ff::PrimeField;
-use ark_poly::DenseMultilinearExtension;
-use ark_poly_commit::{LabeledPolynomial, PolynomialCommitment};
+use ark_poly::{DenseMultilinearExtension, MultilinearExtension};
+use ark_poly_commit::{LabeledCommitment, LabeledPolynomial, PolynomialCommitment};
 
 use crate::model::nodes::{NodeOps, NodeOpsSNARK};
 use crate::{model::nodes::Node, quantization::QSmallType};
@@ -15,26 +15,30 @@ use self::{
 };
 
 mod examples;
+mod isolated_verification;
 mod nodes;
 mod qarray;
-mod reshaping;
 
 pub(crate) type Poly<F> = DenseMultilinearExtension<F>;
+pub(crate) type LabeledPoly<F> = LabeledPolynomial<F, DenseMultilinearExtension<F>>;
 
 pub(crate) struct InferenceProof<F, S, PCS>
 where
-    F: PrimeField,
+    F: PrimeField + Absorb,
     S: CryptographicSponge,
     PCS: PolynomialCommitment<F, Poly<F>, S>,
 {
-    // Model output tensors
-    outputs: Vec<QTypeArray>,
+    // Model input and output tensors in plain
+    pub(crate) inputs_outputs: Vec<QTypeArray>,
+
+    // Commitments to each of the node values
+    pub(crate) node_value_commitments: Vec<LabeledCommitment<PCS::Commitment>>,
 
     // Proofs of evaluation of each of the model's nodes
-    node_proofs: Vec<NodeProof>,
+    pub(crate) node_proofs: Vec<NodeProof<F, S, PCS>>,
 
     // Proofs of opening of each of the model's outputs
-    opening_proofs: Vec<PCS::Proof>,
+    pub(crate) opening_proofs: Vec<PCS::Proof>,
 }
 
 // TODO change the functions that receive vectors to receive slices instead whenever it makes sense
@@ -68,6 +72,10 @@ where
             output_shape: nodes.last().unwrap().shape(),
             nodes,
         }
+    }
+
+    pub(crate) fn input_shape(&self) -> &Vec<usize> {
+        &self.input_shape
     }
 
     pub(crate) fn setup_keys<R: RngCore>(
@@ -128,7 +136,8 @@ where
         ck: &PCS::CommitterKey,
         rng: Option<&mut dyn RngCore>,
         sponge: &mut S,
-        node_commitments: Vec<NodeCommitment<F, S, PCS>>,
+        node_coms: &Vec<NodeCommitment<F, S, PCS>>,
+        node_com_states: &Vec<NodeCommitmentState<F, S, PCS>>,
         input: QArray<QSmallType>,
     ) -> InferenceProof<F, S, PCS> {
         // TODO Absorb public parameters into s (to be determined what exactly)
@@ -141,7 +150,7 @@ where
             0,
         );
 
-        let output_f = output.values().iter().map(|x| F::from(*x)).collect();
+        let output_f: Vec<F> = output.values().iter().map(|x| F::from(*x)).collect();
 
         let mut output = QTypeArray::S(output);
 
@@ -149,7 +158,10 @@ where
         // TODO handling F and QSmallType is inelegant; we might want to switch
         // to F for IO in NodeOps::prove
         let mut node_outputs = vec![output.clone()];
-        let mut node_outputs_f = vec![output_f];
+        let mut node_output_mles = vec![Poly::from_evaluations_vec(
+            log2(output_f.len()) as usize,
+            output_f,
+        )];
 
         for node in &self.nodes {
             output = node.padded_evaluate(&output);
@@ -160,27 +172,31 @@ where
             };
 
             node_outputs.push(output.clone());
-            node_outputs_f.push(output_f);
+            node_output_mles.push(Poly::from_evaluations_vec(
+                log2(output_f.len()) as usize,
+                output_f,
+            ));
         }
 
         // Committing to node outputs as MLEs (individual per node for now)
-        let output_mles: Vec<LabeledPolynomial<F, Poly<F>>> = node_outputs_f
+        let labeled_output_mles: Vec<LabeledPolynomial<F, Poly<F>>> = node_output_mles
             .iter()
-            .map(|values|
+            .map(|mle|
             // TODO change dummy label once we e.g. have given numbers to the
             // nodes in the model: fc_1, fc_2, relu_1, etc.
+            // TODO maybe we don't need to clone, if `prove` can take a reference
             LabeledPolynomial::new(
                 "dummy".to_string(),
-                Poly::from_evaluations_vec(log2(values.len()) as usize, values.clone()),
+                mle.clone(),
                 None,
                 None,
             ))
             .collect();
 
-        let (node_coms, node_com_states) = PCS::commit(ck, &output_mles, rng).unwrap();
+        let (output_coms, output_com_states) = PCS::commit(ck, &labeled_output_mles, rng).unwrap();
 
         // Absorb all commitments into the sponge
-        sponge.absorb(&node_coms);
+        sponge.absorb(&output_coms);
 
         // TODO Prove that all commited NIOs live in the right range (to be
         // discussed)
@@ -188,22 +204,26 @@ where
         let mut node_proofs = Vec::new();
 
         // Second pass: proving
-        for ((((node, node_com), values), l_v_coms), v_coms_states) in self
+        for (((((node, node_com), node_com_state), values), l_v_coms), v_coms_states) in self
             .nodes
             .iter()
-            .zip(node_commitments.iter())
-            .zip(node_outputs.windows(2))
-            .zip(node_coms.windows(2))
-            .zip(node_com_states.windows(2))
+            .zip(node_coms.iter())
+            .zip(node_com_states.iter())
+            .zip(labeled_output_mles.windows(2))
+            .zip(output_coms.windows(2))
+            .zip(output_com_states.windows(2))
         {
-            // TODO prove likely needs to receive the sponge for randomness/FS
             node_proofs.push(node.prove(
+                ck,
                 sponge,
-                node_com,
-                values[0].clone(),
-                l_v_coms[0].commitment(),
-                values[1].clone(),
-                l_v_coms[1].commitment(),
+                &node_com,
+                &node_com_state,
+                &values[0],
+                &l_v_coms[0],
+                &v_coms_states[0],
+                &values[1],
+                &l_v_coms[1],
+                &v_coms_states[1],
             ));
         }
 
@@ -212,21 +232,21 @@ where
         // output nodes and instead working witht their plain values all along,
         // but that would require messy node-by-node handling
         let input_node = node_outputs.first().unwrap();
-        let input_node_f = node_outputs_f.first().unwrap();
-        let input_labeled_value = output_mles.first().unwrap();
-        let input_node_com = node_coms.first().unwrap();
-        let input_node_com_state = node_com_states.first().unwrap();
+        let input_node_f = node_output_mles.first().unwrap().to_evaluations();
+        let input_labeled_value = labeled_output_mles.first().unwrap();
+        let input_node_com = output_coms.first().unwrap();
+        let input_node_com_state = output_com_states.first().unwrap();
 
         let output_node = node_outputs.last().unwrap();
-        let output_node_f = node_outputs_f.last().unwrap();
-        let output_labeled_value = output_mles.last().unwrap();
-        let output_node_com = node_coms.last().unwrap();
-        let output_node_com_state = node_com_states.last().unwrap();
+        let output_node_f = node_output_mles.last().unwrap().to_evaluations();
+        let output_labeled_value = labeled_output_mles.last().unwrap();
+        let output_node_com = output_coms.last().unwrap();
+        let output_node_com_state = output_com_states.last().unwrap();
 
         // Absorb the model IO output and squeeze the challenge point
         // Absorb the plain output and squeeze the challenge point
-        sponge.absorb(input_node_f);
-        sponge.absorb(output_node_f);
+        sponge.absorb(&input_node_f);
+        sponge.absorb(&output_node_f);
         let input_challenge_point =
             sponge.squeeze_field_elements(log2(input_node_f.len()) as usize);
         let output_challenge_point =
@@ -260,10 +280,10 @@ where
         )
         .unwrap();
 
-        /* TODO (important) Change output_node to all boundary nodes: first and last */
         // TODO prove that inputs match input commitments?
         InferenceProof {
-            outputs: vec![input_node.clone(), output_node.clone()],
+            inputs_outputs: vec![input_node.clone(), output_node.clone()],
+            node_value_commitments: output_coms,
             node_proofs,
             opening_proofs: vec![input_opening_proof, output_opening_proof],
         }

@@ -3,10 +3,14 @@ use ark_crypto_primitives::{
     merkle_tree::{ByteDigestConverter, Config},
     sponge::poseidon::PoseidonSponge,
 };
+// no-std note:
+// Currently, we use the `LeafIdentityHasher` from ark_pcs_bench_templates.
+// This is not ideal, since the entire `ark_pcs_bench_templates` crate does not support `no_std`
+// (due to `criterion`) dependency.
 use ark_pcs_bench_templates::*;
 use ark_poly::DenseMultilinearExtension;
 
-use ark_poly_commit::linear_codes::{LinearCodePCS, MultilinearBrakedown};
+use ark_poly_commit::linear_codes::{LinearCodePCS, MultilinearLigero};
 use blake2::Blake2s256;
 
 // Brakedown PCS over BN254
@@ -26,14 +30,9 @@ impl Config for MerkleTreeParams {
 
 type MTConfig = MerkleTreeParams;
 type ColHasher<F> = FieldToBytesColHasher<F, Blake2s256>;
-pub(crate) type Brakedown<F> = LinearCodePCS<
-    MultilinearBrakedown<
-        F,
-        MTConfig,
-        PoseidonSponge<F>,
-        DenseMultilinearExtension<F>,
-        ColHasher<F>,
-    >,
+
+pub(crate) type Ligero<F> = LinearCodePCS<
+    MultilinearLigero<F, MTConfig, PoseidonSponge<F>, DenseMultilinearExtension<F>, ColHasher<F>>,
     F,
     DenseMultilinearExtension<F>,
     PoseidonSponge<F>,

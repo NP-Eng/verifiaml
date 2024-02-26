@@ -1,13 +1,13 @@
 use ark_std::marker::PhantomData;
 
-use ark_crypto_primitives::sponge::CryptographicSponge;
+use ark_crypto_primitives::sponge::{Absorb, CryptographicSponge};
 use ark_ff::PrimeField;
-use ark_poly_commit::{LabeledPolynomial, PolynomialCommitment};
+use ark_poly_commit::{LabeledCommitment, LabeledPolynomial, PolynomialCommitment};
 use ark_std::log2;
 use ark_std::rand::RngCore;
 
 use crate::model::qarray::{QArray, QTypeArray};
-use crate::model::Poly;
+use crate::model::{LabeledPoly, Poly};
 use crate::quantization::{
     requantise_fc, BMMQInfo, QInfo, QLargeType, QScaleType, QSmallType, RoundingScheme,
 };
@@ -87,7 +87,7 @@ where
 
 impl<F, S, PCS> NodeOpsSNARK<F, S, PCS> for RequantiseBMMNode<F, S, PCS>
 where
-    F: PrimeField,
+    F: PrimeField + Absorb,
     S: CryptographicSponge,
     PCS: PolynomialCommitment<F, Poly<F>, S>,
 {
@@ -146,14 +146,18 @@ where
 
     fn prove(
         &self,
+        ck: &PCS::CommitterKey,
         s: &mut S,
         node_com: &NodeCommitment<F, S, PCS>,
-        input: QTypeArray,
-        input_com: &PCS::Commitment,
-        output: QTypeArray,
-        output_com: &PCS::Commitment,
-    ) -> NodeProof {
-        unimplemented!()
+        node_com_state: &NodeCommitmentState<F, S, PCS>,
+        input: &LabeledPoly<F>,
+        input_com: &LabeledCommitment<PCS::Commitment>,
+        input_com_state: &PCS::CommitmentState,
+        output: &LabeledPoly<F>,
+        output_com: &LabeledCommitment<PCS::Commitment>,
+        output_com_state: &PCS::CommitmentState,
+    ) -> NodeProof<F, S, PCS> {
+        NodeProof::RequantiseBMM(RequantiseBMMNodeProof {})
     }
 }
 

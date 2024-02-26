@@ -1,8 +1,6 @@
 pub(crate) mod model;
 pub(crate) mod quantization;
-
-#[cfg(test)]
-pub(crate) mod pcs_types;
+pub(crate) mod utils;
 
 trait Commitment {}
 
