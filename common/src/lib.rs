@@ -11,7 +11,10 @@ trait Proof {}
 pub use model::nodes::{
     bmm::{BMMNode, BMMNodeCommitment, BMMNodeCommitmentState, BMMNodeProof},
     relu::ReLUNode,
-    requantise_bmm::{RequantiseBMMNode, RequantiseBMMNodeProof},
+    requantise_bmm::{
+        RequantiseBMMNode, RequantiseBMMNodeCommitment, RequantiseBMMNodeCommitmentState,
+        RequantiseBMMNodeProof,
+    },
     reshape::ReshapeNode,
     Node, NodeCommitment, NodeCommitmentState, NodeOpsCommon, NodeProof,
 };

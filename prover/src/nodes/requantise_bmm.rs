@@ -2,9 +2,11 @@ use ark_crypto_primitives::sponge::{Absorb, CryptographicSponge};
 use ark_ff::PrimeField;
 use ark_poly_commit::{LabeledCommitment, PolynomialCommitment};
 
+use ark_std::rand::RngCore;
 use hcs_common::{
     requantise_fc, LabeledPoly, NodeCommitment, NodeCommitmentState, NodeProof, Poly, QArray,
-    QSmallType, QTypeArray, RequantiseBMMNode, RequantiseBMMNodeProof, RoundingScheme,
+    QSmallType, QTypeArray, RequantiseBMMNode, RequantiseBMMNodeCommitment,
+    RequantiseBMMNodeCommitmentState, RequantiseBMMNodeProof, RoundingScheme,
 };
 
 use crate::NodeOpsProve;
@@ -63,5 +65,16 @@ where
         _output_com_state: &PCS::CommitmentState,
     ) -> NodeProof<F, S, PCS> {
         NodeProof::RequantiseBMM(RequantiseBMMNodeProof {})
+    }
+
+    fn commit(
+        &self,
+        _ck: &PCS::CommitterKey,
+        _rng: Option<&mut dyn RngCore>,
+    ) -> (NodeCommitment<F, S, PCS>, NodeCommitmentState<F, S, PCS>) {
+        (
+            NodeCommitment::RequantiseBMM(RequantiseBMMNodeCommitment()),
+            NodeCommitmentState::RequantiseBMM(RequantiseBMMNodeCommitmentState()),
+        )
     }
 }

@@ -4,14 +4,13 @@ use ark_crypto_primitives::sponge::{Absorb, CryptographicSponge};
 use ark_ff::PrimeField;
 use ark_poly_commit::PolynomialCommitment;
 use ark_std::log2;
-use ark_std::rand::RngCore;
 
 use crate::model::qarray::{QArray, QTypeArray};
 use crate::model::Poly;
 use crate::quantization::{requantise_fc, BMMQInfo, QInfo, QScaleType, QSmallType, RoundingScheme};
 use crate::{Commitment, CommitmentState};
 
-use super::{NodeCommitment, NodeCommitmentState, NodeOpsCommon, NodeOpsNative};
+use super::{NodeOpsCommon, NodeOpsNative};
 
 // TODO convention: input, bias and output are rows, the op is vec-by-mat (in that order)
 
@@ -95,17 +94,6 @@ where
 
     fn com_num_vars(&self) -> usize {
         self.padded_size_log
-    }
-
-    fn commit(
-        &self,
-        _ck: &PCS::CommitterKey,
-        _rng: Option<&mut dyn RngCore>,
-    ) -> (NodeCommitment<F, S, PCS>, NodeCommitmentState<F, S, PCS>) {
-        (
-            NodeCommitment::RequantiseBMM(RequantiseBMMNodeCommitment()),
-            NodeCommitmentState::RequantiseBMM(RequantiseBMMNodeCommitmentState()),
-        )
     }
 }
 

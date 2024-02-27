@@ -2,9 +2,8 @@ use ark_std::marker::PhantomData;
 
 use ark_crypto_primitives::sponge::{Absorb, CryptographicSponge};
 use ark_ff::PrimeField;
-use ark_poly_commit::{LabeledCommitment, LabeledPolynomial, PolynomialCommitment};
+use ark_poly_commit::{LabeledCommitment, PolynomialCommitment};
 use ark_std::log2;
-use ark_std::rand::RngCore;
 
 use ark_sumcheck::ml_sumcheck::Proof;
 
@@ -13,7 +12,7 @@ use crate::model::Poly;
 use crate::quantization::{QLargeType, QSmallType};
 use crate::{Commitment, CommitmentState};
 
-use super::{NodeCommitment, NodeCommitmentState, NodeOpsCommon, NodeOpsNative};
+use super::{NodeOpsCommon, NodeOpsNative};
 
 // TODO convention: input, bias and output are rows, the op is vec-by-mat (in that order)
 
@@ -177,46 +176,6 @@ where
 
     fn com_num_vars(&self) -> usize {
         self.padded_dims_log.0 + self.padded_dims_log.1
-    }
-
-    fn commit(
-        &self,
-        ck: &PCS::CommitterKey,
-        rng: Option<&mut dyn RngCore>,
-    ) -> (NodeCommitment<F, S, PCS>, NodeCommitmentState<F, S, PCS>) {
-        // TODO should we separate the associated commitment type into one with state and one without?
-        let padded_weights_f: Vec<F> = self.padded_weights.iter().map(|w| F::from(*w)).collect();
-
-        // TODO part of this code is duplicated in prove, another hint that this should probs
-        // be stored
-        let weight_poly = LabeledPolynomial::new(
-            "weight_poly".to_string(),
-            Poly::from_evaluations_vec(self.com_num_vars(), padded_weights_f),
-            Some(1),
-            None,
-        );
-
-        let padded_bias_f: Vec<F> = self.padded_bias.iter().map(|b| F::from(*b)).collect();
-
-        let bias_poly = LabeledPolynomial::new(
-            "bias_poly".to_string(),
-            Poly::from_evaluations_vec(self.padded_dims_log.1, padded_bias_f),
-            Some(1),
-            None,
-        );
-
-        let coms = PCS::commit(ck, vec![&weight_poly, &bias_poly], rng).unwrap();
-
-        (
-            NodeCommitment::BMM(BMMNodeCommitment {
-                weight_com: coms.0[0].clone(),
-                bias_com: coms.0[1].clone(),
-            }),
-            NodeCommitmentState::BMM(BMMNodeCommitmentState {
-                weight_com_state: coms.1[0].clone(),
-                bias_com_state: coms.1[1].clone(),
-            }),
-        )
     }
 }
 

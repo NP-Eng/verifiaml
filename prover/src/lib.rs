@@ -2,6 +2,7 @@ use ark_crypto_primitives::sponge::{Absorb, CryptographicSponge};
 use ark_ff::PrimeField;
 use ark_poly_commit::{LabeledCommitment, PolynomialCommitment};
 
+use ark_std::rand::RngCore;
 use hcs_common::{
     LabeledPoly, Node, NodeCommitment, NodeCommitmentState, NodeOpsCommon, NodeProof, Poly,
     QTypeArray,
@@ -35,6 +36,13 @@ where
         output_com: &LabeledCommitment<PCS::Commitment>,
         output_com_state: &PCS::CommitmentState,
     ) -> NodeProof<F, S, PCS>;
+
+    /// Commit to the node parameters
+    fn commit(
+        &self,
+        ck: &PCS::CommitterKey,
+        rng: Option<&mut dyn RngCore>,
+    ) -> (NodeCommitment<F, S, PCS>, NodeCommitmentState<F, S, PCS>);
 }
 
 fn node_as_node_ops_snark<F, S, PCS>(node: &Node<F, S, PCS>) -> &dyn NodeOpsProve<F, S, PCS>
@@ -87,5 +95,13 @@ where
             output_com,
             output_com_state,
         )
+    }
+
+    fn commit(
+        &self,
+        ck: &PCS::CommitterKey,
+        rng: Option<&mut dyn RngCore>,
+    ) -> (NodeCommitment<F, S, PCS>, NodeCommitmentState<F, S, PCS>) {
+        node_as_node_ops_snark(self).commit(ck, rng)
     }
 }

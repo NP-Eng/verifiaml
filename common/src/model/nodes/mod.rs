@@ -1,7 +1,6 @@
 use ark_crypto_primitives::sponge::Absorb;
 use ark_ff::PrimeField;
 use ark_poly_commit::PolynomialCommitment;
-use ark_std::rand::RngCore;
 
 use crate::model::{
     nodes::{bmm::BMMNode, relu::ReLUNode},
@@ -83,13 +82,6 @@ where
     /// Returns the maximum number of variables of the MLEs committed to as part of
     /// this nodes's commitment.
     fn com_num_vars(&self) -> usize;
-
-    /// Commit to the node parameters
-    fn commit(
-        &self,
-        ck: &PCS::CommitterKey,
-        rng: Option<&mut dyn RngCore>,
-    ) -> (NodeCommitment<F, S, PCS>, NodeCommitmentState<F, S, PCS>);
 }
 
 pub enum Node<F, S, PCS>
@@ -216,14 +208,5 @@ where
 
     fn com_num_vars(&self) -> usize {
         self.as_node_ops_snark().com_num_vars()
-    }
-
-    /// Commit to the node parameters
-    fn commit(
-        &self,
-        ck: &PCS::CommitterKey,
-        rng: Option<&mut dyn RngCore>,
-    ) -> (NodeCommitment<F, S, PCS>, NodeCommitmentState<F, S, PCS>) {
-        self.as_node_ops_snark().commit(ck, rng)
     }
 }
