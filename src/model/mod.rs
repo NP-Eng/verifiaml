@@ -109,10 +109,7 @@ where
             output = node.evaluate(&output);
         }
 
-        match output {
-            QTypeArray::S(o) => o,
-            _ => panic!("Output QArray type should be QSmallType"),
-        }
+        output.unwrap_small()
     }
 
     /// Unlike the node's `padded_evaluate`, the model's `padded_evaluate` accepts unpadded input
@@ -136,10 +133,9 @@ where
         }
 
         // TODO switch to reference in reshape?
-        match output {
-            QTypeArray::S(o) => o.compact_resize(self.output_shape.clone(), ST::ZERO),
-            _ => panic!("Output QArray type should be QSmallType"),
-        }
+        output
+            .unwrap_small()
+            .compact_resize(self.output_shape.clone(), ST::ZERO)
     }
 
     pub(crate) fn prove_inference(

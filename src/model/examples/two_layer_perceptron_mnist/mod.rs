@@ -163,10 +163,7 @@ fn prove_inference_two_layer_perceptron_mnist() {
 
     let output_qtypearray = inference_proof.inputs_outputs[1].clone();
 
-    let output_i8 = match output_qtypearray {
-        QTypeArray::S(o) => o,
-        _ => panic!("Expected QTypeArray::S"),
-    };
+    let output_i8 = output_qtypearray.unwrap_small();
    
     let output_u8 = (output_i8.cast::<i32>() + 128).cast::<u8>();
 
@@ -219,10 +216,7 @@ fn verify_inference_two_layer_perceptron_mnist() {
         inference_proof
     ));
 
-    let output_i8 = match output_qtypearray {
-        QTypeArray::S(o) => o,
-        _ => panic!("Expected QTypeArray::S"),
-    };
+    let output_i8 = output_qtypearray.unwrap_small();
    
     let output_u8 = (output_i8.cast::<i32>() + 128).cast::<u8>();
 

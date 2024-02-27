@@ -231,10 +231,8 @@ where
     // output nodes and instead working witht their plain values all along,
     // but that would require messy node-by-node handling
     let input_node_com = node_value_commitments.first().unwrap();
-    let input_node_qarray = match &inputs_outputs[0] {
-        QTypeArray::S(i) => i,
-        _ => panic!("Model input should be QTypeArray::S"),
-    };
+    let input_node_qarray = &inputs_outputs[0].ref_small();
+
     let input_node_f: Vec<F> = input_node_qarray
         .values()
         .iter()
@@ -243,10 +241,12 @@ where
 
     let output_node_com = node_value_commitments.last().unwrap();
     // TODO maybe it's better to save this as F in the proof?
-    let output_node_f: Vec<F> = match &inputs_outputs[1] {
-        QTypeArray::S(o) => o.values().iter().map(|x| F::from(*x)).collect(),
-        _ => panic!("Model output should be QTypeArray::S"),
-    };
+    let output_node_f: Vec<F> = inputs_outputs[1]
+        .ref_small()
+        .values()
+        .iter()
+        .map(|x| F::from(*x))
+        .collect();
 
     // Absorb the model IO output and squeeze the challenge point
     // Absorb the plain output and squeeze the challenge point

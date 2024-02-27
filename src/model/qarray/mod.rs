@@ -23,6 +23,39 @@ where
     L(QArray<LT>),
 }
 
+impl<ST: InnerType, LT: InnerType> QTypeArray<ST, LT>
+where
+    LT: From<ST>,
+{
+    pub(crate) fn unwrap_small(self) -> QArray<ST> {
+        match self {
+            QTypeArray::S(s) => s,
+            _ => panic!("Expected QTypeArray::S"),
+        }
+    }
+
+    pub(crate) fn unwrap_large(self) -> QArray<LT> {
+        match self {
+            QTypeArray::L(l) => l,
+            _ => panic!("Expected QTypeArray::L"),
+        }
+    }
+
+    pub(crate) fn ref_small(&self) -> &QArray<ST> {
+        match self {
+            QTypeArray::S(s) => s,
+            _ => panic!("Expected QSmallType"),
+        }
+    }
+
+    pub(crate) fn ref_large(&self) -> &QArray<LT> {
+        match self {
+            QTypeArray::L(l) => l,
+            _ => panic!("Expected QLargeType"),
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests;
 
