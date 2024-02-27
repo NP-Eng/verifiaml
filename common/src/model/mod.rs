@@ -9,10 +9,7 @@ use crate::model::nodes::{NodeOpsCommon, NodeOpsNative};
 use crate::{model::nodes::Node, quantization::QSmallType};
 
 use self::qarray::QTypeArray;
-use self::{
-    nodes::{NodeCommitment, NodeCommitmentState, NodeProof},
-    qarray::QArray,
-};
+use self::{nodes::NodeProof, qarray::QArray};
 
 pub mod nodes;
 pub mod qarray;
@@ -100,14 +97,5 @@ where
             QTypeArray::S(o) => o,
             _ => panic!("Output QArray type should be QSmallType"),
         }
-    }
-
-    pub fn commit(
-        &self,
-        ck: &PCS::CommitterKey,
-        _rng: Option<&mut dyn RngCore>,
-    ) -> Vec<(NodeCommitment<F, S, PCS>, NodeCommitmentState<F, S, PCS>)> {
-        // TODO blindly passing None, likely need to change to get hiding
-        self.nodes.iter().map(|n| n.commit(ck, None)).collect()
     }
 }

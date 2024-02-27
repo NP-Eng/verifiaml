@@ -25,6 +25,12 @@ where
         node_com_states: &Vec<NodeCommitmentState<F, S, PCS>>,
         input: QArray<QSmallType>,
     ) -> InferenceProof<F, S, PCS>;
+
+    fn commit(
+        &self,
+        ck: &PCS::CommitterKey,
+        _rng: Option<&mut dyn RngCore>,
+    ) -> Vec<(NodeCommitment<F, S, PCS>, NodeCommitmentState<F, S, PCS>)>;
 }
 
 impl<F, S, PCS> ProveModel<F, S, PCS> for Model<F, S, PCS>
@@ -216,5 +222,14 @@ where
             node_proofs,
             opening_proofs: vec![input_opening_proof, output_opening_proof],
         }
+    }
+
+    fn commit(
+        &self,
+        ck: &PCS::CommitterKey,
+        _rng: Option<&mut dyn RngCore>,
+    ) -> Vec<(NodeCommitment<F, S, PCS>, NodeCommitmentState<F, S, PCS>)> {
+        // TODO blindly passing None, likely need to change to get hiding
+        self.nodes.iter().map(|n| n.commit(ck, None)).collect()
     }
 }
