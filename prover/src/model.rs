@@ -1,3 +1,5 @@
+use ark_std::marker::PhantomData;
+
 use ark_std::{log2, rand::RngCore};
 
 use ark_crypto_primitives::sponge::{Absorb, CryptographicSponge};
@@ -8,6 +10,50 @@ use hcs_common::{InferenceProof, Model};
 use hcs_common::{NodeCommitment, NodeCommitmentState, Poly, QArray, QSmallType, QTypeArray};
 
 use crate::NodeOpsProve;
+
+pub struct ModelProver<F, S, PCS>
+where
+    F: PrimeField + Absorb,
+    S: CryptographicSponge,
+    PCS: PolynomialCommitment<F, Poly<F>, S>,
+{
+    phantom: PhantomData<(F, S, PCS)>,
+}
+
+impl<F, S, PCS> ModelProver<F, S, PCS>
+where
+    F: PrimeField + Absorb,
+    S: CryptographicSponge,
+    PCS: PolynomialCommitment<F, Poly<F>, S>,
+{
+    pub fn padded_evaluate(
+        model: &Model<F, S, PCS>,
+        input: QArray<QSmallType>,
+    ) -> QArray<QSmallType> {
+        model.padded_evaluate(input)
+    }
+
+    pub fn prove_inference(
+        model: &Model<F, S, PCS>,
+        ck: &PCS::CommitterKey,
+        rng: Option<&mut dyn RngCore>,
+        sponge: &mut S,
+        node_coms: &Vec<NodeCommitment<F, S, PCS>>,
+        node_com_states: &Vec<NodeCommitmentState<F, S, PCS>>,
+        input: QArray<QSmallType>,
+    ) -> InferenceProof<F, S, PCS> {
+        model.prove_inference(ck, rng, sponge, node_coms, node_com_states, input)
+    }
+
+    pub fn commit(
+        model: &Model<F, S, PCS>,
+        ck: &PCS::CommitterKey,
+        rng: Option<&mut dyn RngCore>,
+    ) -> Vec<(NodeCommitment<F, S, PCS>, NodeCommitmentState<F, S, PCS>)> {
+        model.commit(ck, rng)
+    }
+}
+
 pub trait ProveModel<F, S, PCS>
 where
     F: PrimeField + Absorb,
