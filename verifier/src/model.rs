@@ -1,3 +1,5 @@
+use ark_std::marker::PhantomData;
+
 use crate::NodeOpsVerify;
 use ark_crypto_primitives::sponge::{Absorb, CryptographicSponge};
 use ark_ff::PrimeField;
@@ -7,29 +9,23 @@ use ark_std::log2;
 
 use hcs_common::{InferenceProof, Model, NodeCommitment, Poly, QTypeArray};
 
-pub trait VerifyModel<F, S, PCS>
+pub struct ModelVerifier<F, S, PCS>
 where
     F: PrimeField + Absorb,
     S: CryptographicSponge,
     PCS: PolynomialCommitment<F, Poly<F>, S>,
 {
-    fn verify_inference(
-        &self,
-        vk: &PCS::VerifierKey,
-        sponge: &mut S,
-        node_commitments: &Vec<NodeCommitment<F, S, PCS>>,
-        inference_proof: InferenceProof<F, S, PCS>,
-    ) -> bool;
+    phantom: PhantomData<(F, S, PCS)>,
 }
 
-impl<F, S, PCS> VerifyModel<F, S, PCS> for Model<F, S, PCS>
+impl<F, S, PCS> ModelVerifier<F, S, PCS>
 where
     F: PrimeField + Absorb,
     S: CryptographicSponge,
     PCS: PolynomialCommitment<F, Poly<F>, S>,
 {
-    fn verify_inference(
-        &self,
+    pub fn verify_inference(
+        model: &Model<F, S, PCS>,
         vk: &PCS::VerifierKey,
         sponge: &mut S,
         node_commitments: &Vec<NodeCommitment<F, S, PCS>>,
@@ -49,7 +45,7 @@ where
         // discussed)
 
         // Verify node proofs
-        for (((node, node_com), io_com), node_proof) in self
+        for (((node, node_com), io_com), node_proof) in model
             .nodes
             .iter()
             .zip(node_commitments.iter())
@@ -95,7 +91,7 @@ where
         // Verifying that the actual input was honestly padded with zeros
         let padded_input_shape = input_node_qarray.shape().clone();
         let honestly_padded_input = input_node_qarray
-            .compact_resize(self.input_shape().clone(), 0)
+            .compact_resize(model.input_shape().clone(), 0)
             .compact_resize(padded_input_shape, 0);
 
         if honestly_padded_input.values() != input_node_qarray.values() {

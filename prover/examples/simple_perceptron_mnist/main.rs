@@ -2,8 +2,8 @@ use hcs_common::{
     quantise_f32_u8_nne, test_sponge, BMMNode, Ligero, Model, Node, Poly, QArray, QSmallType,
     QTypeArray, RequantiseBMMNode, ReshapeNode,
 };
-use hcs_prover::ProveModel;
-use hcs_verifier::VerifyModel;
+use hcs_prover::ModelProver;
+use hcs_verifier::ModelVerifier;
 
 use ark_bn254::Fr;
 use ark_crypto_primitives::sponge::{poseidon::PoseidonSponge, Absorb, CryptographicSponge};
@@ -91,7 +91,7 @@ fn run_padded_simple_perceptron_mnist() {
 
     let input_i8 = (quantised_input.cast::<i32>() - 128).cast::<QSmallType>();
 
-    let output_i8 = perceptron.padded_evaluate(input_i8);
+    let output_i8 = ModelProver::padded_evaluate(&perceptron, input_i8);
 
     let output_u8 = (output_i8.cast::<i32>() + 128).cast::<u8>();
 
@@ -122,9 +122,12 @@ fn prove_inference_simple_perceptron_mnist() {
 
     //let (hidden_nodes, com_states) = perceptron.commit(&ck, None).iter().unzip();
     let (node_coms, node_com_states): (Vec<_>, Vec<_>) =
-        perceptron.commit(&ck, None).into_iter().unzip();
+        ModelProver::commit(&perceptron, &ck, None)
+            .into_iter()
+            .unzip();
 
-    let inference_proof = perceptron.prove_inference(
+    let inference_proof = ModelProver::prove_inference(
+        &perceptron,
         &ck,
         Some(&mut rng),
         &mut sponge,
@@ -168,9 +171,12 @@ fn verify_inference_simple_perceptron_mnist() {
     let mut sponge: PoseidonSponge<Fr> = test_sponge();
 
     let (node_coms, node_com_states): (Vec<_>, Vec<_>) =
-        perceptron.commit(&ck, None).into_iter().unzip();
+        ModelProver::commit(&perceptron, &ck, None)
+            .into_iter()
+            .unzip();
 
-    let inference_proof = perceptron.prove_inference(
+    let inference_proof = ModelProver::prove_inference(
+        &perceptron,
         &ck,
         Some(&mut rng),
         &mut sponge,
@@ -183,7 +189,13 @@ fn verify_inference_simple_perceptron_mnist() {
 
     let mut sponge: PoseidonSponge<Fr> = test_sponge();
 
-    assert!(perceptron.verify_inference(&vk, &mut sponge, &node_coms, inference_proof));
+    assert!(ModelVerifier::verify_inference(
+        &perceptron,
+        &vk,
+        &mut sponge,
+        &node_coms,
+        inference_proof
+    ));
 
     let output_i8 = match output_qtypearray {
         QTypeArray::S(o) => o,

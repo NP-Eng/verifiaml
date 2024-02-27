@@ -12,7 +12,6 @@ mod model;
 mod nodes;
 
 pub use model::ModelProver;
-pub use model::ProveModel;
 
 pub trait NodeOpsProve<F, S, PCS>: NodeOpsCommon<F, S, PCS>
 where

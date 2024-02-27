@@ -7,7 +7,7 @@ use hcs_common::{Node, NodeCommitment, NodeOpsCommon, NodeProof, Poly};
 mod model;
 mod nodes;
 
-pub use model::VerifyModel;
+pub use model::ModelVerifier;
 
 pub trait NodeOpsVerify<F, S, PCS>: NodeOpsCommon<F, S, PCS>
 where

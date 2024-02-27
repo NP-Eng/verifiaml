@@ -30,7 +30,30 @@ where
         model: &Model<F, S, PCS>,
         input: QArray<QSmallType>,
     ) -> QArray<QSmallType> {
-        model.padded_evaluate(input)
+        let input = input;
+        // TODO sanity check: input shape matches model input shape
+
+        let input = input.compact_resize(
+            // TODO this functionality is so common we might as well make it an #[inline] function
+            model
+                .input_shape
+                .iter()
+                .map(|x| x.next_power_of_two())
+                .collect(),
+            0,
+        );
+
+        let mut output = QTypeArray::S(input);
+
+        for node in &model.nodes {
+            output = node.padded_evaluate(&output);
+        }
+
+        // TODO switch to reference in reshape?
+        match output {
+            QTypeArray::S(o) => o.compact_resize(model.output_shape.clone(), 0),
+            _ => panic!("Output QArray type should be QSmallType"),
+        }
     }
 
     pub fn prove_inference(
@@ -42,89 +65,11 @@ where
         node_com_states: &Vec<NodeCommitmentState<F, S, PCS>>,
         input: QArray<QSmallType>,
     ) -> InferenceProof<F, S, PCS> {
-        model.prove_inference(ck, rng, sponge, node_coms, node_com_states, input)
-    }
-
-    pub fn commit(
-        model: &Model<F, S, PCS>,
-        ck: &PCS::CommitterKey,
-        rng: Option<&mut dyn RngCore>,
-    ) -> Vec<(NodeCommitment<F, S, PCS>, NodeCommitmentState<F, S, PCS>)> {
-        model.commit(ck, rng)
-    }
-}
-
-pub trait ProveModel<F, S, PCS>
-where
-    F: PrimeField + Absorb,
-    S: CryptographicSponge,
-    PCS: PolynomialCommitment<F, Poly<F>, S>,
-{
-    fn padded_evaluate(&self, input: QArray<QSmallType>) -> QArray<QSmallType>;
-
-    fn prove_inference(
-        &self,
-        ck: &PCS::CommitterKey,
-        rng: Option<&mut dyn RngCore>,
-        sponge: &mut S,
-        node_coms: &Vec<NodeCommitment<F, S, PCS>>,
-        node_com_states: &Vec<NodeCommitmentState<F, S, PCS>>,
-        input: QArray<QSmallType>,
-    ) -> InferenceProof<F, S, PCS>;
-
-    fn commit(
-        &self,
-        ck: &PCS::CommitterKey,
-        _rng: Option<&mut dyn RngCore>,
-    ) -> Vec<(NodeCommitment<F, S, PCS>, NodeCommitmentState<F, S, PCS>)>;
-}
-
-impl<F, S, PCS> ProveModel<F, S, PCS> for Model<F, S, PCS>
-where
-    F: PrimeField + Absorb,
-    S: CryptographicSponge,
-    PCS: PolynomialCommitment<F, Poly<F>, S>,
-{
-    /// Unlike the node's `padded_evaluate`, the model's `padded_evaluate` accepts unpadded input
-    /// and first re-sizes it before running inference.
-    fn padded_evaluate(&self, input: QArray<QSmallType>) -> QArray<QSmallType> {
-        // TODO sanity check: input shape matches model input shape
-
-        let input = input.compact_resize(
-            // TODO this functionality is so common we might as well make it an #[inline] function
-            self.input_shape
-                .iter()
-                .map(|x| x.next_power_of_two())
-                .collect(),
-            0,
-        );
-
-        let mut output = QTypeArray::S(input);
-
-        for node in &self.nodes {
-            output = node.padded_evaluate(&output);
-        }
-
-        // TODO switch to reference in reshape?
-        match output {
-            QTypeArray::S(o) => o.compact_resize(self.output_shape.clone(), 0),
-            _ => panic!("Output QArray type should be QSmallType"),
-        }
-    }
-
-    fn prove_inference(
-        &self,
-        ck: &PCS::CommitterKey,
-        rng: Option<&mut dyn RngCore>,
-        sponge: &mut S,
-        node_coms: &Vec<NodeCommitment<F, S, PCS>>,
-        node_com_states: &Vec<NodeCommitmentState<F, S, PCS>>,
-        input: QArray<QSmallType>,
-    ) -> InferenceProof<F, S, PCS> {
         // TODO Absorb public parameters into s (to be determined what exactly)
 
         let output = input.compact_resize(
-            self.input_shape
+            model
+                .input_shape
                 .iter()
                 .map(|x| x.next_power_of_two())
                 .collect(),
@@ -144,7 +89,7 @@ where
             output_f,
         )];
 
-        for node in &self.nodes {
+        for node in &model.nodes {
             output = node.padded_evaluate(&output);
 
             let output_f: Vec<F> = match &output {
@@ -185,7 +130,7 @@ where
         let mut node_proofs = Vec::new();
 
         // Second pass: proving
-        for (((((node, node_com), node_com_state), values), l_v_coms), v_coms_states) in self
+        for (((((node, node_com), node_com_state), values), l_v_coms), v_coms_states) in model
             .nodes
             .iter()
             .zip(node_coms.iter())
@@ -270,12 +215,13 @@ where
         }
     }
 
-    fn commit(
-        &self,
+    pub fn commit(
+        model: &Model<F, S, PCS>,
         ck: &PCS::CommitterKey,
-        _rng: Option<&mut dyn RngCore>,
+        rng: Option<&mut dyn RngCore>,
     ) -> Vec<(NodeCommitment<F, S, PCS>, NodeCommitmentState<F, S, PCS>)> {
+        let _rng = rng;
         // TODO blindly passing None, likely need to change to get hiding
-        self.nodes.iter().map(|n| n.commit(ck, None)).collect()
+        model.nodes.iter().map(|n| n.commit(ck, None)).collect()
     }
 }
