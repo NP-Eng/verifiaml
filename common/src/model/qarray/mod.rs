@@ -7,31 +7,34 @@ use ark_std::fmt::Debug;
 use ark_std::ops::{Add, Div, Mul, Sub};
 use ark_std::vec;
 use ark_std::vec::Vec;
+use serde::de::DeserializeOwned;
+use serde::{Deserialize, Serialize};
+use serde_json;
 
 use crate::quantization::{QLargeType, QSmallType};
 
 const QARRAY_NESTED_TAB: &str = "    ";
 
-#[derive(Clone)]
-pub enum QTypeArray {
-    S(QArray<QSmallType>),
-    L(QArray<QLargeType>),
-}
-
 #[cfg(test)]
 mod tests;
 
-pub trait InnerType: Copy + Debug {}
+pub trait InnerType: Copy + Debug + Serialize + DeserializeOwned {}
 
 impl InnerType for QSmallType {}
 impl InnerType for QLargeType {}
 impl InnerType for u8 {}
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct QArray<T: InnerType> {
     flattened: Vec<T>,
     shape: Vec<usize>,
     cumulative_dimensions: Vec<usize>,
+}
+
+#[derive(Clone)]
+pub enum QTypeArray {
+    S(QArray<QSmallType>),
+    L(QArray<QLargeType>),
 }
 
 // impl indexing into the QArray
@@ -184,6 +187,22 @@ impl<T: InnerType> QArray<T> {
         );
 
         QArray::new(flattened, new_shape)
+    }
+
+    fn write(&self, path: &str) {
+        let mut writer = std::fs::File::create(path).unwrap();
+        serde_json::to_writer(&mut writer, self).unwrap();
+    }
+
+    fn read(path: &str) -> QArray<T> {
+        let reader = std::fs::File::open(path).unwrap();
+        serde_json::from_reader(reader).unwrap()
+    }
+
+    fn write_multiple(qarrays: Vec<QArray<T>>, paths: [&str]) {
+        for (qarray, path) in qarrays.iter().zip(paths.iter()) {
+            qarray.write(path);
+        }
     }
 }
 
