@@ -168,7 +168,7 @@ where
 pub(crate) fn verify_inference<F, S, PCS, ST, LT>(
     vk: &PCS::VerifierKey,
     sponge: &mut S,
-    model: &Model<F, S, PCS, ST, LT>,
+    model: &Model<ST, LT>,
     node_commitments: &Vec<NodeCommitment<F, S, PCS>>,
     inference_proof: InferenceProof<F, S, PCS, ST, LT>,
 ) -> bool

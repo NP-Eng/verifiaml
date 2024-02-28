@@ -20,7 +20,7 @@ use super::{NodeCommitment, NodeCommitmentState, NodeOps, NodeOpsSNARK, NodeProo
 // TODO convention: input, bias and output are rows, the op is vec-by-mat (in that order)
 
 /// Start with 2D matrices, and Mat-by-vector multiplication only
-pub(crate) struct BMMNode<F, S, PCS, ST, LT> {
+pub(crate) struct BMMNode<ST, LT> {
     /// The row-major flattened unpadded vector of weights
     weights: Vec<ST>,
     /// The padded weight vector
@@ -35,8 +35,6 @@ pub(crate) struct BMMNode<F, S, PCS, ST, LT> {
     padded_dims_log: (usize, usize),
     /// Zero-point quantisation parameter of the input
     input_zero_point: ST,
-
-    phantom: PhantomData<(F, S, PCS)>,
 }
 
 /// Commitment to a BMM node, consisting of a commitment to the *dual* of the
@@ -111,11 +109,8 @@ pub(crate) struct BMMNodeProof<
     pub(crate) bias_opening_value: F,
 }
 
-impl<F, S, PCS, ST, LT> NodeOps<ST, LT> for BMMNode<F, S, PCS, ST, LT>
+impl<ST, LT> NodeOps<ST, LT> for BMMNode<ST, LT>
 where
-    F: PrimeField,
-    S: CryptographicSponge,
-    PCS: PolynomialCommitment<F, Poly<F>, S>,
     ST: InnerType + TryFrom<LT>,
     LT: InnerType + From<ST>,
 {
@@ -166,7 +161,7 @@ where
     }
 }
 
-impl<F, S, PCS, ST, LT> NodeOpsSNARK<F, S, PCS, ST, LT> for BMMNode<F, S, PCS, ST, LT>
+impl<F, S, PCS, ST, LT> NodeOpsSNARK<F, S, PCS, ST, LT> for BMMNode<ST, LT>
 where
     F: PrimeField + Absorb + From<ST> + From<LT>,
     S: CryptographicSponge,
@@ -243,7 +238,10 @@ where
         // be stored
         let weight_poly = LabeledPolynomial::new(
             "weight_poly".to_string(),
-            Poly::from_evaluations_vec(self.com_num_vars(), padded_weights_f),
+            Poly::from_evaluations_vec(
+                <BMMNode<ST, LT> as NodeOpsSNARK<F, S, PCS, ST, LT>>::com_num_vars(&self),
+                padded_weights_f,
+            ),
             Some(1),
             None,
         );
@@ -318,7 +316,10 @@ where
         let weights_f = self.padded_weights.iter().map(|w| F::from(*w)).collect();
 
         // Dual of the MLE of the row-major flattening of the weight matrix
-        let weight_mle = Poly::from_evaluations_vec(self.com_num_vars(), weights_f);
+        let weight_mle = Poly::from_evaluations_vec(
+            <BMMNode<ST, LT> as NodeOpsSNARK<F, S, PCS, ST, LT>>::com_num_vars(&self),
+            weights_f,
+        );
 
         // TODO consider whether this can be done once and stored
         let bias_f = self.padded_bias.iter().map(|w| F::from(*w)).collect();
@@ -423,11 +424,8 @@ where
     }
 }
 
-impl<F, S, PCS, ST, LT> BMMNode<F, S, PCS, ST, LT>
+impl<ST, LT> BMMNode<ST, LT>
 where
-    F: PrimeField,
-    S: CryptographicSponge,
-    PCS: PolynomialCommitment<F, Poly<F>, S>,
     ST: InnerType + TryFrom<LT>,
     LT: InnerType + From<ST>,
 {
@@ -476,7 +474,6 @@ where
             dims,
             padded_dims_log,
             input_zero_point,
-            phantom: PhantomData,
         }
     }
 

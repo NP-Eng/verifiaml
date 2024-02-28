@@ -119,18 +119,15 @@ where
     ) -> NodeProof<F, S, PCS>;
 }
 
-pub(crate) enum Node<F, S, PCS, ST, LT>
+pub(crate) enum Node<ST, LT>
 where
-    F: PrimeField,
-    S: CryptographicSponge,
-    PCS: PolynomialCommitment<F, Poly<F>, S>,
     ST: InnerType,
     LT: InnerType,
 {
-    BMM(BMMNode<F, S, PCS, ST, LT>),
-    RequantiseBMM(RequantiseBMMNode<F, S, PCS, ST>),
-    ReLU(ReLUNode<F, S, PCS, ST>),
-    Reshape(ReshapeNode<F, S, PCS>),
+    BMM(BMMNode<ST, LT>),
+    RequantiseBMM(RequantiseBMMNode<ST>),
+    ReLU(ReLUNode<ST>),
+    Reshape(ReshapeNode),
 }
 
 pub(crate) enum NodeProof<F, S, PCS>
@@ -171,11 +168,8 @@ where
 
 // A lot of this overlaps with the NodeOps trait and could be handled more
 // elegantly by simply implementing the trait
-impl<F, S, PCS, ST, LT> Node<F, S, PCS, ST, LT>
+impl<ST, LT> Node<ST, LT>
 where
-    F: PrimeField + Absorb + From<ST> + From<LT>,
-    S: CryptographicSponge,
-    PCS: PolynomialCommitment<F, Poly<F>, S>,
     ST: InnerType + TryFrom<LT>,
     <ST as TryFrom<LT>>::Error: Debug,
     LT: InnerType + From<ST>,
@@ -189,7 +183,12 @@ where
         }
     }
 
-    fn as_node_ops_snark(&self) -> &dyn NodeOpsSNARK<F, S, PCS, ST, LT> {
+    fn as_node_ops_snark<F, S, PCS>(&self) -> &dyn NodeOpsSNARK<F, S, PCS, ST, LT>
+    where
+        F: PrimeField + Absorb + From<ST> + From<LT>,
+        S: CryptographicSponge,
+        PCS: PolynomialCommitment<F, Poly<F>, S>,
+    {
         match self {
             Node::BMM(fc) => fc,
             Node::RequantiseBMM(r) => r,
@@ -211,11 +210,8 @@ where
 }
 // A lot of this overlaps with the NodeOps trait and could be handled more
 // elegantly by simply implementing the trait
-impl<F, S, PCS, ST, LT> NodeOps<ST, LT> for Node<F, S, PCS, ST, LT>
+impl<ST, LT> NodeOps<ST, LT> for Node<ST, LT>
 where
-    F: PrimeField + Absorb + From<ST> + From<LT>,
-    S: CryptographicSponge,
-    PCS: PolynomialCommitment<F, Poly<F>, S>,
     ST: InnerType + TryFrom<LT>,
     <ST as TryFrom<LT>>::Error: Debug,
     LT: InnerType + From<ST>,
@@ -236,7 +232,7 @@ where
     }
 }
 
-impl<F, S, PCS, ST, LT> NodeOpsSNARK<F, S, PCS, ST, LT> for Node<F, S, PCS, ST, LT>
+impl<F, S, PCS, ST, LT> NodeOpsSNARK<F, S, PCS, ST, LT> for Node<ST, LT>
 where
     F: PrimeField + Absorb + From<ST> + From<LT>,
     S: CryptographicSponge,
@@ -249,16 +245,16 @@ where
     /// output shape, i.e. the list of numbers of variables of the associated
     /// MLE
     fn padded_shape_log(&self) -> Vec<usize> {
-        self.as_node_ops_snark().padded_shape_log()
+        self.as_node_ops_snark::<F, S, PCS>().padded_shape_log()
     }
 
     fn com_num_vars(&self) -> usize {
-        self.as_node_ops_snark().com_num_vars()
+        self.as_node_ops_snark::<F, S, PCS>().com_num_vars()
     }
 
     /// Evaluate the padded node natively
     fn padded_evaluate(&self, input: &QTypeArray<ST, LT>) -> QTypeArray<ST, LT> {
-        self.as_node_ops_snark().padded_evaluate(input)
+        self.as_node_ops_snark::<F, S, PCS>().padded_evaluate(input)
     }
 
     /// Commit to the node parameters

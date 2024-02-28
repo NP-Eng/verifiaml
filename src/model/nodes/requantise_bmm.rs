@@ -17,7 +17,7 @@ use super::{NodeCommitment, NodeCommitmentState, NodeOps, NodeOpsSNARK, NodeProo
 // TODO convention: input, bias and output are rows, the op is vec-by-mat (in that order)
 
 /// Apply requantisation after a BMM argument
-pub(crate) struct RequantiseBMMNode<F, S, PCS, ST>
+pub(crate) struct RequantiseBMMNode<ST>
 where
     ST: InnerType,
 {
@@ -29,8 +29,6 @@ where
 
     /// Quantisation info associated to the input BMM result
     q_info: BMMQInfo<ST>,
-
-    phantom: PhantomData<(F, S, PCS, ST)>,
 }
 
 pub(crate) struct RequantiseBMMNodeCommitment();
@@ -45,11 +43,8 @@ pub(crate) struct RequantiseBMMNodeProof {
     // this will be the sumcheck proof
 }
 
-impl<F, S, PCS, ST, LT> NodeOps<ST, LT> for RequantiseBMMNode<F, S, PCS, ST>
+impl<ST, LT> NodeOps<ST, LT> for RequantiseBMMNode<ST>
 where
-    F: PrimeField,
-    S: CryptographicSponge,
-    PCS: PolynomialCommitment<F, Poly<F>, S>,
     ST: InnerType + TryFrom<LT>,
     <ST as TryFrom<LT>>::Error: Debug,
     LT: InnerType + From<ST>,
@@ -87,7 +82,7 @@ where
     }
 }
 
-impl<F, S, PCS, ST, LT> NodeOpsSNARK<F, S, PCS, ST, LT> for RequantiseBMMNode<F, S, PCS, ST>
+impl<F, S, PCS, ST, LT> NodeOpsSNARK<F, S, PCS, ST, LT> for RequantiseBMMNode<ST>
 where
     F: PrimeField + Absorb + From<ST> + From<LT>,
     S: CryptographicSponge,
@@ -163,11 +158,8 @@ where
     }
 }
 
-impl<F, S, PCS, ST> RequantiseBMMNode<F, S, PCS, ST>
+impl<ST> RequantiseBMMNode<ST>
 where
-    F: PrimeField,
-    S: CryptographicSponge,
-    PCS: PolynomialCommitment<F, Poly<F>, S>,
     ST: InnerType,
 {
     pub(crate) fn new(
@@ -201,7 +193,6 @@ where
             size,
             padded_size_log,
             q_info,
-            phantom: PhantomData,
         }
     }
 }

@@ -11,24 +11,15 @@ use crate::model::{LabeledPoly, NodeCommitmentState, Poly};
 
 use super::{NodeCommitment, NodeOps, NodeOpsSNARK, NodeProof};
 
-pub(crate) struct ReshapeNode<F, S, PCS>
-where
-    F: PrimeField,
-    S: CryptographicSponge,
-    PCS: PolynomialCommitment<F, Poly<F>, S>,
-{
+pub(crate) struct ReshapeNode {
     input_shape: Vec<usize>,
     output_shape: Vec<usize>,
     padded_input_shape_log: Vec<usize>,
     padded_output_shape_log: Vec<usize>,
-    phantom: PhantomData<(F, S, PCS)>,
 }
 
-impl<F, S, PCS, ST, LT> NodeOps<ST, LT> for ReshapeNode<F, S, PCS>
+impl<ST, LT> NodeOps<ST, LT> for ReshapeNode
 where
-    F: PrimeField,
-    S: CryptographicSponge,
-    PCS: PolynomialCommitment<F, Poly<F>, S>,
     ST: InnerType + TryFrom<LT>,
     LT: InnerType + From<ST>,
 {
@@ -55,7 +46,7 @@ where
     }
 }
 
-impl<F, S, PCS, ST, LT> NodeOpsSNARK<F, S, PCS, ST, LT> for ReshapeNode<F, S, PCS>
+impl<F, S, PCS, ST, LT> NodeOpsSNARK<F, S, PCS, ST, LT> for ReshapeNode
 where
     F: PrimeField + Absorb + From<ST> + From<LT>,
     S: CryptographicSponge,
@@ -133,12 +124,7 @@ where
     }
 }
 
-impl<F, S, PCS> ReshapeNode<F, S, PCS>
-where
-    F: PrimeField,
-    S: CryptographicSponge,
-    PCS: PolynomialCommitment<F, Poly<F>, S>,
-{
+impl ReshapeNode {
     pub(crate) fn new(input_shape: Vec<usize>, output_shape: Vec<usize>) -> Self {
         assert_eq!(
             input_shape.iter().product::<usize>(),
@@ -161,7 +147,6 @@ where
             output_shape,
             padded_input_shape_log,
             padded_output_shape_log,
-            phantom: PhantomData,
         }
     }
 }

@@ -20,7 +20,7 @@ const INPUT_DIMS: &[usize] = &[28, 28];
 const OUTPUT_DIMS: usize = 10;
 
 // TODO this is incorrect now that we have switched to logs
-fn build_simple_perceptron_mnist<F, S, PCS>() -> Model<F, S, PCS, i8, i32>
+fn build_simple_perceptron_mnist<F, S, PCS>() -> Model<i8, i32>
 where
     F: PrimeField + Absorb,
     S: CryptographicSponge,
@@ -29,16 +29,16 @@ where
 
     let flat_dim = INPUT_DIMS.iter().product();
 
-    let reshape: ReshapeNode<F, S, PCS> = ReshapeNode::new(INPUT_DIMS.to_vec(), vec![flat_dim]);
+    let reshape: ReshapeNode = ReshapeNode::new(INPUT_DIMS.to_vec(), vec![flat_dim]);
 
-    let bmm: BMMNode<F, S, PCS, i8, i32> = BMMNode::new(
+    let bmm: BMMNode<i8, i32> = BMMNode::new(
         WEIGHTS.to_vec(),
         BIAS.to_vec(),
         (flat_dim, OUTPUT_DIMS),
         Z_I,
     );
 
-    let req_bmm: RequantiseBMMNode<F, S, PCS, i8> = RequantiseBMMNode::new(
+    let req_bmm: RequantiseBMMNode<i8> = RequantiseBMMNode::new(
         OUTPUT_DIMS,
         S_I,
         Z_I,
@@ -98,7 +98,7 @@ fn run_padded_simple_perceptron_mnist() {
 
     let input_i8 = (quantised_input.cast::<i32>() - 128).cast::<i8>();
 
-    let output_i8 = perceptron.padded_evaluate(input_i8);
+    let output_i8 = perceptron.padded_evaluate::<Fr, PoseidonSponge<Fr>, Ligero<Fr>>(input_i8);
 
     let output_u8 = (output_i8.cast::<i32>() + 128).cast::<u8>();
 
@@ -124,12 +124,12 @@ fn prove_inference_simple_perceptron_mnist() {
     let input_i8 = (quantised_input.cast::<i32>() - 128).cast::<i8>();
 
     let mut rng = test_rng();
-    let (ck, _) = perceptron.setup_keys(&mut rng).unwrap();
+    let (ck, _) = perceptron.setup_keys::<Fr, PoseidonSponge<Fr>, Ligero<Fr>>(&mut rng).unwrap();
 
     let mut sponge: PoseidonSponge<Fr> = test_sponge();
 
     //let (hidden_nodes, com_states) = perceptron.commit(&ck, None).iter().unzip();
-    let (node_coms, node_com_states): (Vec<_>, Vec<_>) = perceptron.commit(&ck, None).into_iter().unzip();
+    let (node_coms, node_com_states): (Vec<_>, Vec<_>) = perceptron.commit::<Fr, PoseidonSponge<Fr>, Ligero<Fr>>(&ck, None).into_iter().unzip();
 
     let inference_proof = perceptron.prove_inference(
         &ck,
@@ -169,11 +169,11 @@ fn verify_inference_simple_perceptron_mnist() {
     let input_i8 = (quantised_input.cast::<i32>() - 128).cast::<i8>();
 
     let mut rng = test_rng();
-    let (ck, vk) = perceptron.setup_keys(&mut rng).unwrap();
+    let (ck, vk) = perceptron.setup_keys::<Fr, PoseidonSponge<Fr>, Ligero<Fr>>(&mut rng).unwrap();
 
     let mut sponge: PoseidonSponge<Fr> = test_sponge();
 
-    let (node_coms, node_com_states): (Vec<_>, Vec<_>) = perceptron.commit(&ck, None).into_iter().unzip();
+    let (node_coms, node_com_states): (Vec<_>, Vec<_>) = perceptron.commit::<Fr, PoseidonSponge<Fr>, Ligero<Fr>>(&ck, None).into_iter().unzip();
 
     let inference_proof = perceptron.prove_inference(
         &ck,

@@ -1,5 +1,6 @@
 use std::marker::PhantomData;
 
+use ark_std::rand::Rng;
 use ark_std::{fmt::Debug, log2, rand::RngCore};
 
 use ark_crypto_primitives::sponge::{Absorb, CryptographicSponge};
@@ -49,30 +50,24 @@ where
 
 // TODO: for now, we require all nodes to use the same PCS; this might change
 // in the future
-pub(crate) struct Model<F, S, PCS, ST, LT>
+pub(crate) struct Model<ST, LT>
 where
-    F: PrimeField + Absorb + From<ST> + From<LT>,
-    S: CryptographicSponge,
-    PCS: PolynomialCommitment<F, Poly<F>, S>,
     ST: InnerType,
     LT: InnerType,
 {
     input_shape: Vec<usize>,
     output_shape: Vec<usize>,
-    nodes: Vec<Node<F, S, PCS, ST, LT>>,
+    nodes: Vec<Node<ST, LT>>,
     phantom: PhantomData<(ST, LT)>,
 }
 
-impl<F, S, PCS, ST, LT> Model<F, S, PCS, ST, LT>
+impl<ST, LT> Model<ST, LT>
 where
-    F: PrimeField + Absorb + From<ST> + From<LT>,
-    S: CryptographicSponge,
-    PCS: PolynomialCommitment<F, Poly<F>, S>,
     ST: InnerType + TryFrom<LT>,
     <ST as TryFrom<LT>>::Error: Debug,
     LT: InnerType + From<ST>,
 {
-    pub(crate) fn new(input_shape: Vec<usize>, nodes: Vec<Node<F, S, PCS, ST, LT>>) -> Self {
+    pub(crate) fn new(input_shape: Vec<usize>, nodes: Vec<Node<ST, LT>>) -> Self {
         // An empty model would cause panics later down the line e.g. when
         // determining the number of variables needed to commit to it.
         assert!(!nodes.is_empty(), "A model cannot have no nodes",);
@@ -89,11 +84,21 @@ where
         &self.input_shape
     }
 
-    pub(crate) fn setup_keys<R: RngCore>(
+    pub(crate) fn setup_keys<F, S, PCS>(
         &self,
-        rng: &mut R,
-    ) -> Result<(PCS::CommitterKey, PCS::VerifierKey), PCS::Error> {
-        let num_vars = self.nodes.iter().map(|n| n.com_num_vars()).max().unwrap();
+        rng: &mut impl Rng,
+    ) -> Result<(PCS::CommitterKey, PCS::VerifierKey), PCS::Error>
+    where
+        F: PrimeField + Absorb + From<ST> + From<LT>,
+        S: CryptographicSponge,
+        PCS: PolynomialCommitment<F, Poly<F>, S>,
+    {
+        let num_vars = self
+            .nodes
+            .iter()
+            .map(|n| <Node<ST, LT> as NodeOpsSNARK<F, S, PCS, ST, LT>>::com_num_vars(n))
+            .max()
+            .unwrap();
 
         let pp = PCS::setup(1, Some(num_vars), rng).unwrap();
 
@@ -114,7 +119,12 @@ where
 
     /// Unlike the node's `padded_evaluate`, the model's `padded_evaluate` accepts unpadded input
     /// and first re-sizes it before running inference.
-    pub(crate) fn padded_evaluate(&self, input: QArray<ST>) -> QArray<ST> {
+    pub(crate) fn padded_evaluate<F, S, PCS>(&self, input: QArray<ST>) -> QArray<ST>
+    where
+        F: PrimeField + Absorb + From<ST> + From<LT>,
+        S: CryptographicSponge,
+        PCS: PolynomialCommitment<F, Poly<F>, S>,
+    {
         // TODO sanity check: input shape matches model input shape
 
         let input = input.compact_resize(
@@ -129,7 +139,8 @@ where
         let mut output = QTypeArray::S(input);
 
         for node in &self.nodes {
-            output = node.padded_evaluate(&output);
+            output =
+                <Node<ST, LT> as NodeOpsSNARK<F, S, PCS, ST, LT>>::padded_evaluate(node, &output);
         }
 
         // TODO switch to reference in reshape?
@@ -138,7 +149,7 @@ where
             .compact_resize(self.output_shape.clone(), ST::ZERO)
     }
 
-    pub(crate) fn prove_inference(
+    pub(crate) fn prove_inference<F, S, PCS>(
         &self,
         ck: &PCS::CommitterKey,
         rng: Option<&mut dyn RngCore>,
@@ -146,7 +157,12 @@ where
         node_coms: &Vec<NodeCommitment<F, S, PCS>>,
         node_com_states: &Vec<NodeCommitmentState<F, S, PCS>>,
         input: QArray<ST>,
-    ) -> InferenceProof<F, S, PCS, ST, LT> {
+    ) -> InferenceProof<F, S, PCS, ST, LT>
+    where
+        F: PrimeField + Absorb + From<ST> + From<LT>,
+        S: CryptographicSponge,
+        PCS: PolynomialCommitment<F, Poly<F>, S>,
+    {
         // TODO Absorb public parameters into s (to be determined what exactly)
 
         let output = input.compact_resize(
@@ -171,7 +187,8 @@ where
         )];
 
         for node in &self.nodes {
-            output = node.padded_evaluate(&output);
+            output =
+                <Node<ST, LT> as NodeOpsSNARK<F, S, PCS, ST, LT>>::padded_evaluate(node, &output);
 
             let output_f: Vec<F> = match &output {
                 QTypeArray::S(o) => o.values().iter().map(|x| F::from(*x)).collect(),
@@ -296,11 +313,16 @@ where
         }
     }
 
-    pub(crate) fn commit(
+    pub(crate) fn commit<F, S, PCS>(
         &self,
         ck: &PCS::CommitterKey,
         rng: Option<&mut dyn RngCore>,
-    ) -> Vec<(NodeCommitment<F, S, PCS>, NodeCommitmentState<F, S, PCS>)> {
+    ) -> Vec<(NodeCommitment<F, S, PCS>, NodeCommitmentState<F, S, PCS>)>
+    where
+        F: PrimeField + Absorb + From<ST> + From<LT>,
+        S: CryptographicSponge,
+        PCS: PolynomialCommitment<F, Poly<F>, S>,
+    {
         // TODO blindly passing None, likely need to change to get hiding
         self.nodes.iter().map(|n| n.commit(ck, None)).collect()
     }
