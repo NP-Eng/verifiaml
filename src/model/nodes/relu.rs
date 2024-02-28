@@ -12,7 +12,7 @@ use crate::model::{LabeledPoly, Poly};
 use super::{NodeCommitment, NodeCommitmentState, NodeOps, NodeOpsSNARK, NodeProof};
 
 // Rectified linear unit node performing x |-> max(0, x).
-pub(crate) struct ReLUNode<F, S, PCS, ST, LT>
+pub(crate) struct ReLUNode<F, S, PCS, ST>
 where
     F: PrimeField,
     S: CryptographicSponge,
@@ -21,10 +21,10 @@ where
     num_units: usize,
     log_num_units: usize,
     zero_point: ST,
-    phantom: PhantomData<(F, S, PCS, LT)>,
+    phantom: PhantomData<(F, S, PCS)>,
 }
 
-impl<F, S, PCS, ST, LT> NodeOps<ST, LT> for ReLUNode<F, S, PCS, ST, LT>
+impl<F, S, PCS, ST, LT> NodeOps<ST, LT> for ReLUNode<F, S, PCS, ST>
 where
     F: PrimeField,
     S: CryptographicSponge,
@@ -45,7 +45,7 @@ where
 }
 
 // impl NodeOpsSnark
-impl<F, S, PCS, ST, LT> NodeOpsSNARK<F, S, PCS, ST, LT> for ReLUNode<F, S, PCS, ST, LT>
+impl<F, S, PCS, ST, LT> NodeOpsSNARK<F, S, PCS, ST, LT> for ReLUNode<F, S, PCS, ST>
 where
     F: PrimeField + Absorb + From<ST> + From<LT>,
     S: CryptographicSponge,
@@ -96,13 +96,12 @@ where
     }
 }
 
-impl<F, S, PCS, ST, LT> ReLUNode<F, S, PCS, ST, LT>
+impl<F, S, PCS, ST> ReLUNode<F, S, PCS, ST>
 where
     F: PrimeField,
     S: CryptographicSponge,
     PCS: PolynomialCommitment<F, Poly<F>, S>,
     ST: InnerType,
-    LT: InnerType,
 {
     pub(crate) fn new(num_units: usize, zero_point: ST) -> Self {
         let log_num_units = log2(num_units.next_power_of_two()) as usize;

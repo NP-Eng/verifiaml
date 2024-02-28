@@ -30,7 +30,7 @@ where
 
     let flat_dim = INPUT_DIMS.iter().product();
 
-    let reshape: ReshapeNode<F, S, PCS, i8, i32> = ReshapeNode::new(INPUT_DIMS.to_vec(), vec![flat_dim]);
+    let reshape: ReshapeNode<F, S, PCS> = ReshapeNode::new(INPUT_DIMS.to_vec(), vec![flat_dim]);
 
     let bmm_1: BMMNode<F, S, PCS, i8, i32> = BMMNode::new(
         WEIGHTS_1.to_vec(),
@@ -39,7 +39,7 @@ where
         Z_1_I,
     );
 
-    let req_bmm_1: RequantiseBMMNode<F, S, PCS, i8, i32> = RequantiseBMMNode::new(
+    let req_bmm_1: RequantiseBMMNode<F, S, PCS, i8> = RequantiseBMMNode::new(
         INTER_DIM,
         S_1_I,
         Z_1_I,
@@ -49,7 +49,7 @@ where
         Z_1_O,
     );
 
-    let relu: ReLUNode<F, S, PCS, i8, i32> = ReLUNode::new(28, Z_1_O);
+    let relu: ReLUNode<F, S, PCS, i8> = ReLUNode::new(28, Z_1_O);
 
     let bmm_2: BMMNode<F, S, PCS, i8, i32> = BMMNode::new(
         WEIGHTS_2.to_vec(),
@@ -58,7 +58,7 @@ where
         Z_2_I,
     );
 
-    let req_bmm_2: RequantiseBMMNode<F, S, PCS, i8, i32> = RequantiseBMMNode::new(
+    let req_bmm_2: RequantiseBMMNode<F, S, PCS, i8> = RequantiseBMMNode::new(
         OUTPUT_DIM,
         S_2_I,
         Z_2_I,

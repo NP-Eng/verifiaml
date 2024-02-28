@@ -29,7 +29,7 @@ where
 
     let flat_dim = INPUT_DIMS.iter().product();
 
-    let reshape: ReshapeNode<F, S, PCS, i8, i32> = ReshapeNode::new(INPUT_DIMS.to_vec(), vec![flat_dim]);
+    let reshape: ReshapeNode<F, S, PCS> = ReshapeNode::new(INPUT_DIMS.to_vec(), vec![flat_dim]);
 
     let bmm: BMMNode<F, S, PCS, i8, i32> = BMMNode::new(
         WEIGHTS.to_vec(),
@@ -38,7 +38,7 @@ where
         Z_I,
     );
 
-    let req_bmm: RequantiseBMMNode<F, S, PCS, i8, i32> = RequantiseBMMNode::new(
+    let req_bmm: RequantiseBMMNode<F, S, PCS, i8> = RequantiseBMMNode::new(
         OUTPUT_DIMS,
         S_I,
         Z_I,

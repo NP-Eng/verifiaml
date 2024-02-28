@@ -128,9 +128,9 @@ where
     LT: InnerType,
 {
     BMM(BMMNode<F, S, PCS, ST, LT>),
-    RequantiseBMM(RequantiseBMMNode<F, S, PCS, ST, LT>),
-    ReLU(ReLUNode<F, S, PCS, ST, LT>),
-    Reshape(ReshapeNode<F, S, PCS, ST, LT>),
+    RequantiseBMM(RequantiseBMMNode<F, S, PCS, ST>),
+    ReLU(ReLUNode<F, S, PCS, ST>),
+    Reshape(ReshapeNode<F, S, PCS>),
 }
 
 pub(crate) enum NodeProof<F, S, PCS>
