@@ -11,18 +11,22 @@ use ark_crypto_primitives::sponge::{poseidon::PoseidonSponge, Absorb, Cryptograp
 use ark_ff::PrimeField;
 use ark_poly_commit::PolynomialCommitment;
 
-mod input;
+use ark_std::test_rng;
+
 mod parameters;
 
-use ark_std::test_rng;
-use input::*;
 use parameters::*;
 
 const INPUT_DIMS: &[usize] = &[28, 28];
 const INTER_DIM: usize = 28;
 const OUTPUT_DIM: usize = 10;
 
-// TODO this is incorrect now that we have switched to logs
+macro_rules! PATH {
+    () => {
+        "prover/examples/two_layer_perceptron_mnist/{}.json"
+    };
+}
+
 fn build_two_layer_perceptron_mnist<F, S, PCS>() -> Model<F, S, PCS>
 where
     F: PrimeField + Absorb,
@@ -33,9 +37,14 @@ where
 
     let reshape: ReshapeNode<F, S, PCS> = ReshapeNode::new(INPUT_DIMS.to_vec(), vec![flat_dim]);
 
+    let w1_array: QArray<i8> = QArray::read(&format!(PATH!(), "parameters/weights_1"));
+    let b1_array: QArray<i32> = QArray::read(&format!(PATH!(), "parameters/bias_1"));
+    let w2_array: QArray<i8> = QArray::read(&format!(PATH!(), "parameters/weights_2"));
+    let b2_array: QArray<i32> = QArray::read(&format!(PATH!(), "parameters/bias_2"));
+
     let bmm_1: BMMNode<F, S, PCS> = BMMNode::new(
-        WEIGHTS_1.to_vec(),
-        BIAS_1.to_vec(),
+        w1_array.move_values(),
+        b1_array.move_values(),
         (flat_dim, INTER_DIM),
         Z_1_I,
     );
@@ -46,8 +55,8 @@ where
     let relu: ReLUNode<F, S, PCS> = ReLUNode::new(28, Z_1_O);
 
     let bmm_2: BMMNode<F, S, PCS> = BMMNode::new(
-        WEIGHTS_2.to_vec(),
-        BIAS_2.to_vec(),
+        w2_array.move_values(),
+        b2_array.move_values(),
         (INTER_DIM, OUTPUT_DIM),
         Z_2_I,
     );
@@ -69,18 +78,15 @@ where
 }
 
 fn run_native_two_layer_perceptron_mnist() {
-    /**** Change here ****/
-    let input = NORMALISED_INPUT_TEST_150;
-    let expected_output: Vec<u8> = vec![138, 106, 149, 160, 174, 152, 141, 146, 169, 207];
-    /**********************/
+    let input: QArray<f32> = QArray::read(&format!(PATH!(), "data/input_test_150"));
+    let expected_output: QArray<u8> = QArray::read(&format!(PATH!(), "data/output_test_150"));
 
     let perceptron = build_two_layer_perceptron_mnist::<Fr, PoseidonSponge<Fr>, Ligero<Fr>>();
 
-    let quantised_input: QArray<u8> = input
-        .iter()
-        .map(|r| quantise_f32_u8_nne(r, S_INPUT, Z_INPUT))
-        .collect::<Vec<Vec<u8>>>()
-        .into();
+    let quantised_input: QArray<u8> = QArray::new(
+        quantise_f32_u8_nne(input.values(), S_INPUT, Z_INPUT),
+        input.shape().clone(),
+    );
 
     let input_i8 = (quantised_input.cast::<i32>() - 128).cast::<QSmallType>();
 
@@ -88,23 +94,20 @@ fn run_native_two_layer_perceptron_mnist() {
 
     let output_u8 = (output_i8.cast::<i32>() + 128).cast::<u8>();
 
-    println!("Output: {:?}", output_u8.values());
-    assert_eq!(output_u8.move_values(), expected_output);
+    println!("Output: {:?}", output_u8);
+    assert_eq!(output_u8, expected_output);
 }
 
 fn run_padded_two_layer_perceptron_mnist() {
-    /**** Change here ****/
-    let input = NORMALISED_INPUT_TEST_150;
-    let expected_output: Vec<u8> = vec![138, 106, 149, 160, 174, 152, 141, 146, 169, 207];
-    /**********************/
+    let input: QArray<f32> = QArray::read(&format!(PATH!(), "data/input_test_150"));
+    let expected_output: QArray<u8> = QArray::read(&format!(PATH!(), "data/output_test_150"));
 
     let perceptron = build_two_layer_perceptron_mnist::<Fr, PoseidonSponge<Fr>, Ligero<Fr>>();
 
-    let quantised_input: QArray<u8> = input
-        .iter()
-        .map(|r| quantise_f32_u8_nne(r, S_INPUT, Z_INPUT))
-        .collect::<Vec<Vec<u8>>>()
-        .into();
+    let quantised_input: QArray<u8> = QArray::new(
+        quantise_f32_u8_nne(input.values(), S_INPUT, Z_INPUT),
+        input.shape().clone(),
+    );
 
     let input_i8 = (quantised_input.cast::<i32>() - 128).cast::<QSmallType>();
 
@@ -112,23 +115,20 @@ fn run_padded_two_layer_perceptron_mnist() {
 
     let output_u8 = (output_i8.cast::<i32>() + 128).cast::<u8>();
 
-    println!("Output: {:?}", output_u8.values());
-    assert_eq!(output_u8.move_values(), expected_output);
+    println!("Output: {:?}", output_u8);
+    assert_eq!(output_u8, expected_output);
 }
 
 fn prove_inference_two_layer_perceptron_mnist() {
-    /**** Change here ****/
-    let input = NORMALISED_INPUT_TEST_150;
-    let expected_output: Vec<u8> = vec![138, 106, 149, 160, 174, 152, 141, 146, 169, 207];
-    /**********************/
+    let input: QArray<f32> = QArray::read(&format!(PATH!(), "data/input_test_150"));
+    let expected_output: QArray<u8> = QArray::read(&format!(PATH!(), "data/output_test_150"));
 
     let perceptron = build_two_layer_perceptron_mnist::<Fr, PoseidonSponge<Fr>, Ligero<Fr>>();
 
-    let quantised_input: QArray<u8> = input
-        .iter()
-        .map(|r| quantise_f32_u8_nne(r, S_INPUT, Z_INPUT))
-        .collect::<Vec<Vec<u8>>>()
-        .into();
+    let quantised_input: QArray<u8> = QArray::new(
+        quantise_f32_u8_nne(input.values(), S_INPUT, Z_INPUT),
+        input.shape().clone(),
+    );
 
     let input_i8 = (quantised_input.cast::<i32>() - 128).cast::<QSmallType>();
 
@@ -159,21 +159,22 @@ fn prove_inference_two_layer_perceptron_mnist() {
     let output_u8 = (output_i8.cast::<i32>() + 128).cast::<u8>();
 
     println!("Padded output: {:?}", output_u8.values());
-    assert_eq!(output_u8.move_values()[0..OUTPUT_DIM], expected_output);
+    assert_eq!(
+        output_u8.compact_resize(vec![OUTPUT_DIM], 0),
+        expected_output
+    );
 }
 
 fn verify_inference_two_layer_perceptron_mnist() {
-    /**** Change here ****/
-    let input = NORMALISED_INPUT_TEST_150;
-    let expected_output: Vec<u8> = vec![138, 106, 149, 160, 174, 152, 141, 146, 169, 207];
-    /**********************/
+    let input: QArray<f32> = QArray::read(&format!(PATH!(), "data/input_test_150"));
+    let expected_output: QArray<u8> = QArray::read(&format!(PATH!(), "data/output_test_150"));
+
     let perceptron = build_two_layer_perceptron_mnist::<Fr, PoseidonSponge<Fr>, Ligero<Fr>>();
 
-    let quantised_input: QArray<u8> = input
-        .iter()
-        .map(|r| quantise_f32_u8_nne(r, S_INPUT, Z_INPUT))
-        .collect::<Vec<Vec<u8>>>()
-        .into();
+    let quantised_input: QArray<u8> = QArray::new(
+        quantise_f32_u8_nne(input.values(), S_INPUT, Z_INPUT),
+        input.shape().clone(),
+    );
 
     let input_i8 = (quantised_input.cast::<i32>() - 128).cast::<QSmallType>();
 
@@ -208,7 +209,10 @@ fn verify_inference_two_layer_perceptron_mnist() {
     let output_u8 = (output_i8.cast::<i32>() + 128).cast::<u8>();
 
     println!("Padded output: {:?}", output_u8.values());
-    assert_eq!(output_u8.move_values()[0..OUTPUT_DIM], expected_output);
+    assert_eq!(
+        output_u8.compact_resize(vec![OUTPUT_DIM], 0),
+        expected_output
+    );
 }
 
 fn main() {

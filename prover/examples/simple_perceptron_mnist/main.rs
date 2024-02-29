@@ -202,3 +202,29 @@ fn main() {
     prove_inference_simple_perceptron_mnist();
     verify_inference_simple_perceptron_mnist();
 }
+
+// QArray::from(vec![138, 106, 149, 160, 174, 152, 141, 146, 169, 207]).write("prover/examples/two_layer_perceptron_mnist/data/input_test_150.json");
+
+// QArray::from(NORMALISED_INPUT_TEST_150.iter().map(|v| v.to_vec()).collect::<Vec<_>>()).write("prover/examples/two_layer_perceptron_mnist/data/output_test_150.json");
+
+// QArray::write_multiple(
+//     &[
+//         &QArray::from(WEIGHTS_1.to_vec()),
+//         &QArray::from(WEIGHTS_2.to_vec()),
+//     ],
+//     &[
+//         &"prover/examples/two_layer_perceptron_mnist/parameters/weights_1.json",
+//         &"prover/examples/two_layer_perceptron_mnist/parameters/weights_2.json",
+//     ],
+// );
+
+// QArray::write_multiple(
+//     &[
+//         &QArray::from(BIAS_1.to_vec()),
+//         &QArray::from(BIAS_2.to_vec()),
+//     ],
+//     &[
+//         &"prover/examples/two_layer_perceptron_mnist/parameters/bias_1.json",
+//         &"prover/examples/two_layer_perceptron_mnist/parameters/bias_2.json",
+//     ],
+// )

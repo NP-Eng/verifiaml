@@ -23,11 +23,15 @@ pub trait InnerType: Copy + Debug + Serialize + DeserializeOwned {}
 impl InnerType for QSmallType {}
 impl InnerType for QLargeType {}
 impl InnerType for u8 {}
+impl InnerType for f32 {}
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq)]
 pub struct QArray<T> {
+    #[serde(rename = "f")]
     flattened: Vec<T>,
+    #[serde(rename = "s")]
     shape: Vec<usize>,
+    #[serde(rename = "c")]
     cumulative_dimensions: Vec<usize>,
 }
 
@@ -189,23 +193,23 @@ impl<T: InnerType> QArray<T> {
         QArray::new(flattened, new_shape)
     }
 
-    fn write(&self, path: &str) {
+    pub fn write(&self, path: &str) {
         let mut writer = std::fs::File::create(path).unwrap();
         serde_json::to_writer(&mut writer, self).unwrap();
     }
 
-    fn read(path: &str) -> QArray<T> {
+    pub fn read(path: &str) -> QArray<T> {
         let reader = std::fs::File::open(path).unwrap();
         serde_json::from_reader(reader).unwrap()
     }
 
-    fn write_multiple(qarrays: &[&QArray<T>], paths: &[&str]) {
+    pub fn write_multiple(qarrays: &[&QArray<T>], paths: &[&str]) {
         for (qarray, path) in qarrays.iter().zip(paths.iter()) {
             qarray.write(path);
         }
     }
 
-    fn read_multiple(paths: &[&str]) -> Vec<QArray<T>> {
+    pub fn read_multiple(paths: &[&str]) -> Vec<QArray<T>> {
         paths.iter().map(|path| QArray::read(path)).collect()
     }
 }
