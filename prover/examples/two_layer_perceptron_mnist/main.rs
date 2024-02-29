@@ -77,43 +77,57 @@ where
     )
 }
 
-fn run_native_two_layer_perceptron_mnist() {
-    let input: QArray<f32> = QArray::read(&format!(PATH!(), "data/input_test_150"));
-    let expected_output: QArray<u8> = QArray::read(&format!(PATH!(), "data/output_test_150"));
-
-    let perceptron = build_two_layer_perceptron_mnist::<Fr, PoseidonSponge<Fr>, Ligero<Fr>>();
-
+// Auxiliary function
+fn unpadded_inference(
+    raw_input: QArray<f32>,
+    perceptron: &Model<Fr, PoseidonSponge<Fr>, Ligero<Fr>>,
+) -> QArray<u8> {
     let quantised_input: QArray<u8> = QArray::new(
-        quantise_f32_u8_nne(input.values(), S_INPUT, Z_INPUT),
-        input.shape().clone(),
+        quantise_f32_u8_nne(raw_input.values(), S_INPUT, Z_INPUT),
+        raw_input.shape().clone(),
     );
 
     let input_i8 = (quantised_input.cast::<i32>() - 128).cast::<QSmallType>();
 
     let output_i8 = perceptron.evaluate(input_i8);
 
-    let output_u8 = (output_i8.cast::<i32>() + 128).cast::<u8>();
-
-    println!("Output: {:?}", output_u8);
-    assert_eq!(output_u8, expected_output);
+    (output_i8.cast::<i32>() + 128).cast()
 }
 
-fn run_padded_two_layer_perceptron_mnist() {
-    let input: QArray<f32> = QArray::read(&format!(PATH!(), "data/input_test_150"));
-    let expected_output: QArray<u8> = QArray::read(&format!(PATH!(), "data/output_test_150"));
-
-    let perceptron = build_two_layer_perceptron_mnist::<Fr, PoseidonSponge<Fr>, Ligero<Fr>>();
-
+// Auxiliary function
+fn padded_inference(
+    raw_input: QArray<f32>,
+    perceptron: &Model<Fr, PoseidonSponge<Fr>, Ligero<Fr>>,
+) -> QArray<u8> {
     let quantised_input: QArray<u8> = QArray::new(
-        quantise_f32_u8_nne(input.values(), S_INPUT, Z_INPUT),
-        input.shape().clone(),
+        quantise_f32_u8_nne(raw_input.values(), S_INPUT, Z_INPUT),
+        raw_input.shape().clone(),
     );
 
     let input_i8 = (quantised_input.cast::<i32>() - 128).cast::<QSmallType>();
 
     let output_i8 = perceptron.padded_evaluate(input_i8);
 
-    let output_u8 = (output_i8.cast::<i32>() + 128).cast::<u8>();
+    (output_i8.cast::<i32>() + 128).cast()
+}
+
+fn run_unpadded_two_layer_perceptron_mnist() {
+    let raw_input: QArray<f32> = QArray::read(&format!(PATH!(), "data/input_test_150"));
+    let expected_output: QArray<u8> = QArray::read(&format!(PATH!(), "data/output_test_150"));
+
+    let perceptron = build_two_layer_perceptron_mnist();
+    let output_u8 = unpadded_inference(raw_input, &perceptron);
+
+    println!("Output: {:?}", output_u8);
+    assert_eq!(output_u8, expected_output);
+}
+
+fn run_padded_two_layer_perceptron_mnist() {
+    let raw_input: QArray<f32> = QArray::read(&format!(PATH!(), "data/input_test_150"));
+    let expected_output: QArray<u8> = QArray::read(&format!(PATH!(), "data/output_test_150"));
+
+    let perceptron = build_two_layer_perceptron_mnist();
+    let output_u8 = padded_inference(raw_input, &perceptron);
 
     println!("Output: {:?}", output_u8);
     assert_eq!(output_u8, expected_output);
@@ -216,7 +230,7 @@ fn verify_inference_two_layer_perceptron_mnist() {
 }
 
 fn main() {
-    run_native_two_layer_perceptron_mnist();
+    run_unpadded_two_layer_perceptron_mnist();
     run_padded_two_layer_perceptron_mnist();
     prove_inference_two_layer_perceptron_mnist();
     verify_inference_two_layer_perceptron_mnist();

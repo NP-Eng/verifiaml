@@ -212,6 +212,16 @@ impl<T: InnerType> QArray<T> {
     pub fn read_multiple(paths: &[&str]) -> Vec<QArray<T>> {
         paths.iter().map(|path| QArray::read(path)).collect()
     }
+
+    pub fn write_list(qarrays: &[&QArray<T>], path: &str) {
+        let mut writer = std::fs::File::create(path).unwrap();
+        serde_json::to_writer(&mut writer, qarrays).unwrap();
+    }
+
+    pub fn read_list(path: &str) -> Vec<QArray<T>> {
+        let reader = std::fs::File::open(path).unwrap();
+        serde_json::from_reader(reader).unwrap()
+    }
 }
 
 /************************* Padding *************************/
