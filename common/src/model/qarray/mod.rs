@@ -25,7 +25,7 @@ impl InnerType for QLargeType {}
 impl InnerType for u8 {}
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct QArray<T: InnerType> {
+pub struct QArray<T> {
     flattened: Vec<T>,
     shape: Vec<usize>,
     cumulative_dimensions: Vec<usize>,
@@ -199,10 +199,14 @@ impl<T: InnerType> QArray<T> {
         serde_json::from_reader(reader).unwrap()
     }
 
-    fn write_multiple(qarrays: Vec<QArray<T>>, paths: [&str]) {
+    fn write_multiple(qarrays: &[&QArray<T>], paths: &[&str]) {
         for (qarray, path) in qarrays.iter().zip(paths.iter()) {
             qarray.write(path);
         }
+    }
+
+    fn read_multiple(paths: &[&str]) -> Vec<QArray<T>> {
+        paths.iter().map(|path| QArray::read(path)).collect()
     }
 }
 
