@@ -95,8 +95,6 @@ fn padded_inference(
 }
 
 fn run_unpadded_simple_perceptron_mnist() {
-    let perceptron = build_simple_perceptron_mnist::<Fr, PoseidonSponge<Fr>, Ligero<Fr>>();
-
     let raw_input: QArray<f32> = QArray::read(&format!(PATH!(), "data/input_test_150.json"));
     let expected_output: QArray<u8> = QArray::read(&format!(PATH!(), "data/output_test_150.json"));
 
@@ -108,8 +106,6 @@ fn run_unpadded_simple_perceptron_mnist() {
 }
 
 fn run_padded_simple_perceptron_mnist() {
-    let perceptron = build_simple_perceptron_mnist::<Fr, PoseidonSponge<Fr>, Ligero<Fr>>();
-
     let raw_input: QArray<f32> = QArray::read(&format!(PATH!(), "data/input_test_150.json"));
     let expected_output: QArray<u8> = QArray::read(&format!(PATH!(), "data/output_test_150.json"));
 
@@ -118,6 +114,40 @@ fn run_padded_simple_perceptron_mnist() {
 
     println!("Output: {:?}", output_u8);
     assert_eq!(output_u8, expected_output);
+}
+
+fn multi_run_unpadded_two_layer_perceptron_mnist() {
+    let perceptron = build_simple_perceptron_mnist();
+
+    // Mnist test samples with index
+    // 6393, 1894, 5978, 6120, 817, 3843, 7626, 9272, 498, 4622
+    let raw_inputs: Vec<QArray<f32>> =
+        QArray::read_list(&format!(PATH!(), "data/10_test_inputs.json"));
+    let expected_outputs: Vec<QArray<u8>> =
+        QArray::read_list(&format!(PATH!(), "data/10_test_outputs.json"));
+
+    for (raw_input, expected_output) in raw_inputs.into_iter().zip(expected_outputs.into_iter()) {
+        assert_eq!(unpadded_inference(raw_input, &perceptron), expected_output);
+    }
+
+    println!("Unpadded compatibility test successful");
+}
+
+fn multi_run_padded_two_layer_perceptron_mnist() {
+    let perceptron = build_simple_perceptron_mnist();
+
+    // Mnist test samples with index
+    // 6393, 1894, 5978, 6120, 817, 3843, 7626, 9272, 498, 4622
+    let raw_inputs: Vec<QArray<f32>> =
+        QArray::read_list(&format!(PATH!(), "data/10_test_inputs.json"));
+    let expected_outputs: Vec<QArray<u8>> =
+        QArray::read_list(&format!(PATH!(), "data/10_test_outputs.json"));
+
+    for (raw_input, expected_output) in raw_inputs.into_iter().zip(expected_outputs.into_iter()) {
+        assert_eq!(padded_inference(raw_input, &perceptron), expected_output);
+    }
+
+    println!("Padded compatibility test successful");
 }
 
 fn prove_inference_simple_perceptron_mnist() {
@@ -219,6 +249,8 @@ fn verify_inference_simple_perceptron_mnist() {
 fn main() {
     run_unpadded_simple_perceptron_mnist();
     run_padded_simple_perceptron_mnist();
+    multi_run_unpadded_two_layer_perceptron_mnist();
+    multi_run_padded_two_layer_perceptron_mnist();
     prove_inference_simple_perceptron_mnist();
     verify_inference_simple_perceptron_mnist();
 }
