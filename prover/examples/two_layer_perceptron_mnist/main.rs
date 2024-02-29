@@ -21,6 +21,8 @@ const INPUT_DIMS: &[usize] = &[28, 28];
 const INTER_DIM: usize = 28;
 const OUTPUT_DIM: usize = 10;
 
+// This is the cleaner way to format a fixed string with various data due to
+// the time at which Rust expands macros
 macro_rules! PATH {
     () => {
         "prover/examples/two_layer_perceptron_mnist/{}"
@@ -204,7 +206,7 @@ fn prove_inference_two_layer_perceptron_mnist() {
         _ => panic!("Expected QTypeArray::S"),
     };
 
-    let output_u8 = (output_i8.cast::<i32>() + 128).cast::<u8>();
+    let output_u8: QArray<u8> = (output_i8.cast::<i32>() + 128).cast();
 
     println!("Padded output: {:?}", output_u8.values());
     assert_eq!(
