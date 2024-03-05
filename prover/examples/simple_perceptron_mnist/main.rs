@@ -116,7 +116,7 @@ fn run_padded_simple_perceptron_mnist() {
     assert_eq!(output_u8, expected_output);
 }
 
-fn multi_run_unpadded_two_layer_perceptron_mnist() {
+fn multi_run_unpadded_simple_perceptron_mnist() {
     let perceptron = build_simple_perceptron_mnist();
 
     // Mnist test samples with index
@@ -133,7 +133,7 @@ fn multi_run_unpadded_two_layer_perceptron_mnist() {
     println!("Unpadded compatibility test successful");
 }
 
-fn multi_run_padded_two_layer_perceptron_mnist() {
+fn multi_run_padded_simple_perceptron_mnist() {
     let perceptron = build_simple_perceptron_mnist();
 
     // Mnist test samples with index
@@ -249,8 +249,8 @@ fn verify_inference_simple_perceptron_mnist() {
 fn main() {
     run_unpadded_simple_perceptron_mnist();
     run_padded_simple_perceptron_mnist();
-    multi_run_unpadded_two_layer_perceptron_mnist();
-    multi_run_padded_two_layer_perceptron_mnist();
+    multi_run_unpadded_simple_perceptron_mnist();
+    multi_run_padded_simple_perceptron_mnist();
     prove_inference_simple_perceptron_mnist();
     verify_inference_simple_perceptron_mnist();
 }
