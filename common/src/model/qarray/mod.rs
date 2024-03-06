@@ -102,6 +102,20 @@ impl<T: InnerType> QArray<T> {
             "New shape must have the same number of elements as the original one"
         );
 
+        // Recomputing cumulative dimensions
+        let mut cumulative_dimensions = Vec::with_capacity(new_shape.len());
+
+        let mut acc = 1;
+
+        for dim in new_shape.iter().rev() {
+            cumulative_dimensions.push(acc);
+            acc *= dim;
+        }
+
+        cumulative_dimensions.reverse();
+        self.cumulative_dimensions = cumulative_dimensions;
+
+        // Setting the new shape itself
         self.shape = new_shape;
     }
 
