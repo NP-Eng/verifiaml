@@ -40,12 +40,7 @@ where
     let w_array: QArray<i8> = QArray::read(&format!(PATH!(), "parameters/weights.json"));
     let b_array: QArray<i32> = QArray::read(&format!(PATH!(), "parameters/bias.json"));
 
-    let bmm: BMMNode<F, S, PCS> = BMMNode::new(
-        w_array.move_values(),
-        b_array.move_values(),
-        (flat_dim, OUTPUT_DIM),
-        Z_I,
-    );
+    let bmm: BMMNode<F, S, PCS> = BMMNode::new(w_array, b_array, (flat_dim, OUTPUT_DIM), Z_I);
 
     let req_bmm: RequantiseBMMNode<F, S, PCS> =
         RequantiseBMMNode::new(OUTPUT_DIM, S_I, Z_I, S_W, Z_W, S_O, Z_O);

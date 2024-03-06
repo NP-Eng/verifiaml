@@ -19,13 +19,13 @@ use super::{NodeOpsCommon, NodeOpsNative};
 /// Start with 2D matrices, and Mat-by-vector multiplication only
 pub struct BMMNode<F, S, PCS> {
     /// The row-major flattened unpadded vector of weights
-    weights: Vec<QSmallType>,
+    weights: QArray<QSmallType>,
     /// The padded weight vector
-    pub padded_weights: Vec<QSmallType>,
+    pub padded_weights: QArray<QSmallType>,
     /// The unpadded vector of biases
-    bias: Vec<QLargeType>,
+    bias: QArray<QLargeType>,
     /// The padded bias vector
-    pub padded_bias: Vec<QLargeType>,
+    pub padded_bias: QArray<QLargeType>,
     /// Unpadded imensions (rows, columns)
     dims: (usize, usize),
     /// The logarithm of the padded dimensions (rows, columns)
@@ -145,7 +145,7 @@ where
         // is that input-by-weight products can be computed in i8. To be safe, let us use the large type here
         let shifted_input = input - self.input_zero_point as QLargeType;
 
-        let mut accumulators = self.bias.clone();
+        let mut accumulators = self.bias.values().clone();
 
         // TODO this can be made more elegant (efficient?) using addition of QArrays after defining suitable operators
 
@@ -186,8 +186,8 @@ where
     PCS: PolynomialCommitment<F, Poly<F>, S>,
 {
     pub fn new(
-        weights: Vec<QSmallType>,
-        bias: Vec<QLargeType>,
+        weights: QArray<QSmallType>,
+        bias: QArray<QLargeType>,
         dims: (usize, usize),
         input_zero_point: QSmallType,
     ) -> Self {
@@ -208,19 +208,15 @@ where
             log2(dims.1.next_power_of_two()) as usize,
         );
 
-        // Padding the weights
-        let weight_array = QArray::new(weights.clone(), vec![dims.0, dims.1]);
+        // Padding the weights and bias
+        let padded_weights = weights.clone().compact_resize(
+            vec![dims.0.next_power_of_two(), dims.1.next_power_of_two()],
+            0,
+        );
 
-        let padded_weights = weight_array
-            .compact_resize(
-                vec![dims.0.next_power_of_two(), dims.1.next_power_of_two()],
-                0,
-            )
-            .move_values();
-
-        // Padding the bias
-        let mut padded_bias = bias.clone();
-        padded_bias.resize(dims.1.next_power_of_two(), 0);
+        let padded_bias = bias
+            .clone()
+            .compact_resize(vec![dims.1.next_power_of_two()], 0);
 
         Self {
             weights,

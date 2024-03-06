@@ -44,24 +44,15 @@ where
     let w2_array: QArray<i8> = QArray::read(&format!(PATH!(), "parameters/weights_2.json"));
     let b2_array: QArray<i32> = QArray::read(&format!(PATH!(), "parameters/bias_2.json"));
 
-    let bmm_1: BMMNode<F, S, PCS> = BMMNode::new(
-        w1_array.move_values(),
-        b1_array.move_values(),
-        (flat_dim, INTER_DIM),
-        Z_1_I,
-    );
+    let bmm_1: BMMNode<F, S, PCS> = BMMNode::new(w1_array, b1_array, (flat_dim, INTER_DIM), Z_1_I);
 
     let req_bmm_1: RequantiseBMMNode<F, S, PCS> =
         RequantiseBMMNode::new(INTER_DIM, S_1_I, Z_1_I, S_1_W, Z_1_W, S_1_O, Z_1_O);
 
     let relu: ReLUNode<F, S, PCS> = ReLUNode::new(28, Z_1_O);
 
-    let bmm_2: BMMNode<F, S, PCS> = BMMNode::new(
-        w2_array.move_values(),
-        b2_array.move_values(),
-        (INTER_DIM, OUTPUT_DIM),
-        Z_2_I,
-    );
+    let bmm_2: BMMNode<F, S, PCS> =
+        BMMNode::new(w2_array, b2_array, (INTER_DIM, OUTPUT_DIM), Z_2_I);
 
     let req_bmm_2: RequantiseBMMNode<F, S, PCS> =
         RequantiseBMMNode::new(OUTPUT_DIM, S_2_I, Z_2_I, S_2_W, Z_2_W, S_2_O, Z_2_O);
