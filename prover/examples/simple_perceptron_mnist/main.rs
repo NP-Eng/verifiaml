@@ -96,8 +96,9 @@ fn run_unpadded_simple_perceptron_mnist() {
     let perceptron = build_simple_perceptron_mnist();
     let output_u8 = unpadded_inference(raw_input, &perceptron);
 
-    println!("Output: {:?}", output_u8);
     assert_eq!(output_u8, expected_output);
+
+    println!("Single unpadded compatibility test successful");
 }
 
 fn run_padded_simple_perceptron_mnist() {
@@ -107,8 +108,9 @@ fn run_padded_simple_perceptron_mnist() {
     let perceptron = build_simple_perceptron_mnist();
     let output_u8 = padded_inference(raw_input, &perceptron);
 
-    println!("Output: {:?}", output_u8);
     assert_eq!(output_u8, expected_output);
+
+    println!("Single padded compatibility test successful");
 }
 
 fn multi_run_unpadded_simple_perceptron_mnist() {
@@ -125,7 +127,7 @@ fn multi_run_unpadded_simple_perceptron_mnist() {
         assert_eq!(unpadded_inference(raw_input, &perceptron), expected_output);
     }
 
-    println!("Unpadded compatibility test successful");
+    println!("Multiple unpadded compatibility test successful");
 }
 
 fn multi_run_padded_simple_perceptron_mnist() {
@@ -142,7 +144,7 @@ fn multi_run_padded_simple_perceptron_mnist() {
         assert_eq!(padded_inference(raw_input, &perceptron), expected_output);
     }
 
-    println!("Padded compatibility test successful");
+    println!("Multiple padded compatibility test successful");
 }
 
 fn prove_inference_simple_perceptron_mnist() {
@@ -184,11 +186,12 @@ fn prove_inference_simple_perceptron_mnist() {
 
     let output_u8: QArray<u8> = (output_i8.cast::<i32>() + 128).cast();
 
-    println!("Padded output: {:?}", output_u8.values());
     assert_eq!(
         output_u8.compact_resize(vec![OUTPUT_DIM], 0),
         expected_output
     );
+
+    println!("Inference proof test successful");
 }
 
 fn verify_inference_simple_perceptron_mnist() {
@@ -234,11 +237,12 @@ fn verify_inference_simple_perceptron_mnist() {
 
     let output_u8: QArray<u8> = (output_i8.cast::<i32>() + 128).cast();
 
-    println!("Padded output: {:?}", output_u8.values());
     assert_eq!(
         output_u8.compact_resize(vec![OUTPUT_DIM], 0),
         expected_output
     );
+
+    println!("Inference verification test successful");
 }
 
 fn main() {
