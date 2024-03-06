@@ -188,14 +188,9 @@ where
     pub fn new(
         weights: QArray<QSmallType>,
         bias: QArray<QLargeType>,
-        dims: (usize, usize),
         input_zero_point: QSmallType,
     ) -> Self {
-        assert_eq!(
-            weights.len(),
-            dims.0 * dims.1,
-            "Weights vector length does not match the product of the dimensions"
-        );
+        let dims = (weights.shape()[0], weights.shape()[1]);
 
         assert_eq!(
             bias.len(),
