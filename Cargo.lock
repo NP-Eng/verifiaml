@@ -54,7 +54,7 @@ dependencies = [
 [[package]]
 name = "ark-crypto-primitives"
 version = "0.4.0"
-source = "git+https://github.com/HungryCatsStudio/crypto-primitives?branch=absorb#fdc92e2bad35e06187a14ff46425382aa6d5b446"
+source = "git+https://github.com/arkworks-rs/crypto-primitives#b93e00568e29d98c738b31680aeaec6ed7c505f4"
 dependencies = [
  "ark-crypto-primitives-macros",
  "ark-ec",
@@ -72,7 +72,7 @@ dependencies = [
 [[package]]
 name = "ark-crypto-primitives-macros"
 version = "0.4.0"
-source = "git+https://github.com/HungryCatsStudio/crypto-primitives?branch=absorb#fdc92e2bad35e06187a14ff46425382aa6d5b446"
+source = "git+https://github.com/arkworks-rs/crypto-primitives#b93e00568e29d98c738b31680aeaec6ed7c505f4"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -504,7 +504,6 @@ dependencies = [
 name = "hcs-common"
 version = "0.1.0"
 dependencies = [
- "ark-bn254",
  "ark-crypto-primitives",
  "ark-ec",
  "ark-ff",
@@ -527,37 +526,30 @@ dependencies = [
  "ark-crypto-primitives",
  "ark-ec",
  "ark-ff",
- "ark-pcs-bench-templates",
  "ark-poly",
  "ark-poly-commit",
  "ark-serialize",
  "ark-std",
  "ark-sumcheck",
- "blake2",
  "hcs-common",
  "hcs-verifier",
  "rayon",
- "serde_json",
 ]
 
 [[package]]
 name = "hcs-verifier"
 version = "0.1.0"
 dependencies = [
- "ark-bn254",
  "ark-crypto-primitives",
  "ark-ec",
  "ark-ff",
- "ark-pcs-bench-templates",
  "ark-poly",
  "ark-poly-commit",
  "ark-serialize",
  "ark-std",
  "ark-sumcheck",
- "blake2",
  "hcs-common",
  "rayon",
- "serde_json",
 ]
 
 [[package]]

@@ -17,9 +17,6 @@ ark-pcs-bench-templates = { workspace = true, optional = true}
 blake2 = { workspace = true, optional = true }
 serde_json = { workspace = true, optional = true }
 
-[dev-dependencies]
-ark-bn254 = { workspace = true, features = [ "curve" ] }
-
 [features]
 default = [ "std", "parallel" ]
 std = [ "ark-ff/std", "ark-ec/std", "ark-poly/std", "ark-serialize/std", "ark-crypto-primitives/std", "ark-poly-commit/std", "ark-sumcheck/std" ]
