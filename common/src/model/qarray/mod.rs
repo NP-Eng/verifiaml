@@ -7,31 +7,38 @@ use ark_std::fmt::Debug;
 use ark_std::ops::{Add, Div, Mul, Sub};
 use ark_std::vec;
 use ark_std::vec::Vec;
+use serde::de::DeserializeOwned;
+use serde::{Deserialize, Serialize};
+use serde_json;
 
 use crate::quantization::{QLargeType, QSmallType};
 
 const QARRAY_NESTED_TAB: &str = "    ";
 
-#[derive(Clone)]
-pub enum QTypeArray {
-    S(QArray<QSmallType>),
-    L(QArray<QLargeType>),
-}
-
 #[cfg(test)]
 mod tests;
 
-pub trait InnerType: Copy + Debug {}
+pub trait InnerType: Copy + Debug + Serialize + DeserializeOwned {}
 
 impl InnerType for QSmallType {}
 impl InnerType for QLargeType {}
 impl InnerType for u8 {}
+impl InnerType for f32 {}
 
-#[derive(Debug, Clone)]
-pub struct QArray<T: InnerType> {
+#[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq)]
+pub struct QArray<T> {
+    #[serde(rename = "f")]
     flattened: Vec<T>,
+    #[serde(rename = "s")]
     shape: Vec<usize>,
+    #[serde(rename = "c")]
     cumulative_dimensions: Vec<usize>,
+}
+
+#[derive(Clone)]
+pub enum QTypeArray {
+    S(QArray<QSmallType>),
+    L(QArray<QLargeType>),
 }
 
 // impl indexing into the QArray
@@ -95,6 +102,20 @@ impl<T: InnerType> QArray<T> {
             "New shape must have the same number of elements as the original one"
         );
 
+        // Recomputing cumulative dimensions
+        let mut cumulative_dimensions = Vec::with_capacity(new_shape.len());
+
+        let mut acc = 1;
+
+        for dim in new_shape.iter().rev() {
+            cumulative_dimensions.push(acc);
+            acc *= dim;
+        }
+
+        cumulative_dimensions.reverse();
+        self.cumulative_dimensions = cumulative_dimensions;
+
+        // Setting the new shape itself
         self.shape = new_shape;
     }
 
@@ -184,6 +205,36 @@ impl<T: InnerType> QArray<T> {
         );
 
         QArray::new(flattened, new_shape)
+    }
+
+    pub fn write(&self, path: &str) {
+        let mut writer = std::fs::File::create(path).unwrap();
+        serde_json::to_writer(&mut writer, self).unwrap();
+    }
+
+    pub fn read(path: &str) -> QArray<T> {
+        let reader = std::fs::File::open(path).unwrap();
+        serde_json::from_reader(reader).unwrap()
+    }
+
+    pub fn write_multiple(qarrays: &[&QArray<T>], paths: &[&str]) {
+        for (qarray, path) in qarrays.iter().zip(paths.iter()) {
+            qarray.write(path);
+        }
+    }
+
+    pub fn read_multiple(paths: &[&str]) -> Vec<QArray<T>> {
+        paths.iter().map(|path| QArray::read(path)).collect()
+    }
+
+    pub fn write_list(qarrays: &[&QArray<T>], path: &str) {
+        let mut writer = std::fs::File::create(path).unwrap();
+        serde_json::to_writer(&mut writer, qarrays).unwrap();
+    }
+
+    pub fn read_list(path: &str) -> Vec<QArray<T>> {
+        let reader = std::fs::File::open(path).unwrap();
+        serde_json::from_reader(reader).unwrap()
     }
 }
 
