@@ -1,21 +1,19 @@
 use hcs_common::{
-    quantise_f32_u8_nne, test_sponge, BMMNode, Ligero, Model, Node, Poly, QArray, QSmallType,
-    QTypeArray, ReLUNode, RequantiseBMMNode, ReshapeNode,
+    test_sponge, BMMNode, Ligero, Model, Node, Poly, QArray, ReLUNode, RequantiseBMMNode,
+    ReshapeNode,
 };
-use hcs_prover::ProveModel;
-
-use hcs_verifier::VerifyModel;
 
 use ark_bn254::Fr;
 use ark_crypto_primitives::sponge::{poseidon::PoseidonSponge, Absorb, CryptographicSponge};
 use ark_ff::PrimeField;
 use ark_poly_commit::PolynomialCommitment;
 
-use ark_std::test_rng;
-
 mod parameters;
-
 use parameters::*;
+
+#[path = "../common/lib.rs"]
+mod common;
+use common::*;
 
 const INPUT_DIMS: &[usize] = &[28, 28];
 const INTER_DIM: usize = 28;
@@ -69,201 +67,71 @@ where
     )
 }
 
-// Auxiliary function
-fn unpadded_inference(
-    raw_input: QArray<f32>,
-    perceptron: &Model<Fr, PoseidonSponge<Fr>, Ligero<Fr>>,
-) -> QArray<u8> {
-    let quantised_input: QArray<u8> = QArray::new(
-        quantise_f32_u8_nne(raw_input.values(), S_INPUT, Z_INPUT),
-        raw_input.shape().clone(),
-    );
-
-    let input_i8 = (quantised_input.cast::<i32>() - 128).cast::<QSmallType>();
-
-    let output_i8 = perceptron.evaluate(input_i8);
-
-    (output_i8.cast::<i32>() + 128).cast()
-}
-
-// Auxiliary function
-fn padded_inference(
-    raw_input: QArray<f32>,
-    perceptron: &Model<Fr, PoseidonSponge<Fr>, Ligero<Fr>>,
-) -> QArray<u8> {
-    let quantised_input: QArray<u8> = QArray::new(
-        quantise_f32_u8_nne(raw_input.values(), S_INPUT, Z_INPUT),
-        raw_input.shape().clone(),
-    );
-
-    let input_i8 = (quantised_input.cast::<i32>() - 128).cast::<QSmallType>();
-
-    let output_i8 = perceptron.padded_evaluate(input_i8);
-
-    (output_i8.cast::<i32>() + 128).cast()
-}
-
-fn run_unpadded_two_layer_perceptron_mnist() {
-    let raw_input: QArray<f32> = QArray::read(&format!(PATH!(), "data/input_test_150.json"));
-    let expected_output: QArray<u8> = QArray::read(&format!(PATH!(), "data/output_test_150.json"));
-
-    let perceptron = build_two_layer_perceptron_mnist();
-    let output_u8 = unpadded_inference(raw_input, &perceptron);
-
-    assert_eq!(output_u8, expected_output);
-
-    println!("Single unpadded compatibility test successful");
-}
-
-fn run_padded_two_layer_perceptron_mnist() {
-    let raw_input: QArray<f32> = QArray::read(&format!(PATH!(), "data/input_test_150.json"));
-    let expected_output: QArray<u8> = QArray::read(&format!(PATH!(), "data/output_test_150.json"));
-
-    let perceptron = build_two_layer_perceptron_mnist();
-    let output_u8 = padded_inference(raw_input, &perceptron);
-
-    assert_eq!(output_u8, expected_output);
-
-    println!("Single padded compatibility test successful");
-}
-
-fn multi_run_unpadded_two_layer_perceptron_mnist() {
-    let perceptron = build_two_layer_perceptron_mnist();
-
-    // Mnist test samples with index
-    // 6393, 1894, 5978, 6120, 817, 3843, 7626, 9272, 498, 4622
-    let raw_inputs: Vec<QArray<f32>> =
-        QArray::read_list(&format!(PATH!(), "data/10_test_inputs.json"));
-    let expected_outputs: Vec<QArray<u8>> =
-        QArray::read_list(&format!(PATH!(), "data/10_test_outputs.json"));
-
-    for (raw_input, expected_output) in raw_inputs.into_iter().zip(expected_outputs.into_iter()) {
-        assert_eq!(unpadded_inference(raw_input, &perceptron), expected_output);
-    }
-
-    println!("Multiple unpadded compatibility test successful");
-}
-
-fn multi_run_padded_two_layer_perceptron_mnist() {
-    let perceptron = build_two_layer_perceptron_mnist();
-
-    // Mnist test samples with index
-    // 6393, 1894, 5978, 6120, 817, 3843, 7626, 9272, 498, 4622
-    let raw_inputs: Vec<QArray<f32>> =
-        QArray::read_list(&format!(PATH!(), "data/10_test_inputs.json"));
-    let expected_outputs: Vec<QArray<u8>> =
-        QArray::read_list(&format!(PATH!(), "data/10_test_outputs.json"));
-
-    for (raw_input, expected_output) in raw_inputs.into_iter().zip(expected_outputs.into_iter()) {
-        assert_eq!(padded_inference(raw_input, &perceptron), expected_output);
-    }
-
-    println!("Multiple padded compatibility test successful");
-}
-
-fn prove_inference_two_layer_perceptron_mnist() {
-    let input: QArray<f32> = QArray::read(&format!(PATH!(), "data/input_test_150.json"));
-    let expected_output: QArray<u8> = QArray::read(&format!(PATH!(), "data/output_test_150.json"));
-
-    let perceptron = build_two_layer_perceptron_mnist::<Fr, PoseidonSponge<Fr>, Ligero<Fr>>();
-
-    let quantised_input: QArray<u8> = QArray::new(
-        quantise_f32_u8_nne(input.values(), S_INPUT, Z_INPUT),
-        input.shape().clone(),
-    );
-
-    let input_i8 = (quantised_input.cast::<i32>() - 128).cast::<QSmallType>();
-
-    let mut rng = test_rng();
-    let (ck, _) = perceptron.setup_keys(&mut rng).unwrap();
-
-    let mut sponge: PoseidonSponge<Fr> = test_sponge();
-
-    let (node_coms, node_com_states): (Vec<_>, Vec<_>) =
-        perceptron.commit(&ck, None).into_iter().unzip();
-
-    let inference_proof = perceptron.prove_inference(
-        &ck,
-        Some(&mut rng),
-        &mut sponge,
-        &node_coms,
-        &node_com_states,
-        input_i8,
-    );
-
-    let output_qtypearray = inference_proof.inputs_outputs[1].clone();
-
-    let output_i8 = match output_qtypearray {
-        QTypeArray::S(o) => o,
-        _ => panic!("Expected QTypeArray::S"),
-    };
-
-    let output_u8: QArray<u8> = (output_i8.cast::<i32>() + 128).cast();
-
-    assert_eq!(
-        output_u8.compact_resize(vec![OUTPUT_DIM], 0),
-        expected_output
-    );
-
-    println!("Inference proof test successful");
-}
-
-fn verify_inference_two_layer_perceptron_mnist() {
-    let input: QArray<f32> = QArray::read(&format!(PATH!(), "data/input_test_150.json"));
-    let expected_output: QArray<u8> = QArray::read(&format!(PATH!(), "data/output_test_150.json"));
-
-    let perceptron = build_two_layer_perceptron_mnist::<Fr, PoseidonSponge<Fr>, Ligero<Fr>>();
-
-    let quantised_input: QArray<u8> = QArray::new(
-        quantise_f32_u8_nne(input.values(), S_INPUT, Z_INPUT),
-        input.shape().clone(),
-    );
-
-    let input_i8 = (quantised_input.cast::<i32>() - 128).cast::<QSmallType>();
-
-    let mut rng = test_rng();
-    let (ck, vk) = perceptron.setup_keys(&mut rng).unwrap();
-
-    let mut sponge: PoseidonSponge<Fr> = test_sponge();
-
-    let (node_coms, node_com_states): (Vec<_>, Vec<_>) =
-        perceptron.commit(&ck, None).into_iter().unzip();
-
-    let inference_proof = perceptron.prove_inference(
-        &ck,
-        Some(&mut rng),
-        &mut sponge,
-        &node_coms,
-        &node_com_states,
-        input_i8,
-    );
-
-    let output_qtypearray = inference_proof.inputs_outputs[1].clone();
-
-    let mut sponge: PoseidonSponge<Fr> = test_sponge();
-
-    assert!(perceptron.verify_inference(&vk, &mut sponge, &node_coms, inference_proof));
-
-    let output_i8 = match output_qtypearray {
-        QTypeArray::S(o) => o,
-        _ => panic!("Expected QTypeArray::S"),
-    };
-
-    let output_u8 = (output_i8.cast::<i32>() + 128).cast::<u8>();
-
-    assert_eq!(
-        output_u8.compact_resize(vec![OUTPUT_DIM], 0),
-        expected_output
-    );
-
-    println!("Inference verification test successful");
-}
-
 fn main() {
-    run_unpadded_two_layer_perceptron_mnist();
-    run_padded_two_layer_perceptron_mnist();
-    multi_run_unpadded_two_layer_perceptron_mnist();
-    multi_run_padded_two_layer_perceptron_mnist();
-    prove_inference_two_layer_perceptron_mnist();
-    verify_inference_two_layer_perceptron_mnist();
+    let two_layer_perceptron: Model<Fr, PoseidonSponge<Fr>, Ligero<Fr>> =
+        build_two_layer_perceptron_mnist();
+
+    // Right now this can't be QInfo because the latter is always a pair
+    // (f32, i8), which indeed matches in-model quantisation, but not
+    // model-input quantisation (which is done outside the model). In the
+    // future we can consider whether to make QInfo generic on the types and
+    // make this into a QInfo
+    let qinfo = (S_INPUT, Z_INPUT);
+
+    println!("\nEXAMPLE: two-layer perceptron");
+    println!("-----------------------------");
+
+    run_unpadded(
+        &format!(PATH!(), "data/input_test_150.json"),
+        &format!(PATH!(), "data/output_test_150.json"),
+        &two_layer_perceptron,
+        qinfo,
+    );
+
+    run_padded(
+        &format!(PATH!(), "data/input_test_150.json"),
+        &format!(PATH!(), "data/output_test_150.json"),
+        &two_layer_perceptron,
+        qinfo,
+    );
+
+    // MNIST test samples with index
+    // 6393, 1894, 5978, 6120, 817, 3843, 7626, 9272, 498, 4622
+    multi_run_unpadded(
+        &format!(PATH!(), "data/10_test_inputs.json"),
+        &format!(PATH!(), "data/10_test_outputs.json"),
+        &two_layer_perceptron,
+        qinfo,
+    );
+
+    multi_run_padded(
+        &format!(PATH!(), "data/10_test_inputs.json"),
+        &format!(PATH!(), "data/10_test_outputs.json"),
+        &two_layer_perceptron,
+        qinfo,
+    );
+
+    // We need to construct the sponge outside the common/lib functions to keep
+    // the latter generic on the sponge type
+    let sponge: PoseidonSponge<Fr> = test_sponge();
+
+    let output_shape = vec![OUTPUT_DIM];
+
+    prove_inference(
+        &format!(PATH!(), "data/input_test_150.json"),
+        &format!(PATH!(), "data/output_test_150.json"),
+        &two_layer_perceptron,
+        qinfo,
+        sponge.clone(),
+        output_shape.clone(),
+    );
+
+    verify_inference(
+        &format!(PATH!(), "data/input_test_150.json"),
+        &format!(PATH!(), "data/output_test_150.json"),
+        &two_layer_perceptron,
+        qinfo,
+        sponge,
+        output_shape,
+    );
 }
