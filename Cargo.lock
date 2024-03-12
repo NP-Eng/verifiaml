@@ -515,6 +515,7 @@ dependencies = [
  "ark-sumcheck",
  "blake2",
  "rayon",
+ "serde",
  "serde_json",
 ]
 

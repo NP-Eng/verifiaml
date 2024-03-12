@@ -53,7 +53,7 @@ where
         // is that input-by-weight products can be computed in i8. To be safe, let us use the large type here
         let shifted_input = input - self.input_zero_point as QLargeType;
 
-        let mut accumulators = self.padded_bias.clone();
+        let mut accumulators = self.padded_bias.values().clone();
 
         // TODO this can be made more elegant (efficient?) using addition of QArrays after defining suitable operators
 
@@ -115,13 +115,23 @@ where
         );
 
         // TODO consider whether this can be done once and stored
-        let weights_f = self.padded_weights.iter().map(|w| F::from(*w)).collect();
+        let weights_f = self
+            .padded_weights
+            .values()
+            .iter()
+            .map(|w| F::from(*w))
+            .collect();
 
         // Dual of the MLE of the row-major flattening of the weight matrix
         let weight_mle = Poly::from_evaluations_vec(self.com_num_vars(), weights_f);
 
         // TODO consider whether this can be done once and stored
-        let bias_f = self.padded_bias.iter().map(|w| F::from(*w)).collect();
+        let bias_f = self
+            .padded_bias
+            .values()
+            .iter()
+            .map(|w| F::from(*w))
+            .collect();
         // Dual of the MLE of the bias vector
         let bias_mle = Poly::from_evaluations_vec(self.padded_dims_log.1, bias_f);
 
@@ -228,7 +238,12 @@ where
         rng: Option<&mut dyn RngCore>,
     ) -> (NodeCommitment<F, S, PCS>, NodeCommitmentState<F, S, PCS>) {
         // TODO should we separate the associated commitment type into one with state and one without?
-        let padded_weights_f: Vec<F> = self.padded_weights.iter().map(|w| F::from(*w)).collect();
+        let padded_weights_f: Vec<F> = self
+            .padded_weights
+            .values()
+            .iter()
+            .map(|w| F::from(*w))
+            .collect();
 
         // TODO part of this code is duplicated in prove, another hint that this should probs
         // be stored
@@ -239,7 +254,12 @@ where
             None,
         );
 
-        let padded_bias_f: Vec<F> = self.padded_bias.iter().map(|b| F::from(*b)).collect();
+        let padded_bias_f: Vec<F> = self
+            .padded_bias
+            .values()
+            .iter()
+            .map(|b| F::from(*b))
+            .collect();
 
         let bias_poly = LabeledPolynomial::new(
             "bias_poly".to_string(),

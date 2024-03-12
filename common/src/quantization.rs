@@ -6,7 +6,7 @@ pub(crate) type QScaleComputationType = f64; // larger precision type to compute
 pub(crate) type QZeroPointType = QSmallType; // the quantisation zero-point has the same type as the output
 
 pub(crate) struct QInfo {
-    pub(super) scale: QScaleType,
+    pub(crate) scale: QScaleType,
     pub(crate) zero_point: QZeroPointType,
 }
 
