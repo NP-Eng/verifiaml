@@ -14,4 +14,4 @@ The saved JSON file can be deserialised over in Rust with `QArray::read(path: &s
 
 Cf. `exploring_tf_lite/training_two_layer_perceptron.ipynb` for example usage.
 
-This can be useful when bringing over to Rust some TF Lite model parameters or inputs
+This can be useful when bringing over to Rust some TF Lite model parameters or inputs.
