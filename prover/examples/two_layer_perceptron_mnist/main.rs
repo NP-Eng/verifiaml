@@ -1,28 +1,32 @@
 use hcs_common::{
-    quantise_f32_u8_nne, test_sponge, BMMNode, Ligero, Model, Node, Poly, QArray, QSmallType,
-    QTypeArray, ReLUNode, RequantiseBMMNode, ReshapeNode,
+    test_sponge, BMMNode, Ligero, Model, Node, Poly, QArray, ReLUNode, RequantiseBMMNode,
+    ReshapeNode,
 };
-use hcs_prover::ProveModel;
-
-use hcs_verifier::VerifyModel;
 
 use ark_bn254::Fr;
 use ark_crypto_primitives::sponge::{poseidon::PoseidonSponge, Absorb, CryptographicSponge};
 use ark_ff::PrimeField;
 use ark_poly_commit::PolynomialCommitment;
 
-mod input;
 mod parameters;
-
-use ark_std::test_rng;
-use input::*;
 use parameters::*;
+
+#[path = "../common/lib.rs"]
+mod common;
+use common::*;
 
 const INPUT_DIMS: &[usize] = &[28, 28];
 const INTER_DIM: usize = 28;
 const OUTPUT_DIM: usize = 10;
 
-// TODO this is incorrect now that we have switched to logs
+// This is the cleaner way to format a fixed string with various data due to
+// the time at which Rust expands macros
+macro_rules! PATH {
+    () => {
+        "prover/examples/two_layer_perceptron_mnist/{}"
+    };
+}
+
 fn build_two_layer_perceptron_mnist<F, S, PCS>() -> Model<F, S, PCS>
 where
     F: PrimeField + Absorb,
@@ -33,24 +37,19 @@ where
 
     let reshape: ReshapeNode<F, S, PCS> = ReshapeNode::new(INPUT_DIMS.to_vec(), vec![flat_dim]);
 
-    let bmm_1: BMMNode<F, S, PCS> = BMMNode::new(
-        WEIGHTS_1.to_vec(),
-        BIAS_1.to_vec(),
-        (flat_dim, INTER_DIM),
-        Z_1_I,
-    );
+    let w1_array: QArray<i8> = QArray::read(&format!(PATH!(), "parameters/weights_1.json"));
+    let b1_array: QArray<i32> = QArray::read(&format!(PATH!(), "parameters/bias_1.json"));
+    let w2_array: QArray<i8> = QArray::read(&format!(PATH!(), "parameters/weights_2.json"));
+    let b2_array: QArray<i32> = QArray::read(&format!(PATH!(), "parameters/bias_2.json"));
+
+    let bmm_1: BMMNode<F, S, PCS> = BMMNode::new(w1_array, b1_array, Z_1_I);
 
     let req_bmm_1: RequantiseBMMNode<F, S, PCS> =
         RequantiseBMMNode::new(INTER_DIM, S_1_I, Z_1_I, S_1_W, Z_1_W, S_1_O, Z_1_O);
 
     let relu: ReLUNode<F, S, PCS> = ReLUNode::new(28, Z_1_O);
 
-    let bmm_2: BMMNode<F, S, PCS> = BMMNode::new(
-        WEIGHTS_2.to_vec(),
-        BIAS_2.to_vec(),
-        (INTER_DIM, OUTPUT_DIM),
-        Z_2_I,
-    );
+    let bmm_2: BMMNode<F, S, PCS> = BMMNode::new(w2_array, b2_array, Z_2_I);
 
     let req_bmm_2: RequantiseBMMNode<F, S, PCS> =
         RequantiseBMMNode::new(OUTPUT_DIM, S_2_I, Z_2_I, S_2_W, Z_2_W, S_2_O, Z_2_O);
@@ -68,152 +67,71 @@ where
     )
 }
 
-fn run_native_two_layer_perceptron_mnist() {
-    /**** Change here ****/
-    let input = NORMALISED_INPUT_TEST_150;
-    let expected_output: Vec<u8> = vec![138, 106, 149, 160, 174, 152, 141, 146, 169, 207];
-    /**********************/
-
-    let perceptron = build_two_layer_perceptron_mnist::<Fr, PoseidonSponge<Fr>, Ligero<Fr>>();
-
-    let quantised_input: QArray<u8> = input
-        .iter()
-        .map(|r| quantise_f32_u8_nne(r, S_INPUT, Z_INPUT))
-        .collect::<Vec<Vec<u8>>>()
-        .into();
-
-    let input_i8 = (quantised_input.cast::<i32>() - 128).cast::<QSmallType>();
-
-    let output_i8 = perceptron.evaluate(input_i8);
-
-    let output_u8 = (output_i8.cast::<i32>() + 128).cast::<u8>();
-
-    println!("Output: {:?}", output_u8.values());
-    assert_eq!(output_u8.move_values(), expected_output);
-}
-
-fn run_padded_two_layer_perceptron_mnist() {
-    /**** Change here ****/
-    let input = NORMALISED_INPUT_TEST_150;
-    let expected_output: Vec<u8> = vec![138, 106, 149, 160, 174, 152, 141, 146, 169, 207];
-    /**********************/
-
-    let perceptron = build_two_layer_perceptron_mnist::<Fr, PoseidonSponge<Fr>, Ligero<Fr>>();
-
-    let quantised_input: QArray<u8> = input
-        .iter()
-        .map(|r| quantise_f32_u8_nne(r, S_INPUT, Z_INPUT))
-        .collect::<Vec<Vec<u8>>>()
-        .into();
-
-    let input_i8 = (quantised_input.cast::<i32>() - 128).cast::<QSmallType>();
-
-    let output_i8 = perceptron.padded_evaluate(input_i8);
-
-    let output_u8 = (output_i8.cast::<i32>() + 128).cast::<u8>();
-
-    println!("Output: {:?}", output_u8.values());
-    assert_eq!(output_u8.move_values(), expected_output);
-}
-
-fn prove_inference_two_layer_perceptron_mnist() {
-    /**** Change here ****/
-    let input = NORMALISED_INPUT_TEST_150;
-    let expected_output: Vec<u8> = vec![138, 106, 149, 160, 174, 152, 141, 146, 169, 207];
-    /**********************/
-
-    let perceptron = build_two_layer_perceptron_mnist::<Fr, PoseidonSponge<Fr>, Ligero<Fr>>();
-
-    let quantised_input: QArray<u8> = input
-        .iter()
-        .map(|r| quantise_f32_u8_nne(r, S_INPUT, Z_INPUT))
-        .collect::<Vec<Vec<u8>>>()
-        .into();
-
-    let input_i8 = (quantised_input.cast::<i32>() - 128).cast::<QSmallType>();
-
-    let mut rng = test_rng();
-    let (ck, _) = perceptron.setup_keys(&mut rng).unwrap();
-
-    let mut sponge: PoseidonSponge<Fr> = test_sponge();
-
-    let (node_coms, node_com_states): (Vec<_>, Vec<_>) =
-        perceptron.commit(&ck, None).into_iter().unzip();
-
-    let inference_proof = perceptron.prove_inference(
-        &ck,
-        Some(&mut rng),
-        &mut sponge,
-        &node_coms,
-        &node_com_states,
-        input_i8,
-    );
-
-    let output_qtypearray = inference_proof.inputs_outputs[1].clone();
-
-    let output_i8 = match output_qtypearray {
-        QTypeArray::S(o) => o,
-        _ => panic!("Expected QTypeArray::S"),
-    };
-
-    let output_u8 = (output_i8.cast::<i32>() + 128).cast::<u8>();
-
-    println!("Padded output: {:?}", output_u8.values());
-    assert_eq!(output_u8.move_values()[0..OUTPUT_DIM], expected_output);
-}
-
-fn verify_inference_two_layer_perceptron_mnist() {
-    /**** Change here ****/
-    let input = NORMALISED_INPUT_TEST_150;
-    let expected_output: Vec<u8> = vec![138, 106, 149, 160, 174, 152, 141, 146, 169, 207];
-    /**********************/
-    let perceptron = build_two_layer_perceptron_mnist::<Fr, PoseidonSponge<Fr>, Ligero<Fr>>();
-
-    let quantised_input: QArray<u8> = input
-        .iter()
-        .map(|r| quantise_f32_u8_nne(r, S_INPUT, Z_INPUT))
-        .collect::<Vec<Vec<u8>>>()
-        .into();
-
-    let input_i8 = (quantised_input.cast::<i32>() - 128).cast::<QSmallType>();
-
-    let mut rng = test_rng();
-    let (ck, vk) = perceptron.setup_keys(&mut rng).unwrap();
-
-    let mut sponge: PoseidonSponge<Fr> = test_sponge();
-
-    let (node_coms, node_com_states): (Vec<_>, Vec<_>) =
-        perceptron.commit(&ck, None).into_iter().unzip();
-
-    let inference_proof = perceptron.prove_inference(
-        &ck,
-        Some(&mut rng),
-        &mut sponge,
-        &node_coms,
-        &node_com_states,
-        input_i8,
-    );
-
-    let output_qtypearray = inference_proof.inputs_outputs[1].clone();
-
-    let mut sponge: PoseidonSponge<Fr> = test_sponge();
-
-    assert!(perceptron.verify_inference(&vk, &mut sponge, &node_coms, inference_proof));
-
-    let output_i8 = match output_qtypearray {
-        QTypeArray::S(o) => o,
-        _ => panic!("Expected QTypeArray::S"),
-    };
-
-    let output_u8 = (output_i8.cast::<i32>() + 128).cast::<u8>();
-
-    println!("Padded output: {:?}", output_u8.values());
-    assert_eq!(output_u8.move_values()[0..OUTPUT_DIM], expected_output);
-}
-
 fn main() {
-    run_native_two_layer_perceptron_mnist();
-    run_padded_two_layer_perceptron_mnist();
-    prove_inference_two_layer_perceptron_mnist();
-    verify_inference_two_layer_perceptron_mnist();
+    let two_layer_perceptron: Model<Fr, PoseidonSponge<Fr>, Ligero<Fr>> =
+        build_two_layer_perceptron_mnist();
+
+    // Right now this can't be QInfo because the latter is always a pair
+    // (f32, i8), which indeed matches in-model quantisation, but not
+    // model-input quantisation (which is done outside the model). In the
+    // future we can consider whether to make QInfo generic on the types and
+    // make this into a QInfo
+    let qinfo = (S_INPUT, Z_INPUT);
+
+    println!("\nEXAMPLE: two-layer perceptron");
+    println!("-----------------------------");
+
+    run_unpadded(
+        &format!(PATH!(), "data/input_test_150.json"),
+        &format!(PATH!(), "data/output_test_150.json"),
+        &two_layer_perceptron,
+        qinfo,
+    );
+
+    run_padded(
+        &format!(PATH!(), "data/input_test_150.json"),
+        &format!(PATH!(), "data/output_test_150.json"),
+        &two_layer_perceptron,
+        qinfo,
+    );
+
+    // MNIST test samples with index
+    // 6393, 1894, 5978, 6120, 817, 3843, 7626, 9272, 498, 4622
+    multi_run_unpadded(
+        &format!(PATH!(), "data/10_test_inputs.json"),
+        &format!(PATH!(), "data/10_test_outputs.json"),
+        &two_layer_perceptron,
+        qinfo,
+    );
+
+    multi_run_padded(
+        &format!(PATH!(), "data/10_test_inputs.json"),
+        &format!(PATH!(), "data/10_test_outputs.json"),
+        &two_layer_perceptron,
+        qinfo,
+    );
+
+    // We need to construct the sponge outside the common/lib functions to keep
+    // the latter generic on the sponge type
+    let sponge: PoseidonSponge<Fr> = test_sponge();
+
+    let output_shape = vec![OUTPUT_DIM];
+
+    prove_inference(
+        &format!(PATH!(), "data/input_test_150.json"),
+        &format!(PATH!(), "data/output_test_150.json"),
+        &two_layer_perceptron,
+        qinfo,
+        sponge.clone(),
+        output_shape.clone(),
+    );
+
+    verify_inference(
+        &format!(PATH!(), "data/input_test_150.json"),
+        &format!(PATH!(), "data/output_test_150.json"),
+        &two_layer_perceptron,
+        qinfo,
+        sponge,
+        output_shape,
+    );
 }
