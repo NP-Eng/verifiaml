@@ -14,6 +14,7 @@ use ark_poly_commit::PolynomialCommitment;
 mod input;
 mod parameters;
 
+use pyo3::prelude::*;
 use ark_std::test_rng;
 use input::*;
 use parameters::*;
@@ -22,6 +23,18 @@ const INPUT_DIMS: &[usize] = &[28, 28];
 const INTER_DIM: usize = 28;
 const OUTPUT_DIM: usize = 10;
 
+fn generate_test_params() -> (Vec<Vec<Fr>>, Vec<Fr>, Vec<Fr>, Vec<Fr>, Vec<Fr>, Vec<Fr>) {
+    Python::with_gil(
+        |py| -> PyResult<(Vec<Vec<Fr>>, Vec<Fr>, Vec<Fr>, Vec<Fr>, Vec<Fr>, Vec<Fr>)> {
+            Pymodule::from_code(
+                py,
+                include_str!("../two_layer_perceptron_mnist.py"),
+                "two_layer_perceptron_mnist.py",
+                "two_layer_perceptron_mnist",
+            )?;
+        }
+    )
+}
 // TODO this is incorrect now that we have switched to logs
 fn build_two_layer_perceptron_mnist<F, S, PCS>() -> Model<F, S, PCS>
 where
