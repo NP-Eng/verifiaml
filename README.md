@@ -13,7 +13,7 @@ To run the examples, use:
 cargo run --example <example_name> --features "test-types"
 ```
 
-where `<example_name>` is one of `simple_perceptron_mnist/two_layer_perceptron_mnist`.
+where `<example_name>` is one of `simple_perceptron_mnist`/`two_layer_perceptron_mnist`.
 
 ## From `ndarray` to `QArray`
 
