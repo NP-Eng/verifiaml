@@ -44,7 +44,6 @@ class TwoLayerPerceptron:
         self.dense_2_weights = self.quantized_model.get_tensor(3)
         self.dense_2_bias = self.quantized_model.get_tensor(2)
 
-
     def get_run_transcript(self, input_index: int) -> dict:
         return {
             **{
@@ -60,6 +59,9 @@ class TwoLayerPerceptron:
         
         # Quantize the input
         input_tensor = self.__quantize_input(self.dataset[0][0][input_index])
+
+        # Allocate the tensors
+        self.quantized_model.allocate_tensors()
 
         # Set the input tensor
         self.quantized_model.set_tensor(
@@ -116,3 +118,5 @@ class TwoLayerPerceptron:
         scaled_input = np.rint(input_tensor / input_scale) + input_zero_point
         clipped_input = np.clip(scaled_input, 0, 255).astype(np.uint8)
         return np.expand_dims(clipped_input, axis=0)
+    
+print(TwoLayerPerceptron().get_run_transcript(150))
