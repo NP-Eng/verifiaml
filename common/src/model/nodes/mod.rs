@@ -160,7 +160,7 @@ where
 
     // Print the type of the node. This cannot be cleantly achieved by deriving
     // Debug
-    pub(crate) fn type_name(&self) -> &'static str {
+    pub fn type_name(&self) -> &'static str {
         match self {
             Node::BMM(_) => "BMM",
             Node::RequantiseBMM(_r) => "RequantiseBMM",
