@@ -1,5 +1,3 @@
-use ark_std::marker::PhantomData;
-
 use ark_crypto_primitives::sponge::{Absorb, CryptographicSponge};
 use ark_ff::PrimeField;
 use ark_poly_commit::{LabeledCommitment, PolynomialCommitment};
@@ -7,9 +5,8 @@ use ark_std::log2;
 
 use ark_sumcheck::ml_sumcheck::Proof;
 
-use crate::model::qarray::{QArray, QTypeArray};
+use crate::model::qarray::{InnerType, QArray, QTypeArray};
 use crate::model::Poly;
-use crate::quantization::{QLargeType, QSmallType};
 use crate::{Commitment, CommitmentState};
 
 use super::{NodeOpsCommon, NodeOpsNative};
@@ -17,23 +14,21 @@ use super::{NodeOpsCommon, NodeOpsNative};
 // TODO convention: input, bias and output are rows, the op is vec-by-mat (in that order)
 
 /// Start with 2D matrices, and Mat-by-vector multiplication only
-pub struct BMMNode<F, S, PCS> {
+pub struct BMMNode<ST, LT> {
     /// The row-major flattened unpadded vector of weights
-    weights: QArray<QSmallType>,
+    weights: QArray<ST>,
     /// The padded weight vector
-    pub padded_weights: QArray<QSmallType>,
+    pub padded_weights: QArray<ST>,
     /// The unpadded vector of biases
-    bias: QArray<QLargeType>,
+    bias: QArray<LT>,
     /// The padded bias vector
-    pub padded_bias: QArray<QLargeType>,
+    pub padded_bias: QArray<LT>,
     /// Unpadded imensions (rows, columns)
     dims: (usize, usize),
     /// The logarithm of the padded dimensions (rows, columns)
     pub padded_dims_log: (usize, usize),
     /// Zero-point quantisation parameter of the input
-    pub input_zero_point: QSmallType,
-
-    phantom: PhantomData<(F, S, PCS)>,
+    pub input_zero_point: ST,
 }
 
 /// Commitment to a BMM node, consisting of a commitment to the *dual* of the
@@ -108,17 +103,16 @@ pub struct BMMNodeProof<
     pub bias_opening_value: F,
 }
 
-impl<F, S, PCS> NodeOpsNative for BMMNode<F, S, PCS>
+impl<ST, LT> NodeOpsNative<ST, LT> for BMMNode<ST, LT>
 where
-    F: PrimeField,
-    S: CryptographicSponge,
-    PCS: PolynomialCommitment<F, Poly<F>, S>,
+    ST: InnerType,
+    LT: InnerType + From<ST>,
 {
     fn shape(&self) -> Vec<usize> {
         vec![self.dims.1]
     }
 
-    fn evaluate(&self, input: &QTypeArray) -> QTypeArray {
+    fn evaluate(&self, input: &QTypeArray<ST, LT>) -> QTypeArray<ST, LT> {
         // Sanity checks
         // TODO systematise
         let input = match input {
@@ -139,11 +133,11 @@ where
             input.len()
         );
 
-        let input: QArray<QLargeType> = input.cast();
+        let input: QArray<LT> = input.cast();
 
         // TODO this is a bigger question: can this overflow an i8? Supposedly the point of quantisation
         // is that input-by-weight products can be computed in i8. To be safe, let us use the large type here
-        let shifted_input = input - self.input_zero_point as QLargeType;
+        let shifted_input = input - LT::from(self.input_zero_point);
 
         let mut accumulators = self.bias.values().clone();
 
@@ -154,7 +148,7 @@ where
             // TODO does the compiler realise it doesn't need to access accumulators[col] on every iteration of the inner loop? ow change
             for row in 0..self.dims.0 {
                 accumulators[col] +=
-                    shifted_input[row] * (self.weights[row * self.dims.1 + col] as QLargeType)
+                    shifted_input[row] * LT::from(self.weights[row * self.dims.1 + col])
             }
         }
 
@@ -164,12 +158,7 @@ where
     }
 }
 
-impl<F, S, PCS> NodeOpsCommon<F, S, PCS> for BMMNode<F, S, PCS>
-where
-    F: PrimeField + Absorb,
-    S: CryptographicSponge,
-    PCS: PolynomialCommitment<F, Poly<F>, S>,
-{
+impl<ST, LT> NodeOpsCommon for BMMNode<ST, LT> {
     fn padded_shape_log(&self) -> Vec<usize> {
         vec![self.padded_dims_log.1]
     }
@@ -179,17 +168,12 @@ where
     }
 }
 
-impl<F, S, PCS> BMMNode<F, S, PCS>
+impl<ST, LT> BMMNode<ST, LT>
 where
-    F: PrimeField,
-    S: CryptographicSponge,
-    PCS: PolynomialCommitment<F, Poly<F>, S>,
+    ST: InnerType,
+    LT: InnerType,
 {
-    pub fn new(
-        weights: QArray<QSmallType>,
-        bias: QArray<QLargeType>,
-        input_zero_point: QSmallType,
-    ) -> Self {
+    pub fn new(weights: QArray<ST>, bias: QArray<LT>, input_zero_point: ST) -> Self {
         let dims = (weights.shape()[0], weights.shape()[1]);
 
         assert_eq!(
@@ -206,12 +190,12 @@ where
         // Padding the weights and bias
         let padded_weights = weights.clone().compact_resize(
             vec![dims.0.next_power_of_two(), dims.1.next_power_of_two()],
-            0,
+            ST::ZERO,
         );
 
         let padded_bias = bias
             .clone()
-            .compact_resize(vec![dims.1.next_power_of_two()], 0);
+            .compact_resize(vec![dims.1.next_power_of_two()], LT::ZERO);
 
         Self {
             weights,
@@ -221,7 +205,6 @@ where
             dims,
             padded_dims_log,
             input_zero_point,
-            phantom: PhantomData,
         }
     }
 
@@ -229,7 +212,7 @@ where
         self.padded_dims_log
     }
 
-    pub(crate) fn input_zero_point(&self) -> QSmallType {
+    pub(crate) fn input_zero_point(&self) -> ST {
         self.input_zero_point
     }
 }

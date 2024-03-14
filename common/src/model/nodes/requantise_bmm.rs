@@ -1,13 +1,7 @@
-use ark_std::marker::PhantomData;
+use ark_std::{fmt::Debug, log2};
 
-use ark_crypto_primitives::sponge::{Absorb, CryptographicSponge};
-use ark_ff::PrimeField;
-use ark_poly_commit::PolynomialCommitment;
-use ark_std::log2;
-
-use crate::model::qarray::{QArray, QTypeArray};
-use crate::model::Poly;
-use crate::quantization::{requantise_fc, BMMQInfo, QInfo, QScaleType, QSmallType, RoundingScheme};
+use crate::model::qarray::{InnerType, QArray, QTypeArray};
+use crate::quantization::{requantise_fc, BMMQInfo, QInfo, QScaleType, RoundingScheme};
 use crate::{Commitment, CommitmentState};
 
 use super::{NodeOpsCommon, NodeOpsNative};
@@ -15,7 +9,7 @@ use super::{NodeOpsCommon, NodeOpsNative};
 // TODO convention: input, bias and output are rows, the op is vec-by-mat (in that order)
 
 /// Apply requantisation after a BMM argument
-pub struct RequantiseBMMNode<F, S, PCS> {
+pub struct RequantiseBMMNode<ST> {
     // Number of units
     size: usize,
 
@@ -23,9 +17,7 @@ pub struct RequantiseBMMNode<F, S, PCS> {
     pub padded_size_log: usize,
 
     /// Quantisation info associated to the input BMM result
-    pub q_info: BMMQInfo,
-
-    phantom: PhantomData<(F, S, PCS)>,
+    pub q_info: BMMQInfo<ST>,
 }
 
 pub struct RequantiseBMMNodeCommitment();
@@ -40,17 +32,17 @@ pub struct RequantiseBMMNodeProof {
     // this will be the sumcheck proof
 }
 
-impl<F, S, PCS> NodeOpsNative for RequantiseBMMNode<F, S, PCS>
+impl<ST, LT> NodeOpsNative<ST, LT> for RequantiseBMMNode<ST>
 where
-    F: PrimeField,
-    S: CryptographicSponge,
-    PCS: PolynomialCommitment<F, Poly<F>, S>,
+    ST: InnerType + TryFrom<LT>,
+    LT: InnerType + From<ST>,
+    <ST as TryFrom<LT>>::Error: Debug,
 {
     fn shape(&self) -> Vec<usize> {
         vec![self.size]
     }
 
-    fn evaluate(&self, input: &QTypeArray) -> QTypeArray {
+    fn evaluate(&self, input: &QTypeArray<ST, LT>) -> QTypeArray<ST, LT> {
         // Sanity checks
         // TODO systematise
         let input = match input {
@@ -71,7 +63,7 @@ where
             input.len()
         );
 
-        let output: QArray<QSmallType> = requantise_fc(
+        let output: QArray<ST> = requantise_fc(
             input.values(),
             &self.q_info,
             RoundingScheme::NearestTiesEven,
@@ -82,12 +74,7 @@ where
     }
 }
 
-impl<F, S, PCS> NodeOpsCommon<F, S, PCS> for RequantiseBMMNode<F, S, PCS>
-where
-    F: PrimeField + Absorb,
-    S: CryptographicSponge,
-    PCS: PolynomialCommitment<F, Poly<F>, S>,
-{
+impl<ST> NodeOpsCommon for RequantiseBMMNode<ST> {
     fn padded_shape_log(&self) -> Vec<usize> {
         vec![self.padded_size_log]
     }
@@ -97,20 +84,15 @@ where
     }
 }
 
-impl<F, S, PCS> RequantiseBMMNode<F, S, PCS>
-where
-    F: PrimeField,
-    S: CryptographicSponge,
-    PCS: PolynomialCommitment<F, Poly<F>, S>,
-{
-    pub fn new(
+impl<ST> RequantiseBMMNode<ST> {
+    pub(crate) fn new(
         size: usize,
         s_i: QScaleType,
-        z_i: QSmallType,
+        z_i: ST,
         s_w: QScaleType,
-        z_w: QSmallType,
+        z_w: ST,
         s_o: QScaleType,
-        z_o: QSmallType,
+        z_o: ST,
     ) -> Self {
         let padded_size_log = log2(size.next_power_of_two()) as usize;
 
@@ -134,7 +116,6 @@ where
             size,
             padded_size_log,
             q_info,
-            phantom: PhantomData,
         }
     }
 }

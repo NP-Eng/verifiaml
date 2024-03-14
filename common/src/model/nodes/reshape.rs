@@ -1,39 +1,26 @@
 use ark_std::log2;
-use ark_std::marker::PhantomData;
 
-use ark_crypto_primitives::sponge::{Absorb, CryptographicSponge};
-use ark_ff::PrimeField;
-use ark_poly_commit::PolynomialCommitment;
-
-use crate::model::qarray::QTypeArray;
-use crate::model::Poly;
+use crate::model::qarray::{InnerType, QTypeArray};
 
 use super::{NodeOpsCommon, NodeOpsNative};
 
-pub struct ReshapeNode<F, S, PCS>
-where
-    F: PrimeField,
-    S: CryptographicSponge,
-    PCS: PolynomialCommitment<F, Poly<F>, S>,
-{
+pub struct ReshapeNode {
     pub input_shape: Vec<usize>,
     pub output_shape: Vec<usize>,
     pub padded_input_shape_log: Vec<usize>,
     pub padded_output_shape_log: Vec<usize>,
-    phantom: PhantomData<(F, S, PCS)>,
 }
 
-impl<F, S, PCS> NodeOpsNative for ReshapeNode<F, S, PCS>
+impl<ST, LT> NodeOpsNative<ST, LT> for ReshapeNode
 where
-    F: PrimeField,
-    S: CryptographicSponge,
-    PCS: PolynomialCommitment<F, Poly<F>, S>,
+    ST: InnerType,
+    LT: InnerType + From<ST>,
 {
     fn shape(&self) -> Vec<usize> {
         self.output_shape.clone()
     }
 
-    fn evaluate(&self, input: &QTypeArray) -> QTypeArray {
+    fn evaluate(&self, input: &QTypeArray<ST, LT>) -> QTypeArray<ST, LT> {
         // Sanity checks
         // TODO systematise
 
@@ -55,12 +42,7 @@ where
     }
 }
 
-impl<F, S, PCS> NodeOpsCommon<F, S, PCS> for ReshapeNode<F, S, PCS>
-where
-    F: PrimeField + Absorb,
-    S: CryptographicSponge,
-    PCS: PolynomialCommitment<F, Poly<F>, S>,
-{
+impl NodeOpsCommon for ReshapeNode {
     fn padded_shape_log(&self) -> Vec<usize> {
         self.padded_output_shape_log.clone()
     }
@@ -70,12 +52,7 @@ where
     }
 }
 
-impl<F, S, PCS> ReshapeNode<F, S, PCS>
-where
-    F: PrimeField,
-    S: CryptographicSponge,
-    PCS: PolynomialCommitment<F, Poly<F>, S>,
-{
+impl ReshapeNode {
     pub fn new(input_shape: Vec<usize>, output_shape: Vec<usize>) -> Self {
         assert_eq!(
             input_shape.iter().product::<usize>(),
@@ -98,7 +75,6 @@ where
             output_shape,
             padded_input_shape_log,
             padded_output_shape_log,
-            phantom: PhantomData,
         }
     }
 }

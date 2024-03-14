@@ -1,3 +1,5 @@
+use std::ops::{AddAssign, DivAssign, MulAssign, SubAssign};
+
 use ark_std::ops::Index;
 
 use ark_std::any::type_name;
@@ -11,19 +13,79 @@ use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
 use serde_json;
 
-use crate::quantization::{QLargeType, QSmallType};
-
-const QARRAY_NESTED_TAB: &str = "    ";
+use crate::quantization::QScaleType;
 
 #[cfg(test)]
 mod tests;
 
-pub trait InnerType: Copy + Debug + Serialize + DeserializeOwned {}
+const QARRAY_NESTED_TAB: &str = "    ";
 
-impl InnerType for QSmallType {}
-impl InnerType for QLargeType {}
-impl InnerType for u8 {}
-impl InnerType for f32 {}
+pub(crate) trait InnerType:
+    Copy
+    + Debug
+    + PartialEq
+    + PartialOrd
+    + Ord
+    + Add<Output = Self>
+    + Sub<Output = Self>
+    + Mul<Output = Self>
+    + Div<Output = Self>
+    + AddAssign
+    + SubAssign
+    + MulAssign
+    + DivAssign
+    + Serialize
+    + DeserializeOwned
+{
+    const ZERO: Self;
+    const MIN: Self;
+    const MAX: Self;
+
+    // TODO if we decide to make the model generic on the quantisation process
+    // types, this will change
+    fn from_qscaletype(x: QScaleType) -> Self;
+    fn to_qscaletype(&self) -> QScaleType;
+}
+
+impl InnerType for i8 {
+    const ZERO: Self = 0;
+    const MIN: Self = Self::MIN;
+    const MAX: Self = Self::MAX;
+
+    fn from_qscaletype(x: QScaleType) -> Self {
+        x as Self
+    }
+
+    fn to_qscaletype(&self) -> QScaleType {
+        *self as QScaleType
+    }
+}
+impl InnerType for i32 {
+    const ZERO: Self = 0;
+    const MIN: Self = Self::MIN;
+    const MAX: Self = Self::MAX;
+
+    fn from_qscaletype(x: QScaleType) -> Self {
+        x as Self
+    }
+
+    fn to_qscaletype(&self) -> QScaleType {
+        *self as QScaleType
+    }
+}
+impl InnerType for u8 {
+    const ZERO: Self = 0;
+    const MIN: Self = Self::MIN;
+    const MAX: Self = Self::MAX;
+
+    fn from_qscaletype(x: QScaleType) -> Self {
+        x as Self
+    }
+
+    fn to_qscaletype(&self) -> QScaleType {
+        *self as QScaleType
+    }
+}
 
 #[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq)]
 pub struct QArray<T> {
@@ -36,9 +98,9 @@ pub struct QArray<T> {
 }
 
 #[derive(Clone)]
-pub enum QTypeArray {
-    S(QArray<QSmallType>),
-    L(QArray<QLargeType>),
+pub enum QTypeArray<ST, LT> {
+    S(QArray<ST>),
+    L(QArray<LT>),
 }
 
 // impl indexing into the QArray
@@ -490,6 +552,41 @@ impl<T: InnerType + PartialOrd> QArray<T> {
             flattened: flattened_min,
             shape: self.shape.clone(),
             cumulative_dimensions: self.cumulative_dimensions.clone(),
+        }
+    }
+}
+
+/************************ QTypeArray ***********************/
+
+impl<ST: InnerType, LT: InnerType> QTypeArray<ST, LT>
+where
+    LT: From<ST>,
+{
+    pub(crate) fn unwrap_small(self) -> QArray<ST> {
+        match self {
+            QTypeArray::S(s) => s,
+            _ => panic!("Expected S variant"),
+        }
+    }
+
+    pub(crate) fn unwrap_large(self) -> QArray<LT> {
+        match self {
+            QTypeArray::L(l) => l,
+            _ => panic!("Expected L variant"),
+        }
+    }
+
+    pub(crate) fn ref_small(&self) -> &QArray<ST> {
+        match self {
+            QTypeArray::S(s) => s,
+            _ => panic!("Expected S variant"),
+        }
+    }
+
+    pub(crate) fn ref_large(&self) -> &QArray<LT> {
+        match self {
+            QTypeArray::L(l) => l,
+            _ => panic!("Expected L variant"),
         }
     }
 }

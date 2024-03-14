@@ -1,6 +1,7 @@
 use ark_crypto_primitives::sponge::Absorb;
 use ark_ff::PrimeField;
 use ark_poly_commit::PolynomialCommitment;
+use ark_std::fmt::Debug;
 
 use crate::model::{
     nodes::{bmm::BMMNode, relu::ReLUNode},
@@ -16,7 +17,7 @@ use self::{
     reshape::ReshapeNode,
 };
 
-use super::qarray::QTypeArray;
+use super::qarray::{InnerType, QTypeArray};
 
 pub(crate) mod bmm;
 pub(crate) mod relu;
@@ -33,7 +34,7 @@ pub(crate) mod reshape;
 /// It stores information about the transition (such as a matrix and bias, if
 /// applicable), but not about about the specific values of its nodes: these
 /// are handled by the methods only.
-pub(crate) trait NodeOpsNative {
+pub(crate) trait NodeOpsNative<ST, LT> {
     /// Returns the shape of the node's output tensor
     fn shape(&self) -> Vec<usize>;
 
@@ -44,15 +45,10 @@ pub(crate) trait NodeOpsNative {
 
     /// Evaluate the node natively (without padding)
     /// TODO decide whether this method should stay on `NodeOps`, or maybe go to `NodeOpsSNARKVerify`
-    fn evaluate(&self, input: &QTypeArray) -> QTypeArray;
+    fn evaluate(&self, input: &QTypeArray<ST, LT>) -> QTypeArray<ST, LT>;
 }
 
-pub trait NodeOpsCommon<F, S, PCS>
-where
-    F: PrimeField + Absorb,
-    S: CryptographicSponge,
-    PCS: PolynomialCommitment<F, Poly<F>, S>,
-{
+pub trait NodeOpsCommon {
     /// Returns the element-wise base-two logarithm of the padded node's
     /// output shape, i.e. the list of numbers of variables of the associated
     /// MLE
@@ -84,16 +80,11 @@ where
     fn com_num_vars(&self) -> usize;
 }
 
-pub enum Node<F, S, PCS>
-where
-    F: PrimeField,
-    S: CryptographicSponge,
-    PCS: PolynomialCommitment<F, Poly<F>, S>,
-{
-    BMM(BMMNode<F, S, PCS>),
-    RequantiseBMM(RequantiseBMMNode<F, S, PCS>),
-    ReLU(ReLUNode<F, S, PCS>),
-    Reshape(ReshapeNode<F, S, PCS>),
+pub enum Node<ST, LT> {
+    BMM(BMMNode<ST, LT>),
+    RequantiseBMM(RequantiseBMMNode<ST>),
+    ReLU(ReLUNode<ST>),
+    Reshape(ReshapeNode),
 }
 
 pub enum NodeProof<F, S, PCS>
@@ -134,13 +125,13 @@ where
 
 // A lot of this overlaps with the NodeOps trait and could be handled more
 // elegantly by simply implementing the trait
-impl<F, S, PCS> Node<F, S, PCS>
+impl<ST, LT> Node<ST, LT>
 where
-    F: PrimeField + Absorb,
-    S: CryptographicSponge,
-    PCS: PolynomialCommitment<F, Poly<F>, S>,
+    ST: InnerType + TryFrom<LT>,
+    <ST as TryFrom<LT>>::Error: Debug,
+    LT: InnerType + From<ST>,
 {
-    fn as_node_ops(&self) -> &dyn NodeOpsNative {
+    fn as_node_ops(&self) -> &dyn NodeOpsNative<ST, LT> {
         match self {
             Node::BMM(fc) => fc,
             Node::RequantiseBMM(r) => r,
@@ -149,7 +140,7 @@ where
         }
     }
 
-    pub fn as_node_ops_snark(&self) -> &dyn NodeOpsCommon<F, S, PCS> {
+    pub fn as_node_ops_snark(&self) -> &dyn NodeOpsCommon {
         match self {
             Node::BMM(fc) => fc,
             Node::RequantiseBMM(r) => r,
@@ -171,11 +162,11 @@ where
 }
 // A lot of this overlaps with the NodeOps trait and could be handled more
 // elegantly by simply implementing the trait
-impl<F, S, PCS> NodeOpsNative for Node<F, S, PCS>
+impl<ST, LT> NodeOpsNative<ST, LT> for Node<ST, LT>
 where
-    F: PrimeField + Absorb,
-    S: CryptographicSponge,
-    PCS: PolynomialCommitment<F, Poly<F>, S>,
+    ST: InnerType + TryFrom<LT>,
+    <ST as TryFrom<LT>>::Error: Debug,
+    LT: InnerType + From<ST>,
 {
     /// Returns the shape of the node's output tensor
     fn shape(&self) -> Vec<usize> {
@@ -188,16 +179,16 @@ where
     }
 
     /// Evaluate the node natively (without padding)
-    fn evaluate(&self, input: &QTypeArray) -> QTypeArray {
+    fn evaluate(&self, input: &QTypeArray<ST, LT>) -> QTypeArray<ST, LT> {
         self.as_node_ops().evaluate(input)
     }
 }
 
-impl<F, S, PCS> NodeOpsCommon<F, S, PCS> for Node<F, S, PCS>
+impl<ST, LT> NodeOpsCommon for Node<ST, LT>
 where
-    F: PrimeField + Absorb,
-    S: CryptographicSponge,
-    PCS: PolynomialCommitment<F, Poly<F>, S>,
+    ST: InnerType + TryFrom<LT>,
+    <ST as TryFrom<LT>>::Error: Debug,
+    LT: InnerType + From<ST>,
 {
     /// Returns the element-wise base-two logarithm of the padded node's
     /// output shape, i.e. the list of numbers of variables of the associated
