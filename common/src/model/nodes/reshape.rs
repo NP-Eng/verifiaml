@@ -24,10 +24,7 @@ where
         // Sanity checks
         // TODO systematise
 
-        let input = match input {
-            QTypeArray::S(i) => i,
-            _ => panic!("Reshape node expects QSmallType as its QArray input type"),
-        };
+        let input = input.ref_small();
 
         assert_eq!(
             *input.shape(),

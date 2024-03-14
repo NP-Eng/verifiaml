@@ -571,32 +571,33 @@ impl<T: InnerType + PartialOrd> QArray<T> {
 
 /************************ QTypeArray ***********************/
 
-impl<ST: InnerType, LT: InnerType> QTypeArray<ST, LT>
-where
-    LT: From<ST>,
-{
-    pub(crate) fn unwrap_small(self) -> QArray<ST> {
+impl<ST, LT> QTypeArray<ST, LT> {
+    #[inline]
+    pub fn unwrap_small(self) -> QArray<ST> {
         match self {
             QTypeArray::S(s) => s,
             _ => panic!("Expected S variant"),
         }
     }
 
-    pub(crate) fn unwrap_large(self) -> QArray<LT> {
+    #[inline]
+    pub fn unwrap_large(self) -> QArray<LT> {
         match self {
             QTypeArray::L(l) => l,
             _ => panic!("Expected L variant"),
         }
     }
 
-    pub(crate) fn ref_small(&self) -> &QArray<ST> {
+    #[inline]
+    pub fn ref_small(&self) -> &QArray<ST> {
         match self {
             QTypeArray::S(s) => s,
             _ => panic!("Expected S variant"),
         }
     }
 
-    pub(crate) fn ref_large(&self) -> &QArray<LT> {
+    #[inline]
+    pub fn ref_large(&self) -> &QArray<LT> {
         match self {
             QTypeArray::L(l) => l,
             _ => panic!("Expected L variant"),

@@ -21,10 +21,7 @@ where
     LT: InnerType + From<ST>,
 {
     fn padded_evaluate(&self, input: &QTypeArray<ST, LT>) -> QTypeArray<ST, LT> {
-        let input = match input {
-            QTypeArray::L(i) => i,
-            _ => panic!("RequantiseBMM node expects QLargeType as its QArray input type"),
-        };
+        let input = input.ref_large();
 
         let padded_size = 1 << self.padded_size_log;
 

@@ -91,13 +91,11 @@ where
 
     pub fn evaluate(&self, input: QArray<ST>) -> QArray<ST> {
         let mut output = QTypeArray::S(input);
+
         for node in &self.nodes {
             output = node.evaluate(&output);
         }
 
-        match output {
-            QTypeArray::S(o) => o,
-            _ => panic!("Output QArray type should be QSmallType"),
-        }
+        output.unwrap_small()
     }
 }

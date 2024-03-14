@@ -28,10 +28,7 @@ where
     // sumcheck argument. Requantisation and shifting are also applied to these
     // trivial entries, as the proof system does.
     fn padded_evaluate(&self, input: &QTypeArray<ST, LT>) -> QTypeArray<ST, LT> {
-        let input = match input {
-            QTypeArray::S(i) => i,
-            _ => panic!("BMM node expects QSmallType as its QArray input type"),
-        };
+        let input = input.ref_small();
 
         let padded_dims = (1 << self.padded_dims_log.0, 1 << self.padded_dims_log.1);
 

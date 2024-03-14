@@ -45,10 +45,7 @@ where
     fn evaluate(&self, input: &QTypeArray<ST, LT>) -> QTypeArray<ST, LT> {
         // Sanity checks
         // TODO systematise
-        let input = match input {
-            QTypeArray::L(i) => i,
-            _ => panic!("RequantiseBMM node expects QLargeType as its QArray input type"),
-        };
+        let input = input.ref_large();
 
         assert_eq!(
             input.num_dims(),

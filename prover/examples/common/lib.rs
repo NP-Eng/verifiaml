@@ -186,10 +186,7 @@ pub fn prove_inference<F, S, PCS>(
 
     let output_qtypearray = inference_proof.inputs_outputs[1].clone();
 
-    let output_i8 = match output_qtypearray {
-        QTypeArray::S(o) => o,
-        _ => panic!("Expected QTypeArray::S"),
-    };
+    let output_i8 = output_qtypearray.unwrap_small();
 
     let output_u8: QArray<u8> = (output_i8.cast::<i32>() + 128).cast();
 
@@ -244,10 +241,7 @@ pub fn verify_inference<F, S, PCS>(
 
     assert!(model.verify_inference(&vk, &mut verification_sponge, &node_coms, inference_proof));
 
-    let output_i8 = match output_qtypearray {
-        QTypeArray::S(o) => o,
-        _ => panic!("Expected QTypeArray::S"),
-    };
+    let output_i8 = output_qtypearray.unwrap_small();
 
     let output_u8 = (output_i8.cast::<i32>() + 128).cast::<u8>();
 

@@ -64,10 +64,9 @@ where
         }
 
         // TODO switch to reference in reshape?
-        match output {
-            QTypeArray::S(o) => o.compact_resize(self.output_shape.clone(), ST::ZERO),
-            _ => panic!("Output QArray type should be QSmallType"),
-        }
+        output
+            .unwrap_small()
+            .compact_resize(self.output_shape.clone(), ST::ZERO)
     }
 
     fn prove_inference(

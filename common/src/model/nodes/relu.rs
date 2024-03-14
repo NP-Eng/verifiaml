@@ -22,10 +22,7 @@ where
 
     fn evaluate(&self, input: &QTypeArray<ST, LT>) -> QTypeArray<ST, LT> {
         // TODO sanity checks (cf. BMM); systematise
-        let input = match input {
-            QTypeArray::S(i) => i,
-            _ => panic!("ReLU node expects QSmallType as its QArray input type"),
-        };
+        let input = input.ref_small();
 
         QTypeArray::S(input.maximum(self.zero_point))
     }

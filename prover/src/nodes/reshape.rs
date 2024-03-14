@@ -20,10 +20,7 @@ where
     // TODO I think this might be broken due to the failure of commutativity
     // between product and and nearest-geq-power-of-two
     fn padded_evaluate(&self, input: &QTypeArray<ST, LT>) -> QTypeArray<ST, LT> {
-        let input = match input {
-            QTypeArray::S(i) => i,
-            _ => panic!("Reshape node expects QSmallType as its QArray input type"),
-        };
+        let input = input.ref_small();
 
         let padded_input_shape: Vec<usize> = self
             .padded_input_shape_log
