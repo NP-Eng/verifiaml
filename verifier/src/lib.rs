@@ -1,15 +1,16 @@
 use ark_crypto_primitives::sponge::{Absorb, CryptographicSponge};
 use ark_ff::PrimeField;
 use ark_poly_commit::{LabeledCommitment, PolynomialCommitment};
+use ark_std::fmt::Debug;
 
-use hcs_common::{Node, NodeCommitment, NodeOpsCommon, NodeProof, Poly};
+use hcs_common::{InnerType, Node, NodeCommitment, NodeOpsCommon, NodeProof, Poly};
 
 mod model;
 mod nodes;
 
 pub use model::VerifyModel;
 
-pub trait NodeOpsVerify<F, S, PCS>: NodeOpsCommon<F, S, PCS>
+pub trait NodeOpsVerify<F, S, PCS>: NodeOpsCommon
 where
     F: PrimeField + Absorb,
     S: CryptographicSponge,
@@ -26,11 +27,14 @@ where
     ) -> bool;
 }
 
-impl<F, S, PCS> NodeOpsVerify<F, S, PCS> for Node<F, S, PCS>
+impl<F, S, PCS, ST, LT> NodeOpsVerify<F, S, PCS> for Node<ST, LT>
 where
-    F: PrimeField + Absorb,
+    F: PrimeField + Absorb + From<ST>,
     S: CryptographicSponge,
     PCS: PolynomialCommitment<F, Poly<F>, S>,
+    ST: InnerType + TryFrom<LT>,
+    <ST as TryFrom<LT>>::Error: Debug,
+    LT: InnerType + From<ST>,
 {
     fn verify(
         &self,
@@ -45,11 +49,12 @@ where
     }
 }
 
-fn node_as_node_ops_snark<F, S, PCS>(node: &Node<F, S, PCS>) -> &dyn NodeOpsVerify<F, S, PCS>
+fn node_as_node_ops_snark<F, S, PCS, ST, LT>(node: &Node<ST, LT>) -> &dyn NodeOpsVerify<F, S, PCS>
 where
-    F: PrimeField + Absorb,
+    F: PrimeField + Absorb + From<ST>,
     S: CryptographicSponge,
     PCS: PolynomialCommitment<F, Poly<F>, S>,
+    ST: InnerType,
 {
     match node {
         Node::BMM(fc) => fc,

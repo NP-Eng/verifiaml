@@ -1,11 +1,11 @@
 use ark_crypto_primitives::sponge::{Absorb, CryptographicSponge};
 use ark_ff::PrimeField;
 use ark_poly_commit::{LabeledCommitment, PolynomialCommitment};
+use ark_std::{fmt::Debug, rand::RngCore};
 
-use ark_std::rand::RngCore;
 use hcs_common::{
-    LabeledPoly, Node, NodeCommitment, NodeCommitmentState, NodeOpsCommon, NodeProof, Poly,
-    QTypeArray,
+    InnerType, LabeledPoly, Node, NodeCommitment, NodeCommitmentState, NodeOpsCommon, NodeProof,
+    Poly, QTypeArray,
 };
 
 mod model;
@@ -13,14 +13,14 @@ mod nodes;
 
 pub use model::ProveModel;
 
-pub trait NodeOpsProve<F, S, PCS>: NodeOpsCommon<F, S, PCS>
+pub trait NodeOpsProve<F, S, PCS, ST, LT>: NodeOpsCommon
 where
     F: PrimeField + Absorb,
     S: CryptographicSponge,
     PCS: PolynomialCommitment<F, Poly<F>, S>,
 {
     /// Evaluate the padded node natively
-    fn padded_evaluate(&self, input: &QTypeArray) -> QTypeArray;
+    fn padded_evaluate(&self, input: &QTypeArray<ST, LT>) -> QTypeArray<ST, LT>;
 
     /// Produce a node output proof
     fn prove(
@@ -45,11 +45,16 @@ where
     ) -> (NodeCommitment<F, S, PCS>, NodeCommitmentState<F, S, PCS>);
 }
 
-fn node_as_node_ops_snark<F, S, PCS>(node: &Node<F, S, PCS>) -> &dyn NodeOpsProve<F, S, PCS>
+fn node_as_node_ops_snark<F, S, PCS, ST, LT>(
+    node: &Node<ST, LT>,
+) -> &dyn NodeOpsProve<F, S, PCS, ST, LT>
 where
-    F: PrimeField + Absorb,
+    F: PrimeField + Absorb + From<ST> + From<LT>,
     S: CryptographicSponge,
     PCS: PolynomialCommitment<F, Poly<F>, S>,
+    ST: InnerType + TryFrom<LT>,
+    <ST as TryFrom<LT>>::Error: Debug,
+    LT: InnerType + From<ST>,
 {
     match node {
         Node::BMM(fc) => fc,
@@ -59,15 +64,18 @@ where
     }
 }
 
-impl<F, S, PCS> NodeOpsProve<F, S, PCS> for Node<F, S, PCS>
+impl<F, S, PCS, ST, LT> NodeOpsProve<F, S, PCS, ST, LT> for Node<ST, LT>
 where
-    F: PrimeField + Absorb,
+    F: PrimeField + Absorb + From<ST> + From<LT> + From<LT>,
     S: CryptographicSponge,
     PCS: PolynomialCommitment<F, Poly<F>, S>,
+    ST: InnerType + TryFrom<LT>,
+    <ST as TryFrom<LT>>::Error: Debug,
+    LT: InnerType + From<ST>,
 {
     /// Evaluate the padded node natively
-    fn padded_evaluate(&self, input: &QTypeArray) -> QTypeArray {
-        node_as_node_ops_snark(self).padded_evaluate(input)
+    fn padded_evaluate(&self, input: &QTypeArray<ST, LT>) -> QTypeArray<ST, LT> {
+        node_as_node_ops_snark::<F, S, PCS, ST, LT>(self).padded_evaluate(input)
     }
 
     fn prove(

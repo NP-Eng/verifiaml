@@ -20,12 +20,11 @@ mod tests;
 
 const QARRAY_NESTED_TAB: &str = "    ";
 
-pub(crate) trait InnerType:
+pub trait InnerType:
     Copy
     + Debug
     + PartialEq
     + PartialOrd
-    + Ord
     + Add<Output = Self>
     + Sub<Output = Self>
     + Mul<Output = Self>
@@ -75,6 +74,20 @@ impl InnerType for i32 {
 }
 impl InnerType for u8 {
     const ZERO: Self = 0;
+    const MIN: Self = Self::MIN;
+    const MAX: Self = Self::MAX;
+
+    fn from_qscaletype(x: QScaleType) -> Self {
+        x as Self
+    }
+
+    fn to_qscaletype(&self) -> QScaleType {
+        *self as QScaleType
+    }
+}
+
+impl InnerType for f32 {
+    const ZERO: Self = 0.0;
     const MIN: Self = Self::MIN;
     const MAX: Self = Self::MAX;
 

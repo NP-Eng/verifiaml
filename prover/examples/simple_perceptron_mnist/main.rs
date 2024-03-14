@@ -26,7 +26,7 @@ macro_rules! PATH {
 }
 
 // TODO this is incorrect now that we have switched to logs
-fn build_simple_perceptron_mnist<F, S, PCS>() -> Model<F, S, PCS>
+fn build_simple_perceptron_mnist<F, S, PCS>() -> Model<i8, i32>
 where
     F: PrimeField + Absorb,
     S: CryptographicSponge,
@@ -34,14 +34,14 @@ where
 {
     let flat_dim = INPUT_DIMS.iter().product();
 
-    let reshape: ReshapeNode<F, S, PCS> = ReshapeNode::new(INPUT_DIMS.to_vec(), vec![flat_dim]);
+    let reshape: ReshapeNode = ReshapeNode::new(INPUT_DIMS.to_vec(), vec![flat_dim]);
 
     let w_array: QArray<i8> = QArray::read(&format!(PATH!(), "parameters/weights.json"));
     let b_array: QArray<i32> = QArray::read(&format!(PATH!(), "parameters/bias.json"));
 
-    let bmm: BMMNode<F, S, PCS> = BMMNode::new(w_array, b_array, Z_I);
+    let bmm: BMMNode<i8, i32> = BMMNode::new(w_array, b_array, Z_I);
 
-    let req_bmm: RequantiseBMMNode<F, S, PCS> =
+    let req_bmm: RequantiseBMMNode<i8> =
         RequantiseBMMNode::new(OUTPUT_DIM, S_I, Z_I, S_W, Z_W, S_O, Z_O);
 
     Model::new(
@@ -55,8 +55,7 @@ where
 }
 
 fn main() {
-    let simple_perceptron: Model<Fr, PoseidonSponge<Fr>, Ligero<Fr>> =
-        build_simple_perceptron_mnist();
+    let simple_perceptron = build_simple_perceptron_mnist::<Fr, PoseidonSponge<Fr>, Ligero<Fr>>();
 
     // Right now this can't be QInfo because the latter is always a pair
     // (f32, i8), which indeed matches in-model quantisation, but not
@@ -68,14 +67,14 @@ fn main() {
     println!("\nEXAMPLE: simple perceptron");
     println!("--------------------------");
 
-    run_unpadded(
+    run_unpadded::<Fr, PoseidonSponge<Fr>, Ligero<Fr>>(
         &format!(PATH!(), "data/input_test_150.json"),
         &format!(PATH!(), "data/output_test_150.json"),
         &simple_perceptron,
         qinfo,
     );
 
-    run_padded(
+    run_padded::<Fr, PoseidonSponge<Fr>, Ligero<Fr>>(
         &format!(PATH!(), "data/input_test_150.json"),
         &format!(PATH!(), "data/output_test_150.json"),
         &simple_perceptron,
@@ -84,14 +83,14 @@ fn main() {
 
     // MNIST test samples with index
     // 6393, 1894, 5978, 6120, 817, 3843, 7626, 9272, 498, 4622
-    multi_run_unpadded(
+    multi_run_unpadded::<Fr, PoseidonSponge<Fr>, Ligero<Fr>>(
         &format!(PATH!(), "data/10_test_inputs.json"),
         &format!(PATH!(), "data/10_test_outputs.json"),
         &simple_perceptron,
         qinfo,
     );
 
-    multi_run_padded(
+    multi_run_padded::<Fr, PoseidonSponge<Fr>, Ligero<Fr>>(
         &format!(PATH!(), "data/10_test_inputs.json"),
         &format!(PATH!(), "data/10_test_outputs.json"),
         &simple_perceptron,
@@ -104,7 +103,7 @@ fn main() {
 
     let output_shape = vec![OUTPUT_DIM];
 
-    prove_inference(
+    prove_inference::<Fr, PoseidonSponge<Fr>, Ligero<Fr>>(
         &format!(PATH!(), "data/input_test_150.json"),
         &format!(PATH!(), "data/output_test_150.json"),
         &simple_perceptron,
@@ -113,7 +112,7 @@ fn main() {
         output_shape.clone(),
     );
 
-    verify_inference(
+    verify_inference::<Fr, PoseidonSponge<Fr>, Ligero<Fr>>(
         &format!(PATH!(), "data/input_test_150.json"),
         &format!(PATH!(), "data/output_test_150.json"),
         &simple_perceptron,

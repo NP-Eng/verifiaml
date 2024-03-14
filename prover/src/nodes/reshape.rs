@@ -1,23 +1,25 @@
 use ark_crypto_primitives::sponge::{Absorb, CryptographicSponge};
 use ark_ff::PrimeField;
 use ark_poly_commit::{LabeledCommitment, PolynomialCommitment};
-
 use ark_std::rand::RngCore;
+
 use hcs_common::{
-    LabeledPoly, NodeCommitment, NodeCommitmentState, NodeProof, Poly, QTypeArray, ReshapeNode,
+    InnerType, LabeledPoly, NodeCommitment, NodeCommitmentState, NodeProof, Poly, QTypeArray,
+    ReshapeNode,
 };
 
 use crate::NodeOpsProve;
 
-impl<F, S, PCS> NodeOpsProve<F, S, PCS> for ReshapeNode<F, S, PCS>
+impl<F, S, PCS, ST, LT> NodeOpsProve<F, S, PCS, ST, LT> for ReshapeNode
 where
     F: PrimeField + Absorb,
     S: CryptographicSponge,
     PCS: PolynomialCommitment<F, Poly<F>, S>,
+    ST: InnerType,
 {
     // TODO I think this might be broken due to the failure of commutativity
     // between product and and nearest-geq-power-of-two
-    fn padded_evaluate(&self, input: &QTypeArray) -> QTypeArray {
+    fn padded_evaluate(&self, input: &QTypeArray<ST, LT>) -> QTypeArray<ST, LT> {
         let input = match input {
             QTypeArray::S(i) => i,
             _ => panic!("Reshape node expects QSmallType as its QArray input type"),
@@ -43,11 +45,11 @@ where
             "Received padded input shape does not match node's padded input shape"
         );
 
-        let mut unpadded_input = input.compact_resize(self.input_shape.clone(), 0);
+        let mut unpadded_input = input.compact_resize(self.input_shape.clone(), ST::ZERO);
 
         // TODO only handles 2-to-1 reshapes, I think
         unpadded_input.reshape(self.output_shape.clone());
-        let padded_output = unpadded_input.compact_resize(padded_output_shape, 0);
+        let padded_output = unpadded_input.compact_resize(padded_output_shape, ST::ZERO);
 
         QTypeArray::S(padded_output)
     }

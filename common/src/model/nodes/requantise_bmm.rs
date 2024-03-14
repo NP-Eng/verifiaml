@@ -85,7 +85,7 @@ impl<ST> NodeOpsCommon for RequantiseBMMNode<ST> {
 }
 
 impl<ST> RequantiseBMMNode<ST> {
-    pub(crate) fn new(
+    pub fn new(
         size: usize,
         s_i: QScaleType,
         z_i: ST,

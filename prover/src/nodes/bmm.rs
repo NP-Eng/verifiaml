@@ -4,26 +4,30 @@ use ark_crypto_primitives::sponge::{Absorb, CryptographicSponge};
 use ark_ff::PrimeField;
 use ark_poly::{MultilinearExtension, Polynomial};
 use ark_poly_commit::{LabeledCommitment, LabeledPolynomial, PolynomialCommitment};
-use ark_std::rand::RngCore;
+use ark_std::{fmt::Debug, rand::RngCore};
 use ark_sumcheck::ml_sumcheck::{protocol::ListOfProductsOfPolynomials, MLSumcheck};
+
 use hcs_common::{
-    BMMNode, BMMNodeCommitment, BMMNodeCommitmentState, BMMNodeProof, LabeledPoly, NodeCommitment,
-    NodeCommitmentState, NodeOpsCommon, NodeProof, Poly, QArray, QLargeType, QTypeArray,
+    BMMNode, BMMNodeCommitment, BMMNodeCommitmentState, BMMNodeProof, InnerType, LabeledPoly,
+    NodeCommitment, NodeCommitmentState, NodeOpsCommon, NodeProof, Poly, QArray, QTypeArray,
 };
 
 use crate::NodeOpsProve;
 
-impl<F, S, PCS> NodeOpsProve<F, S, PCS> for BMMNode<F, S, PCS>
+impl<F, S, PCS, ST, LT> NodeOpsProve<F, S, PCS, ST, LT> for BMMNode<ST, LT>
 where
-    F: PrimeField + Absorb,
+    F: PrimeField + Absorb + From<ST> + From<LT>,
     S: CryptographicSponge,
     PCS: PolynomialCommitment<F, Poly<F>, S>,
+    ST: InnerType + TryFrom<LT>,
+    <ST as TryFrom<LT>>::Error: Debug,
+    LT: InnerType + From<ST>,
 {
     // This function naively computes entries which are known to be zero. It is
     // meant to exactly mirror the proof-system multiplication proved by the
     // sumcheck argument. Requantisation and shifting are also applied to these
     // trivial entries, as the proof system does.
-    fn padded_evaluate(&self, input: &QTypeArray) -> QTypeArray {
+    fn padded_evaluate(&self, input: &QTypeArray<ST, LT>) -> QTypeArray<ST, LT> {
         let input = match input {
             QTypeArray::S(i) => i,
             _ => panic!("BMM node expects QSmallType as its QArray input type"),
@@ -47,11 +51,11 @@ where
             input.len()
         );
 
-        let input: QArray<QLargeType> = input.cast();
+        let input: QArray<LT> = input.cast();
 
         // TODO this is a bigger question: can this overflow an i8? Supposedly the point of quantisation
         // is that input-by-weight products can be computed in i8. To be safe, let us use the large type here
-        let shifted_input = input - self.input_zero_point as QLargeType;
+        let shifted_input = input - LT::from(self.input_zero_point);
 
         let mut accumulators = self.padded_bias.values().clone();
 
@@ -61,8 +65,8 @@ where
         for col in 0..padded_dims.1 {
             // TODO does the compiler realise it doesn't need to access accumulators[col] on every iteration of the inner loop? ow change
             for row in 0..padded_dims.0 {
-                accumulators[col] += shifted_input[row]
-                    * (self.padded_weights[row * padded_dims.1 + col] as QLargeType)
+                accumulators[col] +=
+                    shifted_input[row] * LT::from(self.padded_weights[row * padded_dims.1 + col])
             }
         }
 

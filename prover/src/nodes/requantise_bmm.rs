@@ -1,23 +1,26 @@
 use ark_crypto_primitives::sponge::{Absorb, CryptographicSponge};
 use ark_ff::PrimeField;
 use ark_poly_commit::{LabeledCommitment, PolynomialCommitment};
+use ark_std::{fmt::Debug, rand::RngCore};
 
-use ark_std::rand::RngCore;
 use hcs_common::{
-    requantise_fc, LabeledPoly, NodeCommitment, NodeCommitmentState, NodeProof, Poly, QArray,
-    QSmallType, QTypeArray, RequantiseBMMNode, RequantiseBMMNodeCommitment,
+    requantise_fc, InnerType, LabeledPoly, NodeCommitment, NodeCommitmentState, NodeProof, Poly,
+    QArray, QTypeArray, RequantiseBMMNode, RequantiseBMMNodeCommitment,
     RequantiseBMMNodeCommitmentState, RequantiseBMMNodeProof, RoundingScheme,
 };
 
 use crate::NodeOpsProve;
 
-impl<F, S, PCS> NodeOpsProve<F, S, PCS> for RequantiseBMMNode<F, S, PCS>
+impl<F, S, PCS, ST, LT> NodeOpsProve<F, S, PCS, ST, LT> for RequantiseBMMNode<ST>
 where
     F: PrimeField + Absorb,
     S: CryptographicSponge,
     PCS: PolynomialCommitment<F, Poly<F>, S>,
+    ST: InnerType + TryFrom<LT>,
+    <ST as TryFrom<LT>>::Error: Debug,
+    LT: InnerType + From<ST>,
 {
-    fn padded_evaluate(&self, input: &QTypeArray) -> QTypeArray {
+    fn padded_evaluate(&self, input: &QTypeArray<ST, LT>) -> QTypeArray<ST, LT> {
         let input = match input {
             QTypeArray::L(i) => i,
             _ => panic!("RequantiseBMM node expects QLargeType as its QArray input type"),
@@ -41,7 +44,7 @@ where
             input.len()
         );
 
-        let output: QArray<QSmallType> = requantise_fc(
+        let output: QArray<ST> = requantise_fc::<ST, LT>(
             input.values(),
             &self.q_info,
             RoundingScheme::NearestTiesEven,

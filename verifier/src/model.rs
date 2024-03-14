@@ -3,11 +3,11 @@ use ark_crypto_primitives::sponge::{Absorb, CryptographicSponge};
 use ark_ff::PrimeField;
 use ark_poly::Polynomial;
 use ark_poly_commit::PolynomialCommitment;
-use ark_std::log2;
+use ark_std::{fmt::Debug, log2};
 
-use hcs_common::{InferenceProof, Model, NodeCommitment, Poly, QTypeArray};
+use hcs_common::{InferenceProof, InnerType, Model, NodeCommitment, Poly, QTypeArray};
 
-pub trait VerifyModel<F, S, PCS>
+pub trait VerifyModel<F, S, PCS, ST, LT>
 where
     F: PrimeField + Absorb,
     S: CryptographicSponge,
@@ -18,22 +18,25 @@ where
         vk: &PCS::VerifierKey,
         sponge: &mut S,
         node_commitments: &Vec<NodeCommitment<F, S, PCS>>,
-        inference_proof: InferenceProof<F, S, PCS>,
+        inference_proof: InferenceProof<F, S, PCS, ST, LT>,
     ) -> bool;
 }
 
-impl<F, S, PCS> VerifyModel<F, S, PCS> for Model<F, S, PCS>
+impl<F, S, PCS, ST, LT> VerifyModel<F, S, PCS, ST, LT> for Model<ST, LT>
 where
-    F: PrimeField + Absorb,
+    F: PrimeField + Absorb + From<ST> + From<LT>,
     S: CryptographicSponge,
     PCS: PolynomialCommitment<F, Poly<F>, S>,
+    ST: InnerType + TryFrom<LT>,
+    <ST as TryFrom<LT>>::Error: Debug,
+    LT: InnerType + From<ST>,
 {
     fn verify_inference(
         &self,
         vk: &PCS::VerifierKey,
         sponge: &mut S,
         node_commitments: &Vec<NodeCommitment<F, S, PCS>>,
-        inference_proof: InferenceProof<F, S, PCS>,
+        inference_proof: InferenceProof<F, S, PCS, ST, LT>,
     ) -> bool {
         let InferenceProof {
             inputs_outputs,
@@ -95,8 +98,8 @@ where
         // Verifying that the actual input was honestly padded with zeros
         let padded_input_shape = input_node_qarray.shape().clone();
         let honestly_padded_input = input_node_qarray
-            .compact_resize(self.input_shape().clone(), 0)
-            .compact_resize(padded_input_shape, 0);
+            .compact_resize(self.input_shape().clone(), ST::ZERO)
+            .compact_resize(padded_input_shape, ST::ZERO);
 
         if honestly_padded_input.values() != input_node_qarray.values() {
             return false;

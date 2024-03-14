@@ -74,9 +74,24 @@ where
             let x = LT::to_qscaletype(x) * s;
             let mut x = LT::from_qscaletype(x.round());
             x += LT::from(q_info.output_info.zero_point);
-            ST::try_from(x.clamp(LT::from(ST::MIN), LT::from(ST::MAX))).unwrap()
+            ST::try_from(partial_ord_clamp(x, LT::from(ST::MIN), LT::from(ST::MAX))).unwrap()
         })
         .collect()
+}
+
+// The (unstable) method clamp comes from the trait Ord, which we cannot
+// restrict InnerType to as we need f32 to implement the latter. Note that this
+// method is not meaningfully defined for classes that genuinely do not
+// implement Ord (total order relation) but only PartialOrd (partial order
+// relation).
+fn partial_ord_clamp<T: PartialOrd>(x: T, min: T, max: T) -> T {
+    if x <= min {
+        min
+    } else if x >= max {
+        max
+    } else {
+        x
+    }
 }
 
 fn requantise_fc_nte<ST: InnerType, LT: InnerType>(output: &[LT], q_info: &BMMQInfo<ST>) -> Vec<ST>
@@ -107,7 +122,7 @@ where
             let x = LT::to_qscaletype(x) * s;
             let mut x = LT::from_qscaletype(x.round_ties_even()); // TODO which type to pick here? Should we check for overflows?
             x += LT::from(q_info.output_info.zero_point);
-            ST::try_from(x.clamp(LT::from(ST::MIN), LT::from(ST::MAX))).unwrap()
+            ST::try_from(partial_ord_clamp(x, LT::from(ST::MIN), LT::from(ST::MAX))).unwrap()
         })
         .collect()
 }

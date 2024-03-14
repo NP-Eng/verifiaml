@@ -69,7 +69,7 @@ where
         &self.input_shape
     }
 
-    pub(crate) fn setup_keys<F, S, PCS, R>(
+    pub fn setup_keys<F, S, PCS, R>(
         &self,
         rng: &mut R,
     ) -> Result<(PCS::CommitterKey, PCS::VerifierKey), PCS::Error>
