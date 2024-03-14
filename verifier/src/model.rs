@@ -120,7 +120,7 @@ where
             [input_node_com],
             &input_challenge_point,
             [input_node_eval],
-            &input_opening_proofs[0], // &input_opening_proofs.iter().chain(&output_opening_proofs),
+            &input_opening_proofs[0],
             sponge,
             None,
         )
