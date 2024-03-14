@@ -184,7 +184,7 @@ pub fn prove_inference<F, S, PCS>(
         input_i8,
     );
 
-    let output_qtypearray = inference_proof.inputs_outputs[1].clone();
+    let output_qtypearray = inference_proof.outputs[0].clone();
 
     let output_i8 = output_qtypearray.unwrap_small();
 
@@ -237,7 +237,7 @@ pub fn verify_inference<F, S, PCS>(
         input_i8,
     );
 
-    let output_qtypearray = inference_proof.inputs_outputs[1].clone();
+    let output_qtypearray = inference_proof.outputs[0].clone();
 
     assert!(model.verify_inference(&vk, &mut verification_sponge, &node_coms, inference_proof));
 

@@ -221,10 +221,12 @@ where
 
         // TODO prove that inputs match input commitments?
         InferenceProof {
-            inputs_outputs: vec![input_node.clone(), output_node.clone()],
+            inputs: vec![input_node.clone()],
+            outputs: vec![output_node.clone()],
             node_value_commitments: output_coms,
             node_proofs,
-            opening_proofs: vec![input_opening_proof, output_opening_proof],
+            input_opening_proofs: vec![input_opening_proof],
+            output_opening_proofs: vec![output_opening_proof],
         }
     }
 

@@ -39,10 +39,12 @@ where
         inference_proof: InferenceProof<F, S, PCS, ST, LT>,
     ) -> bool {
         let InferenceProof {
-            inputs_outputs,
+            inputs,
+            outputs,
             node_value_commitments,
             node_proofs,
-            opening_proofs,
+            input_opening_proofs,
+            output_opening_proofs,
         } = inference_proof;
 
         // Absorb all commitments into the sponge
@@ -69,7 +71,7 @@ where
         // output nodes and instead working witht their plain values all along,
         // but that would require messy node-by-node handling
         let input_node_com = node_value_commitments.first().unwrap();
-        let input_node_qarray = inputs_outputs[0].ref_small();
+        let input_node_qarray = inputs[0].ref_small();
         let input_node_f: Vec<F> = input_node_qarray
             .values()
             .iter()
@@ -78,7 +80,7 @@ where
 
         let output_node_com = node_value_commitments.last().unwrap();
         // TODO maybe it's better to save this as F in the proof?
-        let output_node_f: Vec<F> = inputs_outputs[1]
+        let output_node_f: Vec<F> = outputs[0]
             .ref_small()
             .values()
             .iter()
@@ -120,7 +122,7 @@ where
             [input_node_com],
             &input_challenge_point,
             [input_node_eval],
-            &opening_proofs[0],
+            &input_opening_proofs[0],
             sponge,
             None,
         )
@@ -134,7 +136,7 @@ where
             [output_node_com],
             &output_challenge_point,
             [output_node_eval],
-            &opening_proofs[1],
+            &output_opening_proofs[0],
             sponge,
             None,
         )
