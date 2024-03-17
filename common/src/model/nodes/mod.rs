@@ -133,15 +133,6 @@ where
     I: InnerType + TryFrom<O>,
     O: InnerType + From<I>,
 {
-    pub fn as_node_ops_snark(&self) -> &dyn NodeOpsCommon {
-        match self {
-            Node::BMM(fc) => fc,
-            Node::RequantiseBMM(r) => r,
-            Node::ReLU(r) => r,
-            Node::Reshape(r) => r,
-        }
-    }
-
     // Print the type of the node. This cannot be cleantly achieved by deriving
     // Debug
     pub fn type_name(&self) -> &'static str {
@@ -175,6 +166,12 @@ where
     }
 
     pub fn com_num_vars(&self) -> usize {
-        self.as_node_ops_snark().com_num_vars()
+        let node: &dyn NodeOpsCommon = match &self {
+            Node::BMM(fc) => fc,
+            Node::RequantiseBMM(r) => r,
+            Node::ReLU(r) => r,
+            Node::Reshape(r) => r,
+        };
+        node.com_num_vars()
     }
 }
