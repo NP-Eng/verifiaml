@@ -13,6 +13,7 @@ mod nodes;
 
 pub use model::ProveModel;
 
+/// SNARK-specific operations that each node must implement.
 pub trait NodeOpsProve<F, S, PCS, I, O>
 where
     F: PrimeField + Absorb,
@@ -52,8 +53,8 @@ pub trait NodeOpsPaddedEvaluate<I, O> {
 /// `fn padded_evaluate(&self, input: &QArray<I>) -> QArray<O>;`
 /// but instead:
 /// `fn padded_evaluate(&self, input: &QTypeArray<I, O>) -> QTypeArray<I, O>;`
-/// so that we can have polymorphism and iterate over the different nodes, such that
-/// the output type of the `padded_evaluate`` method is the same as the input type
+/// so that we can have polymorphism and iterate over the different nodes, in a way that
+/// the output type of the `padded_evaluate` method is the same as the input type
 /// of the next node in the model.
 ///
 /// We cannot directly implement a new method `padded_evaluate` on a foreign enum `Node`.
