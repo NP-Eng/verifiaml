@@ -66,6 +66,17 @@ where
     fn padded_evaluate(&self, input: &QTypeArray<I, O>) -> QTypeArray<I, O>;
 }
 
+macro_rules! node_operation {
+    ($self:expr, $method:ident, $($arg:expr),*) => {
+        match $self {
+            Node::BMM(node) => node.$method($($arg),*),
+            Node::RequantiseBMM(node) => node.$method($($arg),*),
+            Node::ReLU(node) => node.$method($($arg),*),
+            Node::Reshape(node) => NodeOpsProve::<_, _, _, I, _>::$method(node, $($arg),*),
+        }
+    };
+}
+
 impl<I, O> NodeOpsPaddedEvaluateWrapper<I, O> for Node<I, O>
 where
     I: InnerType + TryFrom<O>,
@@ -108,57 +119,20 @@ where
         output_com: &LabeledCommitment<PCS::Commitment>,
         output_com_state: &PCS::CommitmentState,
     ) -> NodeProof<F, S, PCS> {
-        match self {
-            Node::BMM(node) => node.prove(
-                ck,
-                s,
-                node_com,
-                node_com_state,
-                input,
-                input_com,
-                input_com_state,
-                output,
-                output_com,
-                output_com_state,
-            ),
-            Node::RequantiseBMM(node) => node.prove(
-                ck,
-                s,
-                node_com,
-                node_com_state,
-                input,
-                input_com,
-                input_com_state,
-                output,
-                output_com,
-                output_com_state,
-            ),
-            Node::ReLU(node) => node.prove(
-                ck,
-                s,
-                node_com,
-                node_com_state,
-                input,
-                input_com,
-                input_com_state,
-                output,
-                output_com,
-                output_com_state,
-            ),
-            Node::Reshape(node) => NodeOpsProve::<_, _, _, I, _>::prove(
-                node,
-                ck,
-                s,
-                node_com,
-                node_com_state,
-                input,
-                input_com,
-                input_com_state,
-                output,
-                output_com,
-                output_com_state,
-            ),
-        }
+        node_operation!(
+            self,
+            prove,
+            ck,
+            s,
+            node_com,
+            node_com_state,
+            input,
+            input_com,
+            input_com_state,
+            output,
+            output_com,
+            output_com_state
+        )
     }
 
     fn commit(
@@ -166,11 +140,6 @@ where
         ck: &PCS::CommitterKey,
         rng: Option<&mut dyn RngCore>,
     ) -> (NodeCommitment<F, S, PCS>, NodeCommitmentState<F, S, PCS>) {
-        match self {
-            Node::BMM(fc) => fc.commit(ck, rng),
-            Node::RequantiseBMM(r) => r.commit(ck, rng),
-            Node::ReLU(r) => r.commit(ck, rng),
-            Node::Reshape(r) => NodeOpsProve::<_, _, _, I, _>::commit(r, ck, rng),
-        }
+        node_operation!(self, commit, ck, rng)
     }
 }
