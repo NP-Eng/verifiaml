@@ -42,12 +42,23 @@ where
     ) -> (NodeCommitment<F, S, PCS>, NodeCommitmentState<F, S, PCS>);
 }
 
+/// Padded evaluation which each of the node types must implement.
 pub trait NodeOpsPaddedEvaluate<I, O> {
     /// Evaluate the padded node natively
     fn padded_evaluate(&self, input: &QArray<I>) -> QArray<O>;
 }
 
-pub(crate) trait NodeOpsPaddedEvaluateWrapper<I, O>
+/// We don't want:
+/// `fn padded_evaluate(&self, input: &QArray<I>) -> QArray<O>;`
+/// but instead:
+/// `fn padded_evaluate(&self, input: &QTypeArray<I, O>) -> QTypeArray<I, O>;`
+/// so that we can have polymorphism and iterate over the different nodes, such that
+/// the output type of the `padded_evaluate`` method is the same as the input type
+/// of the next node in the model.
+///
+/// We cannot directly implement a new method `padded_evaluate` on a foreign enum `Node`.
+/// Instead, we create a private wrapper trait to implement the desired method.
+trait NodeOpsPaddedEvaluateWrapper<I, O>
 where
     I: InnerType + TryFrom<O>,
     O: InnerType + From<I>,
@@ -60,6 +71,9 @@ where
     I: InnerType + TryFrom<O>,
     O: InnerType + From<I>,
 {
+    /// Here we perform matching without sanity checks. By design, the input type of the
+    /// next node in the model is the same as the output type of the current node,
+    /// so hiccups should never occur.
     fn padded_evaluate(&self, input: &QTypeArray<I, O>) -> QTypeArray<I, O> {
         match (self, input) {
             (Node::BMM(fc), QTypeArray::S(input)) => QTypeArray::L(fc.padded_evaluate(input)),
@@ -95,7 +109,7 @@ where
         output_com_state: &PCS::CommitmentState,
     ) -> NodeProof<F, S, PCS> {
         match self {
-            Node::BMM(fc) => fc.prove(
+            Node::BMM(node) => node.prove(
                 ck,
                 s,
                 node_com,
@@ -107,7 +121,7 @@ where
                 output_com,
                 output_com_state,
             ),
-            Node::RequantiseBMM(r) => r.prove(
+            Node::RequantiseBMM(node) => node.prove(
                 ck,
                 s,
                 node_com,
@@ -119,7 +133,7 @@ where
                 output_com,
                 output_com_state,
             ),
-            Node::ReLU(r) => r.prove(
+            Node::ReLU(node) => node.prove(
                 ck,
                 s,
                 node_com,
@@ -131,8 +145,8 @@ where
                 output_com,
                 output_com_state,
             ),
-            Node::Reshape(r) => NodeOpsProve::<_, _, _, I, _>::prove(
-                r,
+            Node::Reshape(node) => NodeOpsProve::<_, _, _, I, _>::prove(
+                node,
                 ck,
                 s,
                 node_com,
