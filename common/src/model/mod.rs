@@ -2,11 +2,9 @@ use ark_crypto_primitives::sponge::{Absorb, CryptographicSponge};
 use ark_ff::PrimeField;
 use ark_poly::DenseMultilinearExtension;
 use ark_poly_commit::{LabeledCommitment, LabeledPolynomial, PolynomialCommitment};
-use ark_std::{fmt::Debug, rand::RngCore};
+use ark_std::rand::RngCore;
 
 use crate::model::nodes::Node;
-use crate::model::nodes::NodeOpsNative;
-use crate::NodeOpsCommon;
 
 use self::qarray::InnerType;
 use self::qarray::QTypeArray;

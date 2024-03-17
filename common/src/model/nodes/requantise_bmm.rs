@@ -1,6 +1,6 @@
-use ark_std::{fmt::Debug, log2};
+use ark_std::log2;
 
-use crate::model::qarray::{InnerType, QArray, QTypeArray};
+use crate::model::qarray::{InnerType, QArray};
 use crate::quantization::{requantise_fc, BMMQInfo, QInfo, QScaleType, RoundingScheme};
 use crate::{Commitment, CommitmentState};
 

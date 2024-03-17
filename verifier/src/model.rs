@@ -3,9 +3,9 @@ use ark_crypto_primitives::sponge::{Absorb, CryptographicSponge};
 use ark_ff::PrimeField;
 use ark_poly::Polynomial;
 use ark_poly_commit::PolynomialCommitment;
-use ark_std::{fmt::Debug, log2};
+use ark_std::log2;
 
-use hcs_common::{InferenceProof, InnerType, Model, NodeCommitment, Poly, QTypeArray};
+use hcs_common::{InferenceProof, InnerType, Model, NodeCommitment, Poly};
 
 pub trait VerifyModel<F, S, PCS, ST, LT>
 where

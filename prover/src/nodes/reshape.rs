@@ -5,7 +5,7 @@ use ark_std::rand::RngCore;
 
 use hcs_common::{
     InnerType, LabeledPoly, NodeCommitment, NodeCommitmentState, NodeProof, Poly, QArray,
-    QTypeArray, ReshapeNode,
+    ReshapeNode,
 };
 
 use crate::{NodeOpsPaddedEvaluate, NodeOpsProve};
@@ -41,8 +41,8 @@ where
 
         // TODO only handles 2-to-1 reshapes, I think
         unpadded_input.reshape(self.output_shape.clone());
-        let padded_output = unpadded_input.compact_resize(padded_output_shape, ST::ZERO);
-        padded_output
+
+        unpadded_input.compact_resize(padded_output_shape, ST::ZERO)
     }
 }
 

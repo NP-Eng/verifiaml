@@ -1,9 +1,8 @@
 use ark_crypto_primitives::sponge::{Absorb, CryptographicSponge};
 use ark_ff::PrimeField;
 use ark_poly_commit::{LabeledCommitment, PolynomialCommitment};
-use ark_std::fmt::Debug;
 
-use hcs_common::{InnerType, Node, NodeCommitment, NodeOpsCommon, NodeProof, Poly};
+use hcs_common::{InnerType, Node, NodeCommitment, NodeProof, Poly};
 
 mod model;
 mod nodes;

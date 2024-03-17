@@ -1,5 +1,4 @@
 use crate::model::qarray::InnerType;
-use ark_std::fmt::Debug;
 
 // TODO if we decide to make the model generic on the quantisation process
 // types (which is probably correct now that the qtypes are generics), these

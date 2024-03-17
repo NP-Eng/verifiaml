@@ -1,4 +1,4 @@
-use ark_std::{fmt::Debug, log2, rand::RngCore};
+use ark_std::{log2, rand::RngCore};
 
 use ark_crypto_primitives::sponge::{Absorb, CryptographicSponge};
 use ark_ff::PrimeField;

@@ -1,9 +1,6 @@
 use ark_std::log2;
 
-use crate::{
-    model::qarray::{InnerType, QTypeArray},
-    QArray,
-};
+use crate::{model::qarray::InnerType, QArray};
 
 use super::{NodeOpsCommon, NodeOpsNative};
 

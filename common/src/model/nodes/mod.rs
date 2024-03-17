@@ -1,7 +1,6 @@
 use ark_crypto_primitives::sponge::Absorb;
 use ark_ff::PrimeField;
 use ark_poly_commit::PolynomialCommitment;
-use ark_std::fmt::Debug;
 
 use crate::{
     model::{

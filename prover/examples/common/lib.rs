@@ -1,16 +1,12 @@
-use hcs_common::{
-    quantise_f32_u8_nne, test_sponge, BMMNode, InferenceProof, InnerType, Ligero, Model, Node,
-    Poly, QArray, QInfo, QTypeArray, ReLUNode, RequantiseBMMNode, ReshapeNode,
-};
+use hcs_common::{quantise_f32_u8_nne, InferenceProof, Model, Poly, QArray};
 use hcs_prover::ProveModel;
 
 use hcs_verifier::VerifyModel;
 
-use ark_bn254::Fr;
-use ark_crypto_primitives::sponge::{poseidon::PoseidonSponge, Absorb, CryptographicSponge};
+use ark_crypto_primitives::sponge::{Absorb, CryptographicSponge};
 use ark_ff::PrimeField;
 use ark_poly_commit::PolynomialCommitment;
-use ark_std::{fmt::Debug, test_rng};
+use ark_std::test_rng;
 
 // Auxiliary function
 fn unpadded_inference<F, S, PCS>(

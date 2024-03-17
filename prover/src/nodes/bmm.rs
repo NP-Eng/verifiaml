@@ -4,12 +4,12 @@ use ark_crypto_primitives::sponge::{Absorb, CryptographicSponge};
 use ark_ff::PrimeField;
 use ark_poly::{MultilinearExtension, Polynomial};
 use ark_poly_commit::{LabeledCommitment, LabeledPolynomial, PolynomialCommitment};
-use ark_std::{fmt::Debug, rand::RngCore};
+use ark_std::rand::RngCore;
 use ark_sumcheck::ml_sumcheck::{protocol::ListOfProductsOfPolynomials, MLSumcheck};
 
 use hcs_common::{
     BMMNode, BMMNodeCommitment, BMMNodeCommitmentState, BMMNodeProof, InnerType, LabeledPoly,
-    NodeCommitment, NodeCommitmentState, NodeOpsCommon, NodeProof, Poly, QArray, QTypeArray,
+    NodeCommitment, NodeCommitmentState, NodeOpsCommon, NodeProof, Poly, QArray,
 };
 
 use crate::{NodeOpsPaddedEvaluate, NodeOpsProve};
@@ -61,8 +61,7 @@ where
             }
         }
 
-        let output = QArray::new(accumulators, vec![padded_dims.1]);
-        output
+        QArray::new(accumulators, vec![padded_dims.1])
     }
 }
 

@@ -5,7 +5,7 @@ use ark_std::log2;
 
 use ark_sumcheck::ml_sumcheck::Proof;
 
-use crate::model::qarray::{InnerType, QArray, QTypeArray};
+use crate::model::qarray::{InnerType, QArray};
 use crate::model::Poly;
 use crate::{Commitment, CommitmentState};
 
@@ -147,8 +147,7 @@ where
             }
         }
 
-        let output = QArray::new(accumulators, vec![self.dims.1]);
-        output
+        QArray::new(accumulators, vec![self.dims.1])
     }
 }
 
