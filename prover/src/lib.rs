@@ -10,6 +10,8 @@ use hcs_common::{
 
 mod model;
 mod nodes;
+#[macro_use]
+mod util;
 
 pub use model::ProveModel;
 
@@ -65,17 +67,6 @@ where
     O: InnerType + From<I>,
 {
     fn padded_evaluate(&self, input: &QTypeArray<I, O>) -> QTypeArray<I, O>;
-}
-
-macro_rules! node_operation {
-    ($self:expr, $method:ident, $($arg:expr),*) => {
-        match $self {
-            Node::BMM(node) => node.$method($($arg),*),
-            Node::RequantiseBMM(node) => node.$method($($arg),*),
-            Node::ReLU(node) => node.$method($($arg),*),
-            Node::Reshape(node) => NodeOpsProve::<_, _, _, I, _>::$method(node, $($arg),*),
-        }
-    };
 }
 
 impl<I, O> NodeOpsPaddedEvaluateWrapper<I, O> for Node<I, O>
