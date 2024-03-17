@@ -28,7 +28,6 @@ where
     S: CryptographicSponge,
     PCS: PolynomialCommitment<F, Poly<F>, S>,
     ST: InnerType + TryFrom<LT>,
-    <ST as TryFrom<LT>>::Error: Debug,
     LT: InnerType + From<ST>,
 {
     fn verify_inference(

@@ -37,7 +37,6 @@ pub fn requantise_fc<ST: InnerType, LT: InnerType>(
 ) -> Vec<ST>
 where
     ST: InnerType + TryFrom<LT>,
-    <ST as TryFrom<LT>>::Error: Debug,
     LT: InnerType + From<ST>,
 {
     match scheme {
@@ -49,7 +48,6 @@ where
 fn requantise_fc_ntafz<ST, LT>(output: &[LT], q_info: &BMMQInfo<ST>) -> Vec<ST>
 where
     ST: InnerType + TryFrom<LT>,
-    <ST as TryFrom<LT>>::Error: Debug,
     LT: InnerType + From<ST>,
 {
     // 1. Computing scale
@@ -74,7 +72,9 @@ where
             let x = LT::to_qscaletype(x) * s;
             let mut x = LT::from_qscaletype(x.round());
             x += LT::from(q_info.output_info.zero_point);
-            ST::try_from(partial_ord_clamp(x, LT::from(ST::MIN), LT::from(ST::MAX))).unwrap()
+            ST::try_from(partial_ord_clamp(x, LT::from(ST::MIN), LT::from(ST::MAX)))
+                .map_err(|_| "Unable to convert Large Type to Small Type")
+                .unwrap()
         })
         .collect()
 }
@@ -97,7 +97,6 @@ fn partial_ord_clamp<T: PartialOrd>(x: T, min: T, max: T) -> T {
 fn requantise_fc_nte<ST: InnerType, LT: InnerType>(output: &[LT], q_info: &BMMQInfo<ST>) -> Vec<ST>
 where
     ST: InnerType + TryFrom<LT>,
-    <ST as TryFrom<LT>>::Error: Debug,
     LT: InnerType + From<ST>,
 {
     // 1. Computing scale
@@ -122,7 +121,9 @@ where
             let x = LT::to_qscaletype(x) * s;
             let mut x = LT::from_qscaletype(x.round_ties_even()); // TODO which type to pick here? Should we check for overflows?
             x += LT::from(q_info.output_info.zero_point);
-            ST::try_from(partial_ord_clamp(x, LT::from(ST::MIN), LT::from(ST::MAX))).unwrap()
+            ST::try_from(partial_ord_clamp(x, LT::from(ST::MIN), LT::from(ST::MAX)))
+                .map_err(|_| "Unable to convert Large Type to Small Type")
+                .unwrap()
         })
         .collect()
 }

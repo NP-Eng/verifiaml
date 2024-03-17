@@ -9,20 +9,14 @@ use hcs_common::{
     RequantiseBMMNodeCommitmentState, RequantiseBMMNodeProof, RoundingScheme,
 };
 
-use crate::NodeOpsProve;
+use crate::{NodeOpsPaddedEvaluate, NodeOpsProve};
 
-impl<F, S, PCS, ST, LT> NodeOpsProve<F, S, PCS, ST, LT> for RequantiseBMMNode<ST>
+impl<ST, LT> NodeOpsPaddedEvaluate<LT, ST> for RequantiseBMMNode<ST>
 where
-    F: PrimeField + Absorb,
-    S: CryptographicSponge,
-    PCS: PolynomialCommitment<F, Poly<F>, S>,
     ST: InnerType + TryFrom<LT>,
-    <ST as TryFrom<LT>>::Error: Debug,
     LT: InnerType + From<ST>,
 {
-    fn padded_evaluate(&self, input: &QTypeArray<ST, LT>) -> QTypeArray<ST, LT> {
-        let input = input.ref_large();
-
+    fn padded_evaluate(&self, input: &QArray<LT>) -> QArray<ST> {
         let padded_size = 1 << self.padded_size_log;
 
         // Sanity checks
@@ -47,10 +41,18 @@ where
             RoundingScheme::NearestTiesEven,
         )
         .into();
-
-        QTypeArray::S(output)
+        output
     }
+}
 
+impl<F, S, PCS, ST, LT> NodeOpsProve<F, S, PCS, LT, ST> for RequantiseBMMNode<ST>
+where
+    F: PrimeField + Absorb,
+    S: CryptographicSponge,
+    PCS: PolynomialCommitment<F, Poly<F>, S>,
+    ST: InnerType + TryFrom<LT>,
+    LT: InnerType + From<ST>,
+{
     fn prove(
         &self,
         _ck: &PCS::CommitterKey,

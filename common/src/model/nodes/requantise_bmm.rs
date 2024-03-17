@@ -36,7 +36,6 @@ impl<ST, LT> NodeOpsNative<LT, ST> for RequantiseBMMNode<ST>
 where
     ST: InnerType + TryFrom<LT>,
     LT: InnerType + From<ST>,
-    <ST as TryFrom<LT>>::Error: Debug,
 {
     fn shape(&self) -> Vec<usize> {
         vec![self.size]

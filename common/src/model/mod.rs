@@ -56,7 +56,6 @@ pub struct Model<ST, LT> {
 impl<ST, LT> Model<ST, LT>
 where
     ST: InnerType + TryFrom<LT>,
-    <ST as TryFrom<LT>>::Error: Debug,
     LT: InnerType + From<ST>,
 {
     pub fn new(input_shape: Vec<usize>, nodes: Vec<Node<ST, LT>>) -> Self {

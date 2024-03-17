@@ -4,24 +4,19 @@ use ark_poly_commit::{LabeledCommitment, PolynomialCommitment};
 use ark_std::rand::RngCore;
 
 use hcs_common::{
-    InnerType, LabeledPoly, NodeCommitment, NodeCommitmentState, NodeProof, Poly, QTypeArray,
-    ReshapeNode,
+    InnerType, LabeledPoly, NodeCommitment, NodeCommitmentState, NodeProof, Poly, QArray,
+    QTypeArray, ReshapeNode,
 };
 
-use crate::NodeOpsProve;
+use crate::{NodeOpsPaddedEvaluate, NodeOpsProve};
 
-impl<F, S, PCS, ST, LT> NodeOpsProve<F, S, PCS, ST, LT> for ReshapeNode
+impl<ST> NodeOpsPaddedEvaluate<ST, ST> for ReshapeNode
 where
-    F: PrimeField + Absorb,
-    S: CryptographicSponge,
-    PCS: PolynomialCommitment<F, Poly<F>, S>,
     ST: InnerType,
 {
     // TODO I think this might be broken due to the failure of commutativity
     // between product and and nearest-geq-power-of-two
-    fn padded_evaluate(&self, input: &QTypeArray<ST, LT>) -> QTypeArray<ST, LT> {
-        let input = input.ref_small();
-
+    fn padded_evaluate(&self, input: &QArray<ST>) -> QArray<ST> {
         let padded_input_shape: Vec<usize> = self
             .padded_input_shape_log
             .iter()
@@ -47,10 +42,17 @@ where
         // TODO only handles 2-to-1 reshapes, I think
         unpadded_input.reshape(self.output_shape.clone());
         let padded_output = unpadded_input.compact_resize(padded_output_shape, ST::ZERO);
-
-        QTypeArray::S(padded_output)
+        padded_output
     }
+}
 
+impl<F, S, PCS, ST> NodeOpsProve<F, S, PCS, ST, ST> for ReshapeNode
+where
+    F: PrimeField + Absorb,
+    S: CryptographicSponge,
+    PCS: PolynomialCommitment<F, Poly<F>, S>,
+    ST: InnerType,
+{
     fn prove(
         &self,
         _ck: &PCS::CommitterKey,

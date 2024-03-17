@@ -12,24 +12,18 @@ use hcs_common::{
     NodeCommitment, NodeCommitmentState, NodeOpsCommon, NodeProof, Poly, QArray, QTypeArray,
 };
 
-use crate::NodeOpsProve;
+use crate::{NodeOpsPaddedEvaluate, NodeOpsProve};
 
-impl<F, S, PCS, ST, LT> NodeOpsProve<F, S, PCS, ST, LT> for BMMNode<ST, LT>
+impl<ST, LT> NodeOpsPaddedEvaluate<ST, LT> for BMMNode<ST, LT>
 where
-    F: PrimeField + Absorb + From<ST> + From<LT>,
-    S: CryptographicSponge,
-    PCS: PolynomialCommitment<F, Poly<F>, S>,
     ST: InnerType + TryFrom<LT>,
-    <ST as TryFrom<LT>>::Error: Debug,
     LT: InnerType + From<ST>,
 {
     // This function naively computes entries which are known to be zero. It is
     // meant to exactly mirror the proof-system multiplication proved by the
     // sumcheck argument. Requantisation and shifting are also applied to these
     // trivial entries, as the proof system does.
-    fn padded_evaluate(&self, input: &QTypeArray<ST, LT>) -> QTypeArray<ST, LT> {
-        let input = input.ref_small();
-
+    fn padded_evaluate(&self, input: &QArray<ST>) -> QArray<LT> {
         let padded_dims = (1 << self.padded_dims_log.0, 1 << self.padded_dims_log.1);
 
         // Sanity checks
@@ -68,10 +62,18 @@ where
         }
 
         let output = QArray::new(accumulators, vec![padded_dims.1]);
-
-        QTypeArray::L(output)
+        output
     }
+}
 
+impl<F, S, PCS, ST, LT> NodeOpsProve<F, S, PCS, ST, LT> for BMMNode<ST, LT>
+where
+    F: PrimeField + Absorb + From<ST> + From<LT>,
+    S: CryptographicSponge,
+    PCS: PolynomialCommitment<F, Poly<F>, S>,
+    ST: InnerType + TryFrom<LT>,
+    LT: InnerType + From<ST>,
+{
     fn prove(
         &self,
         ck: &PCS::CommitterKey,

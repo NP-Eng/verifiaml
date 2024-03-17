@@ -131,7 +131,6 @@ where
 impl<I, O> Node<I, O>
 where
     I: InnerType + TryFrom<O>,
-    <I as TryFrom<O>>::Error: Debug,
     O: InnerType + From<I>,
 {
     pub fn as_node_ops_snark(&self) -> &dyn NodeOpsCommon {
