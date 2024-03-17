@@ -201,10 +201,12 @@ where
         }
     }
 
+    #[allow(dead_code)]
     pub(crate) fn padded_dims_log(&self) -> (usize, usize) {
         self.padded_dims_log
     }
 
+    #[allow(dead_code)]
     pub(crate) fn input_zero_point(&self) -> ST {
         self.input_zero_point
     }

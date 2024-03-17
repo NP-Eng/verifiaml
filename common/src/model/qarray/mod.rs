@@ -226,6 +226,7 @@ impl<T: InnerType> QArray<T> {
     /// Takes an n-dimensional index and returns the corresponding flattened
     /// index. E.g. for a 3x3 matrix, the index (1, 2) corresponds
     /// to the flattened index 5.
+    #[allow(dead_code)]
     fn flatten_index(&self, index: Vec<usize>) -> usize {
         debug_assert_eq!(
             index.len(),
@@ -240,6 +241,7 @@ impl<T: InnerType> QArray<T> {
             .sum()
     }
 
+    #[allow(dead_code)]
     pub(crate) fn get(&self, index: Vec<usize>) -> T {
         self.flattened[self.flatten_index(index)]
     }
