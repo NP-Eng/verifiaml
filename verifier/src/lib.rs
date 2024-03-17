@@ -10,7 +10,7 @@ mod nodes;
 
 pub use model::VerifyModel;
 
-pub trait NodeOpsVerify<F, S, PCS>: NodeOpsCommon
+pub trait NodeOpsVerify<F, S, PCS>
 where
     F: PrimeField + Absorb,
     S: CryptographicSponge,

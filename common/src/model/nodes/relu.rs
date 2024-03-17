@@ -1,6 +1,9 @@
 use ark_std::log2;
 
-use crate::model::qarray::{InnerType, QTypeArray};
+use crate::{
+    model::qarray::{InnerType, QTypeArray},
+    QArray,
+};
 
 use super::{NodeOpsCommon, NodeOpsNative};
 
@@ -11,20 +14,17 @@ pub struct ReLUNode<ST> {
     pub zero_point: ST,
 }
 
-impl<ST, LT> NodeOpsNative<ST, LT> for ReLUNode<ST>
+impl<ST> NodeOpsNative<ST, ST> for ReLUNode<ST>
 where
     ST: InnerType,
-    LT: InnerType + From<ST>,
 {
     fn shape(&self) -> Vec<usize> {
         vec![self.num_units]
     }
 
-    fn evaluate(&self, input: &QTypeArray<ST, LT>) -> QTypeArray<ST, LT> {
+    fn evaluate(&self, input: &QArray<ST>) -> QArray<ST> {
         // TODO sanity checks (cf. BMM); systematise
-        let input = input.ref_small();
-
-        QTypeArray::S(input.maximum(self.zero_point))
+        input.maximum(self.zero_point)
     }
 }
 

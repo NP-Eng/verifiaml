@@ -32,7 +32,7 @@ pub struct RequantiseBMMNodeProof {
     // this will be the sumcheck proof
 }
 
-impl<ST, LT> NodeOpsNative<ST, LT> for RequantiseBMMNode<ST>
+impl<ST, LT> NodeOpsNative<LT, ST> for RequantiseBMMNode<ST>
 where
     ST: InnerType + TryFrom<LT>,
     LT: InnerType + From<ST>,
@@ -42,11 +42,9 @@ where
         vec![self.size]
     }
 
-    fn evaluate(&self, input: &QTypeArray<ST, LT>) -> QTypeArray<ST, LT> {
+    fn evaluate(&self, input: &QArray<LT>) -> QArray<ST> {
         // Sanity checks
         // TODO systematise
-        let input = input.ref_large();
-
         assert_eq!(
             input.num_dims(),
             1,
@@ -67,7 +65,7 @@ where
         )
         .into();
 
-        QTypeArray::S(output)
+        output
     }
 }
 

@@ -13,7 +13,7 @@ mod nodes;
 
 pub use model::ProveModel;
 
-pub trait NodeOpsProve<F, S, PCS, ST, LT>: NodeOpsCommon
+pub trait NodeOpsProve<F, S, PCS, ST, LT>
 where
     F: PrimeField + Absorb,
     S: CryptographicSponge,

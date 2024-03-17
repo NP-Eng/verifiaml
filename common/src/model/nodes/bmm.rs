@@ -112,11 +112,9 @@ where
         vec![self.dims.1]
     }
 
-    fn evaluate(&self, input: &QTypeArray<ST, LT>) -> QTypeArray<ST, LT> {
+    fn evaluate(&self, input: &QArray<ST>) -> QArray<LT> {
         // Sanity checks
         // TODO systematise
-        let input = input.ref_small();
-
         assert_eq!(
             input.num_dims(),
             1,
@@ -150,8 +148,7 @@ where
         }
 
         let output = QArray::new(accumulators, vec![self.dims.1]);
-
-        QTypeArray::L(output)
+        output
     }
 }
 

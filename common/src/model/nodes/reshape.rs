@@ -1,6 +1,9 @@
 use ark_std::log2;
 
-use crate::model::qarray::{InnerType, QTypeArray};
+use crate::{
+    model::qarray::{InnerType, QTypeArray},
+    QArray,
+};
 
 use super::{NodeOpsCommon, NodeOpsNative};
 
@@ -11,20 +14,17 @@ pub struct ReshapeNode {
     pub padded_output_shape_log: Vec<usize>,
 }
 
-impl<ST, LT> NodeOpsNative<ST, LT> for ReshapeNode
+impl<ST> NodeOpsNative<ST, ST> for ReshapeNode
 where
     ST: InnerType,
-    LT: InnerType + From<ST>,
 {
     fn shape(&self) -> Vec<usize> {
         self.output_shape.clone()
     }
 
-    fn evaluate(&self, input: &QTypeArray<ST, LT>) -> QTypeArray<ST, LT> {
+    fn evaluate(&self, input: &QArray<ST>) -> QArray<ST> {
         // Sanity checks
         // TODO systematise
-
-        let input = input.ref_small();
 
         assert_eq!(
             *input.shape(),
@@ -34,8 +34,7 @@ where
 
         let mut output = input.clone();
         output.reshape(self.output_shape.clone());
-
-        QTypeArray::S(output)
+        output
     }
 }
 

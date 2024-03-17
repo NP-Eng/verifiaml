@@ -3,9 +3,12 @@ use ark_ff::PrimeField;
 use ark_poly_commit::PolynomialCommitment;
 use ark_std::fmt::Debug;
 
-use crate::model::{
-    nodes::{bmm::BMMNode, relu::ReLUNode},
-    CryptographicSponge, Poly,
+use crate::{
+    model::{
+        nodes::{bmm::BMMNode, relu::ReLUNode},
+        CryptographicSponge, Poly,
+    },
+    QArray,
 };
 
 use self::{
@@ -34,7 +37,7 @@ pub(crate) mod reshape;
 /// It stores information about the transition (such as a matrix and bias, if
 /// applicable), but not about about the specific values of its nodes: these
 /// are handled by the methods only.
-pub(crate) trait NodeOpsNative<ST, LT> {
+pub(crate) trait NodeOpsNative<I, O> {
     /// Returns the shape of the node's output tensor
     fn shape(&self) -> Vec<usize>;
 
@@ -45,7 +48,7 @@ pub(crate) trait NodeOpsNative<ST, LT> {
 
     /// Evaluate the node natively (without padding)
     /// TODO decide whether this method should stay on `NodeOps`, or maybe go to `NodeOpsSNARKVerify`
-    fn evaluate(&self, input: &QTypeArray<ST, LT>) -> QTypeArray<ST, LT>;
+    fn evaluate(&self, input: &QArray<I>) -> QArray<O>;
 }
 
 pub trait NodeOpsCommon {
@@ -125,21 +128,12 @@ where
 
 // A lot of this overlaps with the NodeOps trait and could be handled more
 // elegantly by simply implementing the trait
-impl<ST, LT> Node<ST, LT>
+impl<I, O> Node<I, O>
 where
-    ST: InnerType + TryFrom<LT>,
-    <ST as TryFrom<LT>>::Error: Debug,
-    LT: InnerType + From<ST>,
+    I: InnerType + TryFrom<O>,
+    <I as TryFrom<O>>::Error: Debug,
+    O: InnerType + From<I>,
 {
-    fn as_node_ops(&self) -> &dyn NodeOpsNative<ST, LT> {
-        match self {
-            Node::BMM(fc) => fc,
-            Node::RequantiseBMM(r) => r,
-            Node::ReLU(r) => r,
-            Node::Reshape(r) => r,
-        }
-    }
-
     pub fn as_node_ops_snark(&self) -> &dyn NodeOpsCommon {
         match self {
             Node::BMM(fc) => fc,
@@ -159,45 +153,29 @@ where
             Node::Reshape(_) => "Reshape",
         }
     }
-}
-// A lot of this overlaps with the NodeOps trait and could be handled more
-// elegantly by simply implementing the trait
-impl<ST, LT> NodeOpsNative<ST, LT> for Node<ST, LT>
-where
-    ST: InnerType + TryFrom<LT>,
-    <ST as TryFrom<LT>>::Error: Debug,
-    LT: InnerType + From<ST>,
-{
-    /// Returns the shape of the node's output tensor
-    fn shape(&self) -> Vec<usize> {
-        self.as_node_ops().shape()
-    }
 
-    /// The number of output units of the node
-    fn num_units(&self) -> usize {
-        self.as_node_ops().num_units()
+    /// Returns the shape of the node's output tensor
+    pub fn shape(&self) -> Vec<usize> {
+        match self {
+            Node::BMM(fc) => fc.shape(),
+            Node::RequantiseBMM(r) => r.shape(),
+            Node::ReLU(r) => r.shape(),
+            Node::Reshape(r) => NodeOpsNative::<I, _>::shape(r),
+        }
     }
 
     /// Evaluate the node natively (without padding)
-    fn evaluate(&self, input: &QTypeArray<ST, LT>) -> QTypeArray<ST, LT> {
-        self.as_node_ops().evaluate(input)
-    }
-}
-
-impl<ST, LT> NodeOpsCommon for Node<ST, LT>
-where
-    ST: InnerType + TryFrom<LT>,
-    <ST as TryFrom<LT>>::Error: Debug,
-    LT: InnerType + From<ST>,
-{
-    /// Returns the element-wise base-two logarithm of the padded node's
-    /// output shape, i.e. the list of numbers of variables of the associated
-    /// MLE
-    fn padded_shape_log(&self) -> Vec<usize> {
-        self.as_node_ops_snark().padded_shape_log()
+    pub fn evaluate(&self, input: &QTypeArray<I, O>) -> QTypeArray<I, O> {
+        match (self, input) {
+            (Node::BMM(fc), QTypeArray::S(input)) => QTypeArray::L(fc.evaluate(input)),
+            (Node::RequantiseBMM(r), QTypeArray::L(input)) => QTypeArray::S(r.evaluate(input)),
+            (Node::ReLU(r), QTypeArray::S(input)) => QTypeArray::S(r.evaluate(input)),
+            (Node::Reshape(r), QTypeArray::S(input)) => QTypeArray::S(r.evaluate(input)),
+            _ => panic!("Type mismatch"),
+        }
     }
 
-    fn com_num_vars(&self) -> usize {
+    pub fn com_num_vars(&self) -> usize {
         self.as_node_ops_snark().com_num_vars()
     }
 }
