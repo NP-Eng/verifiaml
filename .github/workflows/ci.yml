@@ -112,3 +112,41 @@ jobs:
 
       - name: Test
         run: cargo test
+
+  test-compatibility:
+    name: Test compatibility
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        rust:
+          - nightly
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Rust (${{ matrix.rust }})
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: ${{ matrix.rust }}
+          override: true
+
+      - uses: Swatinem/rust-cache@v2
+        name: Enable Rust Caching
+
+      - name: Add SSH key for private repos
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+
+      - name: Set up Python 3.10
+        uses: actions/setup-python@v2
+        with:
+          python-version: 3.10
+
+      - name: Install dependencies
+        run: | 
+          $CONDA/bin/conda env update --file exploring_tf_lite/env.yml --name tf_lite
+
+      - name: Test compatibility
+        run: PYO3_PYTHON=$CONDA/bin/python; cargo test --features test-types
