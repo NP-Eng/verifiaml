@@ -22,7 +22,6 @@ class QTwoLayerPerceptron(QModelWrapper):
             model = QTwoLayerPerceptron.MODEL,
             dataset = QTwoLayerPerceptron.DATASET
         )
-        self.quantized_model.get_tensor_details().length
 
         # MODEL PARAMETERS: (dense_1_bias, dense_1_weights, dense_2_bias, dense_2_weights)
         self.model_params = (
@@ -33,7 +32,7 @@ class QTwoLayerPerceptron(QModelWrapper):
         )
     
     def get_output(self, input_index: int) -> List:
-        return super().get_output(self.dataset[0][0][input_index])[0]
+        return super().get_output(self.dataset[1][0][input_index])[0]
         
     def get_model_parameters(self) -> Tuple:
         return self.model_params

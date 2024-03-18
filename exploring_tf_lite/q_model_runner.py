@@ -4,14 +4,17 @@ import sys
 sys.path.append('../exploring_tf_lite')
 
 from example_models.q_model_wrapper import QModelWrapper
-from example_models.two_layer_perceptron import QTwoLayerPerceptron
+from example_models.q_two_layer_perceptron import QTwoLayerPerceptron
+from example_models.q_simple_perceptron import QSimplePerceptron
 
 def get_model(model_name: str) -> Tuple[QModelWrapper, type]:
     """
     Returns a quantized model wrapper together with the type of the input data.
     """
-    if model_name == 'two_layer_perceptron':
+    if model_name == 'two_layer_perceptron_mnist':
         return (QTwoLayerPerceptron(), int)
+    elif model_name == 'simple_perceptron_mnist':
+        return (QSimplePerceptron(), int)
     else:
         raise ValueError(f"Model '{model_name}' not found.")
     
@@ -28,3 +31,5 @@ def get_model_output(model_name: str, input_data: Any) -> Any:
     model, input_type = get_model(model_name)
     assert isinstance(input_data, input_type), f"Input data must be of type {input_type}."
     return model.get_output(input_data)
+
+print(get_model_output('simple_perceptron_mnist', 0))

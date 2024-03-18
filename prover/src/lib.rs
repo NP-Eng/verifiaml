@@ -11,6 +11,9 @@ use hcs_common::{
 mod model;
 mod nodes;
 
+#[cfg(test)]
+mod compatibility;
+
 pub use model::ProveModel;
 
 pub trait NodeOpsProve<F, S, PCS>: NodeOpsCommon<F, S, PCS>
