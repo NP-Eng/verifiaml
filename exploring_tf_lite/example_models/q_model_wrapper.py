@@ -31,14 +31,6 @@ class QModelWrapper:
                 
         # Load the quantized model into an interpreter
         self.quantized_model = tf.lite.Interpreter(model_path=filename, experimental_preserve_all_tensors=True)
-
-        # Get the model parameters
-        self.model_params = {
-                "dense_1_bias": self.quantized_model.get_tensor(4),
-                "dense_1_weights": self.quantized_model.get_tensor(5).transpose(),
-                "dense_2_bias": self.quantized_model.get_tensor(2),
-                "dense_2_weights": self.quantized_model.get_tensor(3).transpose(),
-            }
         
         
     @staticmethod
@@ -99,10 +91,6 @@ class QModelWrapper:
         return self.quantized_model.get_tensor(
             self.quantized_model.get_output_details()[0]['index']
         )
-    
-    @abstractmethod
-    def get_intermediate_outputs(self, input_data: np.ndarray) -> Tuple:
-        pass
     
     @abstractmethod
     def get_model_parameters(self) -> Tuple:

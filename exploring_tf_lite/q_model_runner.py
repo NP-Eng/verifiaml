@@ -28,6 +28,3 @@ def get_model_output(model_name: str, input_data: Any) -> Any:
     model, input_type = get_model(model_name)
     assert isinstance(input_data, input_type), f"Input data must be of type {input_type}."
     return model.get_output(input_data)
-
-#print(get_model_parameters('two_layer_perceptron'))
-print(get_model_output('two_layer_perceptron', 0))
