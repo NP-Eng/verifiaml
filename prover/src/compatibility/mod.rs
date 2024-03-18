@@ -15,8 +15,8 @@ mod tests {
                 parameters::{
                     S_INPUT as S_INPUT_TWO_LAYER_PERCEPTRON_MNIST,
                     Z_INPUT as Z_INPUT_TWO_LAYER_PERCEPTRON_MNIST,
-                }
-            }
+                },
+            },
         },
         quantise_f32_u8_nne, Ligero, Model, QArray, QSmallType,
     };
@@ -128,8 +128,14 @@ mod tests {
                 let raw_input = get_model_input("two_layer_perceptron_mnist", i);
                 let expected_output = get_model_output("two_layer_perceptron_mnist", i);
 
-                let output =
-                    unpadded_inference(raw_input, &two_layer_perceptron_mnist, (S_INPUT_TWO_LAYER_PERCEPTRON_MNIST, Z_INPUT_TWO_LAYER_PERCEPTRON_MNIST));
+                let output = unpadded_inference(
+                    raw_input,
+                    &two_layer_perceptron_mnist,
+                    (
+                        S_INPUT_TWO_LAYER_PERCEPTRON_MNIST,
+                        Z_INPUT_TWO_LAYER_PERCEPTRON_MNIST,
+                    ),
+                );
 
                 (output == expected_output) as usize
             })
@@ -149,8 +155,14 @@ mod tests {
                 let raw_input = get_model_input("simple_perceptron_mnist", i);
                 let expected_output = get_model_output("simple_perceptron_mnist", i);
 
-                let output =
-                    unpadded_inference(raw_input, &simple_perceptron_mnist, (S_INPUT_SIMPLE_PERCEPTRON_MNIST, Z_INPUT_SIMPLE_PERCEPTRON_MNIST));
+                let output = unpadded_inference(
+                    raw_input,
+                    &simple_perceptron_mnist,
+                    (
+                        S_INPUT_SIMPLE_PERCEPTRON_MNIST,
+                        Z_INPUT_SIMPLE_PERCEPTRON_MNIST,
+                    ),
+                );
 
                 (output == expected_output) as usize
             })
