@@ -17,6 +17,10 @@ rayon = { workspace = true, optional = true }
 hcs-common = { path = "../common" }
 hcs-verifier = { path = "../verifier", optional = true }
 
+[dependencies.pyo3]
+version = "0.20.3"
+features = ["auto-initialize"]
+
 [dev-dependencies]
 ark-bn254 = { workspace = true, features = [ "curve" ] }
 blake2 = { workspace = true }

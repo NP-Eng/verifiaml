@@ -1,3 +1,4 @@
+pub mod example_models;
 pub(crate) mod model;
 pub(crate) mod quantization;
 pub(crate) mod utils;
