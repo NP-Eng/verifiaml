@@ -23,8 +23,11 @@ where
     S: CryptographicSponge,
     PCS: PolynomialCommitment<F, Poly<F>, S>,
 {
-    // Model input and output tensors in plain
-    pub inputs_outputs: Vec<QTypeArray>,
+    // Model input tensors in plain
+    pub inputs: Vec<QTypeArray>,
+
+    // Model output tensors in plain
+    pub outputs: Vec<QTypeArray>,
 
     // Commitments to each of the node values
     pub node_value_commitments: Vec<LabeledCommitment<PCS::Commitment>>,
@@ -32,8 +35,11 @@ where
     // Proofs of evaluation of each of the model's nodes
     pub node_proofs: Vec<NodeProof<F, S, PCS>>,
 
+    // Proofs of opening of each of the model's inputs
+    pub input_opening_proofs: Vec<PCS::Proof>,
+
     // Proofs of opening of each of the model's outputs
-    pub opening_proofs: Vec<PCS::Proof>,
+    pub output_opening_proofs: Vec<PCS::Proof>,
 }
 
 // TODO change the functions that receive vectors to receive slices instead whenever it makes sense
