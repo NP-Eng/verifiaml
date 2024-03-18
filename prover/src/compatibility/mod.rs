@@ -20,6 +20,7 @@ mod tests {
         },
         quantise_f32_u8_nne, Ligero, Model, QArray, QSmallType,
     };
+    use more_asserts::*;
 
     use pyo3::prelude::*;
 
