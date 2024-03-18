@@ -145,7 +145,7 @@ jobs:
           python-version: 3.9
 
       - name: Install dependencies
-        run: $CONDA/bin/conda env update --file exploring_tf_lite/env.yml --name base
+        run: python -m pip install --upgrade pip; python -m pip install tensorflow
 
       - name: Test compatibility
-        run: PYO3_PYTHON=$CONDA/bin/python; cargo test --features test-types
+        run: cargo test --features test-types
