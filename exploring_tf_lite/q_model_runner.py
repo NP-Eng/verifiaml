@@ -31,3 +31,10 @@ def get_model_output(model_name: str, input_data: Any) -> Any:
     model, input_type = get_model(model_name)
     assert isinstance(input_data, input_type), f"Input data must be of type {input_type}."
     return model.get_output(input_data)
+
+def get_model_input(model_name: str, input_index: int) -> Any:
+    """
+    Returns the input data at a given index.
+    """
+    model, _ = get_model(model_name)
+    return model.get_input(input_index)

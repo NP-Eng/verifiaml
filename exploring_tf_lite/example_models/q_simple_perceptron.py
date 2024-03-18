@@ -26,6 +26,9 @@ class QSimplePerceptron(QModelWrapper):
             self.quantized_model.get_tensor(2),
             self.quantized_model.get_tensor(3).transpose(),
         )
+        
+    def get_input(self, input_index: int) -> List:
+        return self.dataset[1][0][input_index]
     
     def get_output(self, input_index: int) -> List:
         return super().get_output(self.dataset[1][0][input_index])[0]

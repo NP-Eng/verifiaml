@@ -15,7 +15,10 @@ pub const OUTPUT_DIM: usize = 10;
 // the time at which Rust expands macros
 macro_rules! PATH {
     () => {
-        "common/src/example_models/two_layer_perceptron_mnist/{}"
+        concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/src/example_models/two_layer_perceptron_mnist/parameters/{}"
+        )
     };
 }
 
@@ -29,10 +32,10 @@ where
 
     let reshape: ReshapeNode<F, S, PCS> = ReshapeNode::new(INPUT_DIMS.to_vec(), vec![flat_dim]);
 
-    let w1_array: QArray<i8> = QArray::read(&format!(PATH!(), "parameters/weights_1.json"));
-    let b1_array: QArray<i32> = QArray::read(&format!(PATH!(), "parameters/bias_1.json"));
-    let w2_array: QArray<i8> = QArray::read(&format!(PATH!(), "parameters/weights_2.json"));
-    let b2_array: QArray<i32> = QArray::read(&format!(PATH!(), "parameters/bias_2.json"));
+    let w1_array: QArray<i8> = QArray::read(&format!(PATH!(), "weights_1.json"));
+    let b1_array: QArray<i32> = QArray::read(&format!(PATH!(), "bias_1.json"));
+    let w2_array: QArray<i8> = QArray::read(&format!(PATH!(), "weights_2.json"));
+    let b2_array: QArray<i32> = QArray::read(&format!(PATH!(), "bias_2.json"));
 
     let bmm_1: BMMNode<F, S, PCS> = BMMNode::new(w1_array, b1_array, Z_1_I);
 

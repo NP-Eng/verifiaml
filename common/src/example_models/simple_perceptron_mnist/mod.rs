@@ -14,7 +14,10 @@ pub const OUTPUT_DIM: usize = 10;
 // the time at which Rust expands macros
 macro_rules! PATH {
     () => {
-        "common/src/example_models/simple_perceptron_mnist/{}"
+        concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/src/example_models/simple_perceptron_mnist/parameters/{}"
+        )
     };
 }
 
@@ -29,8 +32,8 @@ where
 
     let reshape: ReshapeNode<F, S, PCS> = ReshapeNode::new(INPUT_DIMS.to_vec(), vec![flat_dim]);
 
-    let w_array: QArray<i8> = QArray::read(&format!(PATH!(), "parameters/weights.json"));
-    let b_array: QArray<i32> = QArray::read(&format!(PATH!(), "parameters/bias.json"));
+    let w_array: QArray<i8> = QArray::read(&format!(PATH!(), "weights.json"));
+    let b_array: QArray<i32> = QArray::read(&format!(PATH!(), "bias.json"));
 
     let bmm: BMMNode<F, S, PCS> = BMMNode::new(w_array, b_array, Z_I);
 
