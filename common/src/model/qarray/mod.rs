@@ -605,4 +605,12 @@ impl<ST, LT> QTypeArray<ST, LT> {
             _ => panic!("Expected L variant"),
         }
     }
+
+    #[inline]
+    pub fn variant_name(&self) -> &str {
+        match self {
+            QTypeArray::S(_) => "QTypeArray::S",
+            QTypeArray::L(_) => "QTypeArray::L",
+        }
+    }
 }

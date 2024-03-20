@@ -160,7 +160,11 @@ where
             (Node::RequantiseBMM(r), QTypeArray::L(input)) => QTypeArray::S(r.evaluate(input)),
             (Node::ReLU(r), QTypeArray::S(input)) => QTypeArray::S(r.evaluate(input)),
             (Node::Reshape(r), QTypeArray::S(input)) => QTypeArray::S(r.evaluate(input)),
-            _ => panic!("Type mismatch"),
+            _ => panic!(
+                "Type mismatch: node of type {} received input of type {}",
+                self.type_name(),
+                input.variant_name()
+            ),
         }
     }
 
