@@ -607,7 +607,7 @@ impl<ST, LT> QTypeArray<ST, LT> {
     }
 
     #[inline]
-    pub fn variant_name(&self) -> &str {
+    pub fn variant_name(&self) -> &'static str {
         match self {
             QTypeArray::S(_) => "QTypeArray::S",
             QTypeArray::L(_) => "QTypeArray::L",
