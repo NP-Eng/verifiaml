@@ -35,13 +35,47 @@ where
     }
 }
 
-impl NodeOpsCommon for ReshapeNode {
+impl<ST> NodeOpsCommon<ST, ST> for ReshapeNode
+where
+    ST: InnerType,
+{
     fn padded_shape_log(&self) -> Vec<usize> {
         self.padded_output_shape_log.clone()
     }
 
     fn com_num_vars(&self) -> usize {
         0
+    }
+
+    // TODO I think this might be broken due to the failure of commutativity
+    // between product and and nearest-geq-power-of-two
+    fn padded_evaluate(&self, input: &QArray<ST>) -> QArray<ST> {
+        let padded_input_shape: Vec<usize> = self
+            .padded_input_shape_log
+            .iter()
+            .map(|x| (1 << x) as usize)
+            .collect();
+
+        let padded_output_shape: Vec<usize> = self
+            .padded_output_shape_log
+            .iter()
+            .map(|x| (1 << x) as usize)
+            .collect();
+
+        // Sanity checks
+        // TODO systematise
+        assert_eq!(
+            *input.shape(),
+            padded_input_shape,
+            "Received padded input shape does not match node's padded input shape"
+        );
+
+        let mut unpadded_input = input.compact_resize(self.input_shape.clone(), ST::ZERO);
+
+        // TODO only handles 2-to-1 reshapes, I think
+        unpadded_input.reshape(self.output_shape.clone());
+
+        unpadded_input.compact_resize(padded_output_shape, ST::ZERO)
     }
 }
 

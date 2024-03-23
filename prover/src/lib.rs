@@ -4,8 +4,8 @@ use ark_poly_commit::{LabeledCommitment, PolynomialCommitment};
 use ark_std::rand::RngCore;
 
 use hcs_common::{
-    InnerType, LabeledPoly, Node, NodeCommitment, NodeCommitmentState, NodeProof, Poly, QArray,
-    QTypeArray,
+    InnerType, LabeledPoly, Node, NodeCommitment, NodeCommitmentState, NodeOpsCommon, NodeProof,
+    Poly, QTypeArray,
 };
 
 mod model;
@@ -45,12 +45,6 @@ where
     ) -> (NodeCommitment<F, S, PCS>, NodeCommitmentState<F, S, PCS>);
 }
 
-/// Padded evaluation which each of the node types must implement.
-pub trait NodeOpsPaddedEvaluate<I, O> {
-    /// Evaluate the padded node natively
-    fn padded_evaluate(&self, input: &QArray<I>) -> QArray<O>;
-}
-
 /// We don't want:
 /// `fn padded_evaluate(&self, input: &QArray<I>) -> QArray<O>;`
 /// but instead:
@@ -60,7 +54,7 @@ pub trait NodeOpsPaddedEvaluate<I, O> {
 /// of the next node in the model.
 ///
 /// We cannot directly implement a new method `padded_evaluate` on a foreign enum `Node`.
-/// Instead, we create a private wrapper trait to implement the desired method.
+// /// Instead, we create a private wrapper trait to implement the desired method.
 trait NodeOpsPaddedEvaluateWrapper<I, O>
 where
     I: InnerType + TryFrom<O>,

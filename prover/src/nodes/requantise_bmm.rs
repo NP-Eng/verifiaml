@@ -4,46 +4,12 @@ use ark_poly_commit::{LabeledCommitment, PolynomialCommitment};
 use ark_std::rand::RngCore;
 
 use hcs_common::{
-    requantise_fc, InnerType, LabeledPoly, NodeCommitment, NodeCommitmentState, NodeProof, Poly,
-    QArray, RequantiseBMMNode, RequantiseBMMNodeCommitment, RequantiseBMMNodeCommitmentState,
-    RequantiseBMMNodeProof, RoundingScheme,
+    InnerType, LabeledPoly, NodeCommitment, NodeCommitmentState, NodeProof, Poly,
+    RequantiseBMMNode, RequantiseBMMNodeCommitment, RequantiseBMMNodeCommitmentState,
+    RequantiseBMMNodeProof,
 };
 
-use crate::{NodeOpsPaddedEvaluate, NodeOpsProve};
-
-impl<ST, LT> NodeOpsPaddedEvaluate<LT, ST> for RequantiseBMMNode<ST>
-where
-    ST: InnerType + TryFrom<LT>,
-    LT: InnerType + From<ST>,
-{
-    fn padded_evaluate(&self, input: &QArray<LT>) -> QArray<ST> {
-        let padded_size = 1 << self.padded_size_log;
-
-        // Sanity checks
-        // TODO systematise
-        assert_eq!(
-            input.num_dims(),
-            1,
-            "Incorrect shape: RequantiseBMM node expects a 1-dimensional input array"
-        );
-
-        assert_eq!(
-            padded_size,
-            input.len(),
-            "Length mismatch: Padded fully connected node expected input with {} elements, got {} elements instead",
-            padded_size,
-            input.len()
-        );
-
-        let output: QArray<ST> = requantise_fc::<ST, LT>(
-            input.values(),
-            &self.q_info,
-            RoundingScheme::NearestTiesEven,
-        )
-        .into();
-        output
-    }
-}
+use crate::NodeOpsProve;
 
 impl<F, S, PCS, ST, LT> NodeOpsProve<F, S, PCS, LT, ST> for RequantiseBMMNode<ST>
 where

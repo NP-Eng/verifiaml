@@ -26,13 +26,23 @@ where
 }
 
 // impl NodeOpsSnark
-impl<ST> NodeOpsCommon for ReLUNode<ST> {
+impl<ST> NodeOpsCommon<ST, ST> for ReLUNode<ST>
+where
+    ST: InnerType,
+{
     fn padded_shape_log(&self) -> Vec<usize> {
         vec![self.log_num_units]
     }
 
     fn com_num_vars(&self) -> usize {
         0
+    }
+
+    // TODO this is the same as evaluate() for now; the two will likely differ
+    // if/when we introduce input size checks
+    fn padded_evaluate(&self, input: &QArray<ST>) -> QArray<ST> {
+        // TODO sanity checks (cf. BMM); systematise
+        input.maximum(self.zero_point)
     }
 }
 

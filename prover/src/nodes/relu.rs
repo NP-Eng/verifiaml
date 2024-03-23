@@ -4,10 +4,10 @@ use ark_poly_commit::{LabeledCommitment, PolynomialCommitment};
 use ark_std::rand::RngCore;
 
 use hcs_common::{
-    InnerType, LabeledPoly, NodeCommitment, NodeCommitmentState, NodeProof, Poly, QArray, ReLUNode,
+    InnerType, LabeledPoly, NodeCommitment, NodeCommitmentState, NodeProof, Poly, ReLUNode,
 };
 
-use crate::{NodeOpsPaddedEvaluate, NodeOpsProve};
+use crate::NodeOpsProve;
 
 impl<F, S, PCS, ST> NodeOpsProve<F, S, PCS, ST, ST> for ReLUNode<ST>
 where
@@ -38,17 +38,5 @@ where
         _rng: Option<&mut dyn RngCore>,
     ) -> (NodeCommitment<F, S, PCS>, NodeCommitmentState<F, S, PCS>) {
         (NodeCommitment::ReLU(()), NodeCommitmentState::ReLU(()))
-    }
-}
-
-impl<ST> NodeOpsPaddedEvaluate<ST, ST> for ReLUNode<ST>
-where
-    ST: InnerType,
-{
-    // TODO this is the same as evaluate() for now; the two will likely differ
-    // if/when we introduce input size checks
-    fn padded_evaluate(&self, input: &QArray<ST>) -> QArray<ST> {
-        // TODO sanity checks (cf. BMM); systematise
-        input.maximum(self.zero_point)
     }
 }

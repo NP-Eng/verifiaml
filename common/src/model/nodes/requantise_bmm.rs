@@ -68,13 +68,45 @@ where
     }
 }
 
-impl<ST> NodeOpsCommon for RequantiseBMMNode<ST> {
+impl<ST, LT> NodeOpsCommon<LT, ST> for RequantiseBMMNode<ST>
+where
+    ST: InnerType + TryFrom<LT>,
+    LT: InnerType + From<ST>,
+{
     fn padded_shape_log(&self) -> Vec<usize> {
         vec![self.padded_size_log]
     }
 
     fn com_num_vars(&self) -> usize {
         self.padded_size_log
+    }
+
+    fn padded_evaluate(&self, input: &QArray<LT>) -> QArray<ST> {
+        let padded_size = 1 << self.padded_size_log;
+
+        // Sanity checks
+        // TODO systematise
+        assert_eq!(
+            input.num_dims(),
+            1,
+            "Incorrect shape: RequantiseBMM node expects a 1-dimensional input array"
+        );
+
+        assert_eq!(
+            padded_size,
+            input.len(),
+            "Length mismatch: Padded fully connected node expected input with {} elements, got {} elements instead",
+            padded_size,
+            input.len()
+        );
+
+        let output: QArray<ST> = requantise_fc::<ST, LT>(
+            input.values(),
+            &self.q_info,
+            RoundingScheme::NearestTiesEven,
+        )
+        .into();
+        output
     }
 }
 

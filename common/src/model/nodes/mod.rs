@@ -50,7 +50,7 @@ pub(crate) trait NodeOpsNative<I, O> {
     fn evaluate(&self, input: &QArray<I>) -> QArray<O>;
 }
 
-pub trait NodeOpsCommon {
+pub trait NodeOpsCommon<I, O> {
     /// Returns the element-wise base-two logarithm of the padded node's
     /// output shape, i.e. the list of numbers of variables of the associated
     /// MLE
@@ -80,6 +80,9 @@ pub trait NodeOpsCommon {
     /// Returns the maximum number of variables of the MLEs committed to as part of
     /// this nodes's commitment.
     fn com_num_vars(&self) -> usize;
+
+    /// Evaluate the padded node natively
+    fn padded_evaluate(&self, input: &QArray<I>) -> QArray<O>;
 }
 
 pub enum Node<ST, LT> {
@@ -169,12 +172,11 @@ where
     }
 
     pub fn com_num_vars(&self) -> usize {
-        let node: &dyn NodeOpsCommon = match &self {
-            Node::BMM(fc) => fc,
-            Node::RequantiseBMM(r) => r,
-            Node::ReLU(r) => r,
-            Node::Reshape(r) => r,
-        };
-        node.com_num_vars()
+        match &self {
+            Node::BMM(fc) => fc.com_num_vars(),
+            Node::RequantiseBMM(r) => r.com_num_vars(),
+            Node::ReLU(r) => r.com_num_vars(),
+            Node::Reshape(r) => NodeOpsCommon::<I, I>::com_num_vars(r),
+        }
     }
 }
