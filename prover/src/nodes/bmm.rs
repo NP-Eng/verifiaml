@@ -9,7 +9,7 @@ use ark_sumcheck::ml_sumcheck::{protocol::ListOfProductsOfPolynomials, MLSumchec
 
 use hcs_common::{
     BMMNode, BMMNodeCommitment, BMMNodeCommitmentState, BMMNodeProof, InnerType, LabeledPoly,
-    NodeCommitment, NodeCommitmentState, NodeOpsCommon, NodeProof, Poly,
+    NodeCommitment, NodeCommitmentState, NodeOpsPadded, NodeProof, Poly,
 };
 
 use crate::NodeOpsProve;

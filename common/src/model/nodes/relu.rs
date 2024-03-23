@@ -2,7 +2,7 @@ use ark_std::log2;
 
 use crate::{model::qarray::InnerType, QArray};
 
-use super::{NodeOpsCommon, NodeOpsNative};
+use super::{NodeOpsNative, NodeOpsPadded};
 
 // Rectified linear unit node performing x |-> max(0, x).
 pub struct ReLUNode<ST> {
@@ -26,7 +26,7 @@ where
 }
 
 // impl NodeOpsSnark
-impl<ST> NodeOpsCommon<ST, ST> for ReLUNode<ST>
+impl<ST> NodeOpsPadded<ST, ST> for ReLUNode<ST>
 where
     ST: InnerType,
 {

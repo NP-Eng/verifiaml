@@ -9,7 +9,7 @@ use crate::model::qarray::{InnerType, QArray};
 use crate::model::Poly;
 use crate::{Commitment, CommitmentState};
 
-use super::{NodeOpsCommon, NodeOpsNative};
+use super::{NodeOpsNative, NodeOpsPadded};
 
 // TODO convention: input, bias and output are rows, the op is vec-by-mat (in that order)
 
@@ -151,7 +151,7 @@ where
     }
 }
 
-impl<ST, LT> NodeOpsCommon<ST, LT> for BMMNode<ST, LT>
+impl<ST, LT> NodeOpsPadded<ST, LT> for BMMNode<ST, LT>
 where
     ST: InnerType + TryFrom<LT>,
     LT: InnerType + From<ST>,

@@ -50,7 +50,7 @@ pub trait NodeOpsNative<I, O> {
     fn evaluate(&self, input: &QArray<I>) -> QArray<O>;
 }
 
-pub trait NodeOpsCommon<I, O>: NodeOpsNative<I, O> {
+pub trait NodeOpsPadded<I, O>: NodeOpsNative<I, O> {
     /// Returns the element-wise base-two logarithm of the padded node's
     /// output shape, i.e. the list of numbers of variables of the associated
     /// MLE
@@ -176,7 +176,7 @@ where
             Node::BMM(fc) => fc.com_num_vars(),
             Node::RequantiseBMM(r) => r.com_num_vars(),
             Node::ReLU(r) => r.com_num_vars(),
-            Node::Reshape(r) => NodeOpsCommon::<I, I>::com_num_vars(r),
+            Node::Reshape(r) => NodeOpsPadded::<I, I>::com_num_vars(r),
         }
     }
 }

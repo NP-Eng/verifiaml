@@ -16,7 +16,7 @@ pub use model::nodes::{
         RequantiseBMMNodeProof,
     },
     reshape::ReshapeNode,
-    Node, NodeCommitment, NodeCommitmentState, NodeOpsCommon, NodeProof,
+    Node, NodeCommitment, NodeCommitmentState, NodeOpsPadded, NodeProof,
 };
 pub use model::qarray::{InnerType, QArray, QTypeArray};
 pub use model::{InferenceProof, Model};

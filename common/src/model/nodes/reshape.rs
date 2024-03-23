@@ -2,7 +2,7 @@ use ark_std::log2;
 
 use crate::{model::qarray::InnerType, QArray};
 
-use super::{NodeOpsCommon, NodeOpsNative};
+use super::{NodeOpsNative, NodeOpsPadded};
 
 pub struct ReshapeNode {
     pub input_shape: Vec<usize>,
@@ -35,7 +35,7 @@ where
     }
 }
 
-impl<ST> NodeOpsCommon<ST, ST> for ReshapeNode
+impl<ST> NodeOpsPadded<ST, ST> for ReshapeNode
 where
     ST: InnerType,
 {

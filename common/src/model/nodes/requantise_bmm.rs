@@ -4,7 +4,7 @@ use crate::model::qarray::{InnerType, QArray};
 use crate::quantization::{requantise_fc, BMMQInfo, QInfo, QScaleType, RoundingScheme};
 use crate::{Commitment, CommitmentState};
 
-use super::{NodeOpsCommon, NodeOpsNative};
+use super::{NodeOpsNative, NodeOpsPadded};
 
 // TODO convention: input, bias and output are rows, the op is vec-by-mat (in that order)
 
@@ -68,7 +68,7 @@ where
     }
 }
 
-impl<ST, LT> NodeOpsCommon<LT, ST> for RequantiseBMMNode<ST>
+impl<ST, LT> NodeOpsPadded<LT, ST> for RequantiseBMMNode<ST>
 where
     ST: InnerType + TryFrom<LT>,
     LT: InnerType + From<ST>,
