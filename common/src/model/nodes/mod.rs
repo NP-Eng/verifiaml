@@ -36,7 +36,7 @@ pub(crate) mod reshape;
 /// It stores information about the transition (such as a matrix and bias, if
 /// applicable), but not about about the specific values of its nodes: these
 /// are handled by the methods only.
-pub(crate) trait NodeOpsNative<I, O> {
+pub trait NodeOpsNative<I, O> {
     /// Returns the shape of the node's output tensor
     fn shape(&self) -> Vec<usize>;
 
@@ -50,7 +50,7 @@ pub(crate) trait NodeOpsNative<I, O> {
     fn evaluate(&self, input: &QArray<I>) -> QArray<O>;
 }
 
-pub trait NodeOpsCommon<I, O> {
+pub trait NodeOpsCommon<I, O>: NodeOpsNative<I, O> {
     /// Returns the element-wise base-two logarithm of the padded node's
     /// output shape, i.e. the list of numbers of variables of the associated
     /// MLE
