@@ -1,6 +1,6 @@
 use hcs_common::{
     simple_perceptron_mnist::{build_simple_perceptron_mnist, parameters::*, OUTPUT_DIM},
-    test_sponge, Ligero, Model,
+    test_sponge, Ligero,
 };
 
 use ark_bn254::Fr;
@@ -17,8 +17,7 @@ macro_rules! PATH {
 }
 
 fn main() {
-    let simple_perceptron: Model<Fr, PoseidonSponge<Fr>, Ligero<Fr>> =
-        build_simple_perceptron_mnist();
+    let simple_perceptron = build_simple_perceptron_mnist::<Fr, PoseidonSponge<Fr>, Ligero<Fr>>();
 
     // Right now this can't be QInfo because the latter is always a pair
     // (f32, i8), which indeed matches in-model quantisation, but not
@@ -36,7 +35,7 @@ fn main() {
 
     let output_shape = vec![OUTPUT_DIM];
 
-    prove_inference(
+    prove_inference::<Fr, PoseidonSponge<Fr>, Ligero<Fr>>(
         &format!(PATH!(), "data/input_test_150.json"),
         &format!(PATH!(), "data/output_test_150.json"),
         &simple_perceptron,
@@ -45,7 +44,7 @@ fn main() {
         output_shape.clone(),
     );
 
-    verify_inference(
+    verify_inference::<Fr, PoseidonSponge<Fr>, Ligero<Fr>>(
         &format!(PATH!(), "data/input_test_150.json"),
         &format!(PATH!(), "data/output_test_150.json"),
         &simple_perceptron,

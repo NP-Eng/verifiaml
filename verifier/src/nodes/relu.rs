@@ -5,7 +5,7 @@ use hcs_common::{NodeCommitment, NodeProof, Poly, ReLUNode};
 
 use crate::NodeOpsVerify;
 
-impl<F, S, PCS> NodeOpsVerify<F, S, PCS> for ReLUNode<F, S, PCS>
+impl<F, S, PCS, ST> NodeOpsVerify<F, S, PCS> for ReLUNode<ST>
 where
     F: PrimeField + Absorb,
     S: CryptographicSponge,

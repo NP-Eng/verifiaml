@@ -1,27 +1,26 @@
 use ark_crypto_primitives::sponge::{Absorb, CryptographicSponge};
 use ark_ff::PrimeField;
 use ark_poly_commit::{LabeledCommitment, PolynomialCommitment};
-
 use ark_std::rand::RngCore;
+
 use hcs_common::{
-    LabeledPoly, Node, NodeCommitment, NodeCommitmentState, NodeOpsCommon, NodeProof, Poly,
-    QTypeArray,
+    InnerType, LabeledPoly, Node, NodeCommitment, NodeCommitmentState, NodeProof, Poly,
 };
 
 mod model;
 mod nodes;
+#[macro_use]
+mod util;
 
 pub use model::ProveModel;
 
-pub trait NodeOpsProve<F, S, PCS>: NodeOpsCommon<F, S, PCS>
+/// SNARK-specific operations that each node must implement.
+pub trait NodeOpsProve<F, S, PCS, I, O>
 where
     F: PrimeField + Absorb,
     S: CryptographicSponge,
     PCS: PolynomialCommitment<F, Poly<F>, S>,
 {
-    /// Evaluate the padded node natively
-    fn padded_evaluate(&self, input: &QTypeArray) -> QTypeArray;
-
     /// Produce a node output proof
     fn prove(
         &self,
@@ -45,31 +44,14 @@ where
     ) -> (NodeCommitment<F, S, PCS>, NodeCommitmentState<F, S, PCS>);
 }
 
-fn node_as_node_ops_snark<F, S, PCS>(node: &Node<F, S, PCS>) -> &dyn NodeOpsProve<F, S, PCS>
+impl<F, S, PCS, I, O> NodeOpsProve<F, S, PCS, I, O> for Node<I, O>
 where
-    F: PrimeField + Absorb,
+    F: PrimeField + Absorb + From<I> + From<O> + From<O>,
     S: CryptographicSponge,
     PCS: PolynomialCommitment<F, Poly<F>, S>,
+    I: InnerType + TryFrom<O>,
+    O: InnerType + From<I>,
 {
-    match node {
-        Node::BMM(fc) => fc,
-        Node::RequantiseBMM(r) => r,
-        Node::ReLU(r) => r,
-        Node::Reshape(r) => r,
-    }
-}
-
-impl<F, S, PCS> NodeOpsProve<F, S, PCS> for Node<F, S, PCS>
-where
-    F: PrimeField + Absorb,
-    S: CryptographicSponge,
-    PCS: PolynomialCommitment<F, Poly<F>, S>,
-{
-    /// Evaluate the padded node natively
-    fn padded_evaluate(&self, input: &QTypeArray) -> QTypeArray {
-        node_as_node_ops_snark(self).padded_evaluate(input)
-    }
-
     fn prove(
         &self,
         ck: &PCS::CommitterKey,
@@ -83,7 +65,9 @@ where
         output_com: &LabeledCommitment<PCS::Commitment>,
         output_com_state: &PCS::CommitmentState,
     ) -> NodeProof<F, S, PCS> {
-        node_as_node_ops_snark(self).prove(
+        node_operation!(
+            self,
+            prove,
             ck,
             s,
             node_com,
@@ -93,7 +77,7 @@ where
             input_com_state,
             output,
             output_com,
-            output_com_state,
+            output_com_state
         )
     }
 
@@ -102,6 +86,6 @@ where
         ck: &PCS::CommitterKey,
         rng: Option<&mut dyn RngCore>,
     ) -> (NodeCommitment<F, S, PCS>, NodeCommitmentState<F, S, PCS>) {
-        node_as_node_ops_snark(self).commit(ck, rng)
+        node_operation!(self, commit, ck, rng)
     }
 }

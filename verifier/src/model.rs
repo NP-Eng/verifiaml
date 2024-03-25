@@ -5,9 +5,9 @@ use ark_poly::Polynomial;
 use ark_poly_commit::PolynomialCommitment;
 use ark_std::log2;
 
-use hcs_common::{InferenceProof, Model, NodeCommitment, Poly, QTypeArray};
+use hcs_common::{InferenceProof, InnerType, Model, NodeCommitment, Poly};
 
-pub trait VerifyModel<F, S, PCS>
+pub trait VerifyModel<F, S, PCS, ST, LT>
 where
     F: PrimeField + Absorb,
     S: CryptographicSponge,
@@ -18,22 +18,24 @@ where
         vk: &PCS::VerifierKey,
         sponge: &mut S,
         node_commitments: &Vec<NodeCommitment<F, S, PCS>>,
-        inference_proof: InferenceProof<F, S, PCS>,
+        inference_proof: InferenceProof<F, S, PCS, ST, LT>,
     ) -> bool;
 }
 
-impl<F, S, PCS> VerifyModel<F, S, PCS> for Model<F, S, PCS>
+impl<F, S, PCS, ST, LT> VerifyModel<F, S, PCS, ST, LT> for Model<ST, LT>
 where
-    F: PrimeField + Absorb,
+    F: PrimeField + Absorb + From<ST> + From<LT>,
     S: CryptographicSponge,
     PCS: PolynomialCommitment<F, Poly<F>, S>,
+    ST: InnerType + TryFrom<LT>,
+    LT: InnerType + From<ST>,
 {
     fn verify_inference(
         &self,
         vk: &PCS::VerifierKey,
         sponge: &mut S,
         node_commitments: &Vec<NodeCommitment<F, S, PCS>>,
-        inference_proof: InferenceProof<F, S, PCS>,
+        inference_proof: InferenceProof<F, S, PCS, ST, LT>,
     ) -> bool {
         let InferenceProof {
             inputs,
@@ -68,10 +70,7 @@ where
         // output nodes and instead working witht their plain values all along,
         // but that would require messy node-by-node handling
         let input_node_com = node_value_commitments.first().unwrap();
-        let input_node_qarray = match &inputs[0] {
-            QTypeArray::S(i) => i,
-            _ => panic!("Model input should be QTypeArray::S"),
-        };
+        let input_node_qarray = inputs[0].ref_small();
         let input_node_f: Vec<F> = input_node_qarray
             .values()
             .iter()
@@ -80,10 +79,12 @@ where
 
         let output_node_com = node_value_commitments.last().unwrap();
         // TODO maybe it's better to save this as F in the proof?
-        let output_node_f: Vec<F> = match &outputs[0] {
-            QTypeArray::S(o) => o.values().iter().map(|x| F::from(*x)).collect(),
-            _ => panic!("Model output should be QTypeArray::S"),
-        };
+        let output_node_f: Vec<F> = outputs[0]
+            .ref_small()
+            .values()
+            .iter()
+            .map(|x| F::from(*x))
+            .collect();
 
         // Absorb the model IO output and squeeze the challenge point
         // Absorb the plain output and squeeze the challenge point
@@ -97,8 +98,8 @@ where
         // Verifying that the actual input was honestly padded with zeros
         let padded_input_shape = input_node_qarray.shape().clone();
         let honestly_padded_input = input_node_qarray
-            .compact_resize(self.input_shape().clone(), 0)
-            .compact_resize(padded_input_shape, 0);
+            .compact_resize(self.input_shape().clone(), ST::ZERO)
+            .compact_resize(padded_input_shape, ST::ZERO);
 
         if honestly_padded_input.values() != input_node_qarray.values() {
             return false;

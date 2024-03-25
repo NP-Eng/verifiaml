@@ -1,6 +1,8 @@
+#[macro_use]
+pub(crate) mod utils;
+
 pub(crate) mod model;
 pub(crate) mod quantization;
-pub(crate) mod utils;
 
 trait Commitment {}
 
@@ -16,14 +18,12 @@ pub use model::nodes::{
         RequantiseBMMNodeProof,
     },
     reshape::ReshapeNode,
-    Node, NodeCommitment, NodeCommitmentState, NodeOpsCommon, NodeProof,
+    Node, NodeCommitment, NodeCommitmentState, NodeOpsPadded, NodeProof,
 };
-pub use model::qarray::{QArray, QTypeArray};
+pub use model::qarray::{InnerType, QArray, QTypeArray};
 pub use model::{InferenceProof, Model};
 pub use model::{LabeledPoly, Poly};
-pub use quantization::{
-    quantise_f32_u8_nne, requantise_fc, BMMQInfo, QLargeType, QSmallType, RoundingScheme,
-};
+pub use quantization::{quantise_f32_u8_nne, requantise_fc, BMMQInfo, QInfo, RoundingScheme};
 
 #[cfg(feature = "test-types")]
 pub use utils::{pcs_types::Ligero, test_sponge::test_sponge};

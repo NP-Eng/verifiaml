@@ -1,21 +1,15 @@
-use ark_std::marker::PhantomData;
-
-use ark_crypto_primitives::sponge::{Absorb, CryptographicSponge};
-use ark_ff::PrimeField;
-use ark_poly_commit::PolynomialCommitment;
 use ark_std::log2;
 
-use crate::model::qarray::{QArray, QTypeArray};
-use crate::model::Poly;
-use crate::quantization::{requantise_fc, BMMQInfo, QInfo, QScaleType, QSmallType, RoundingScheme};
+use crate::model::qarray::{InnerType, QArray};
+use crate::quantization::{requantise_fc, BMMQInfo, QInfo, QScaleType, RoundingScheme};
 use crate::{Commitment, CommitmentState};
 
-use super::{NodeOpsCommon, NodeOpsNative};
+use super::{NodeOpsNative, NodeOpsPadded};
 
 // TODO convention: input, bias and output are rows, the op is vec-by-mat (in that order)
 
 /// Apply requantisation after a BMM argument
-pub struct RequantiseBMMNode<F, S, PCS> {
+pub struct RequantiseBMMNode<ST> {
     // Number of units
     size: usize,
 
@@ -23,9 +17,7 @@ pub struct RequantiseBMMNode<F, S, PCS> {
     pub padded_size_log: usize,
 
     /// Quantisation info associated to the input BMM result
-    pub q_info: BMMQInfo,
-
-    phantom: PhantomData<(F, S, PCS)>,
+    pub q_info: BMMQInfo<ST>,
 }
 
 pub struct RequantiseBMMNodeCommitment();
@@ -40,24 +32,18 @@ pub struct RequantiseBMMNodeProof {
     // this will be the sumcheck proof
 }
 
-impl<F, S, PCS> NodeOpsNative for RequantiseBMMNode<F, S, PCS>
+impl<ST, LT> NodeOpsNative<LT, ST> for RequantiseBMMNode<ST>
 where
-    F: PrimeField,
-    S: CryptographicSponge,
-    PCS: PolynomialCommitment<F, Poly<F>, S>,
+    ST: InnerType + TryFrom<LT>,
+    LT: InnerType + From<ST>,
 {
     fn shape(&self) -> Vec<usize> {
         vec![self.size]
     }
 
-    fn evaluate(&self, input: &QTypeArray) -> QTypeArray {
+    fn evaluate(&self, input: &QArray<LT>) -> QArray<ST> {
         // Sanity checks
         // TODO systematise
-        let input = match input {
-            QTypeArray::L(i) => i,
-            _ => panic!("RequantiseBMM node expects QLargeType as its QArray input type"),
-        };
-
         assert_eq!(
             input.num_dims(),
             1,
@@ -71,22 +57,21 @@ where
             input.len()
         );
 
-        let output: QArray<QSmallType> = requantise_fc(
+        let output: QArray<ST> = requantise_fc(
             input.values(),
             &self.q_info,
             RoundingScheme::NearestTiesEven,
         )
         .into();
 
-        QTypeArray::S(output)
+        output
     }
 }
 
-impl<F, S, PCS> NodeOpsCommon<F, S, PCS> for RequantiseBMMNode<F, S, PCS>
+impl<ST, LT> NodeOpsPadded<LT, ST> for RequantiseBMMNode<ST>
 where
-    F: PrimeField + Absorb,
-    S: CryptographicSponge,
-    PCS: PolynomialCommitment<F, Poly<F>, S>,
+    ST: InnerType + TryFrom<LT>,
+    LT: InnerType + From<ST>,
 {
     fn padded_shape_log(&self) -> Vec<usize> {
         vec![self.padded_size_log]
@@ -95,22 +80,45 @@ where
     fn com_num_vars(&self) -> usize {
         self.padded_size_log
     }
+
+    fn padded_evaluate(&self, input: &QArray<LT>) -> QArray<ST> {
+        let padded_size = 1 << self.padded_size_log;
+
+        // Sanity checks
+        // TODO systematise
+        assert_eq!(
+            input.num_dims(),
+            1,
+            "Incorrect shape: RequantiseBMM node expects a 1-dimensional input array"
+        );
+
+        assert_eq!(
+            padded_size,
+            input.len(),
+            "Length mismatch: Padded fully connected node expected input with {} elements, got {} elements instead",
+            padded_size,
+            input.len()
+        );
+
+        let output: QArray<ST> = requantise_fc::<ST, LT>(
+            input.values(),
+            &self.q_info,
+            RoundingScheme::NearestTiesEven,
+        )
+        .into();
+        output
+    }
 }
 
-impl<F, S, PCS> RequantiseBMMNode<F, S, PCS>
-where
-    F: PrimeField,
-    S: CryptographicSponge,
-    PCS: PolynomialCommitment<F, Poly<F>, S>,
-{
+impl<ST> RequantiseBMMNode<ST> {
     pub fn new(
         size: usize,
         s_i: QScaleType,
-        z_i: QSmallType,
+        z_i: ST,
         s_w: QScaleType,
-        z_w: QSmallType,
+        z_w: ST,
         s_o: QScaleType,
-        z_o: QSmallType,
+        z_o: ST,
     ) -> Self {
         let padded_size_log = log2(size.next_power_of_two()) as usize;
 
@@ -134,7 +142,6 @@ where
             size,
             padded_size_log,
             q_info,
-            phantom: PhantomData,
         }
     }
 }

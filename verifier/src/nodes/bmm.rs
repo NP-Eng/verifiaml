@@ -5,15 +5,18 @@ use ark_sumcheck::ml_sumcheck::{
     protocol::{verifier::SubClaim, PolynomialInfo},
     MLSumcheck,
 };
-use hcs_common::{BMMNode, BMMNodeCommitment, BMMNodeProof, NodeCommitment, NodeProof, Poly};
+use hcs_common::{
+    BMMNode, BMMNodeCommitment, BMMNodeProof, InnerType, NodeCommitment, NodeProof, Poly,
+};
 
 use crate::NodeOpsVerify;
 
-impl<F, S, PCS> NodeOpsVerify<F, S, PCS> for BMMNode<F, S, PCS>
+impl<F, S, PCS, ST, LT> NodeOpsVerify<F, S, PCS> for BMMNode<ST, LT>
 where
-    F: PrimeField + Absorb,
+    F: PrimeField + Absorb + From<ST>,
     S: CryptographicSponge,
     PCS: PolynomialCommitment<F, Poly<F>, S>,
+    ST: InnerType,
 {
     fn verify(
         &self,

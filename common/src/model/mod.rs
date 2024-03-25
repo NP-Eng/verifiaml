@@ -1,13 +1,12 @@
-use ark_std::rand::RngCore;
-
 use ark_crypto_primitives::sponge::{Absorb, CryptographicSponge};
 use ark_ff::PrimeField;
 use ark_poly::DenseMultilinearExtension;
 use ark_poly_commit::{LabeledCommitment, LabeledPolynomial, PolynomialCommitment};
+use ark_std::rand::RngCore;
 
-use crate::model::nodes::{NodeOpsCommon, NodeOpsNative};
-use crate::{model::nodes::Node, quantization::QSmallType};
+use crate::model::nodes::Node;
 
+use self::qarray::InnerType;
 use self::qarray::QTypeArray;
 use self::{nodes::NodeProof, qarray::QArray};
 
@@ -17,17 +16,17 @@ pub mod qarray;
 pub type Poly<F> = DenseMultilinearExtension<F>;
 pub type LabeledPoly<F> = LabeledPolynomial<F, DenseMultilinearExtension<F>>;
 
-pub struct InferenceProof<F, S, PCS>
+pub struct InferenceProof<F, S, PCS, ST, LT>
 where
     F: PrimeField + Absorb,
     S: CryptographicSponge,
     PCS: PolynomialCommitment<F, Poly<F>, S>,
 {
     // Model input tensors in plain
-    pub inputs: Vec<QTypeArray>,
+    pub inputs: Vec<QTypeArray<ST, LT>>,
 
     // Model output tensors in plain
-    pub outputs: Vec<QTypeArray>,
+    pub outputs: Vec<QTypeArray<ST, LT>>,
 
     // Commitments to each of the node values
     pub node_value_commitments: Vec<LabeledCommitment<PCS::Commitment>>,
@@ -46,24 +45,18 @@ where
 
 // TODO: for now, we require all nodes to use the same PCS; this might change
 // in the future
-pub struct Model<F, S, PCS>
-where
-    F: PrimeField + Absorb,
-    S: CryptographicSponge,
-    PCS: PolynomialCommitment<F, Poly<F>, S>,
-{
+pub struct Model<ST, LT> {
     pub input_shape: Vec<usize>,
     pub output_shape: Vec<usize>,
-    pub nodes: Vec<Node<F, S, PCS>>,
+    pub nodes: Vec<Node<ST, LT>>,
 }
 
-impl<F, S, PCS> Model<F, S, PCS>
+impl<ST, LT> Model<ST, LT>
 where
-    F: PrimeField + Absorb,
-    S: CryptographicSponge,
-    PCS: PolynomialCommitment<F, Poly<F>, S>,
+    ST: InnerType + TryFrom<LT>,
+    LT: InnerType + From<ST>,
 {
-    pub fn new(input_shape: Vec<usize>, nodes: Vec<Node<F, S, PCS>>) -> Self {
+    pub fn new(input_shape: Vec<usize>, nodes: Vec<Node<ST, LT>>) -> Self {
         // An empty model would cause panics later down the line e.g. when
         // determining the number of variables needed to commit to it.
         assert!(!nodes.is_empty(), "A model cannot have no nodes",);
@@ -79,10 +72,16 @@ where
         &self.input_shape
     }
 
-    pub fn setup_keys<R: RngCore>(
+    pub fn setup_keys<F, S, PCS, R>(
         &self,
         rng: &mut R,
-    ) -> Result<(PCS::CommitterKey, PCS::VerifierKey), PCS::Error> {
+    ) -> Result<(PCS::CommitterKey, PCS::VerifierKey), PCS::Error>
+    where
+        F: PrimeField + Absorb + From<ST> + From<LT>,
+        S: CryptographicSponge,
+        PCS: PolynomialCommitment<F, Poly<F>, S>,
+        R: RngCore,
+    {
         let num_vars = self.nodes.iter().map(|n| n.com_num_vars()).max().unwrap();
 
         let pp = PCS::setup(1, Some(num_vars), rng).unwrap();
@@ -93,15 +92,13 @@ where
         PCS::trim(&pp, 0, 0, None)
     }
 
-    pub fn evaluate(&self, input: QArray<QSmallType>) -> QArray<QSmallType> {
+    pub fn evaluate(&self, input: QArray<ST>) -> QArray<ST> {
         let mut output = QTypeArray::S(input);
+
         for node in &self.nodes {
             output = node.evaluate(&output);
         }
 
-        match output {
-            QTypeArray::S(o) => o,
-            _ => panic!("Output QArray type should be QSmallType"),
-        }
+        output.unwrap_small()
     }
 }

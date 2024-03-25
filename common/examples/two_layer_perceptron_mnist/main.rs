@@ -1,6 +1,6 @@
 use hcs_common::{
     two_layer_perceptron_mnist::{build_two_layer_perceptron_mnist, parameters::*},
-    Ligero, Model,
+    Ligero,
 };
 
 use ark_bn254::Fr;
@@ -20,8 +20,8 @@ macro_rules! PATH {
 }
 
 fn main() {
-    let two_layer_perceptron: Model<Fr, PoseidonSponge<Fr>, Ligero<Fr>> =
-        build_two_layer_perceptron_mnist();
+    let two_layer_perceptron =
+        build_two_layer_perceptron_mnist::<Fr, PoseidonSponge<Fr>, Ligero<Fr>>();
 
     // Right now this can't be QInfo because the latter is always a pair
     // (f32, i8), which indeed matches in-model quantisation, but not
@@ -33,7 +33,7 @@ fn main() {
     println!("\nEXAMPLE: two-layer perceptron");
     println!("-----------------------------");
 
-    run_unpadded(
+    run_unpadded::<Fr, PoseidonSponge<Fr>, Ligero<Fr>>(
         &format!(PATH!(), "input_test_150.json"),
         &format!(PATH!(), "output_test_150.json"),
         &two_layer_perceptron,
@@ -42,7 +42,7 @@ fn main() {
 
     // MNIST test samples with index
     // 6393, 1894, 5978, 6120, 817, 3843, 7626, 9272, 498, 4622
-    multi_run_unpadded(
+    multi_run_unpadded::<Fr, PoseidonSponge<Fr>, Ligero<Fr>>(
         &format!(PATH!(), "10_test_inputs.json"),
         &format!(PATH!(), "10_test_outputs.json"),
         &two_layer_perceptron,

@@ -19,7 +19,7 @@ mod tests {
                 },
             },
         },
-        quantise_f32_u8_nne, Ligero, Model, QArray, QSmallType,
+        quantise_f32_u8_nne, Ligero, Model, QArray,
     };
     use ark_bn254::Fr;
     use ark_crypto_primitives::sponge::poseidon::PoseidonSponge;
@@ -71,7 +71,7 @@ mod tests {
 
     fn unpadded_inference(
         raw_input: QArray<f32>,
-        model: &Model<Fr, PoseidonSponge<Fr>, Ligero<Fr>>,
+        model: &Model<i8, i32>,
         qinfo: (f32, u8),
     ) -> QArray<u8> {
         let quantised_input: QArray<u8> = QArray::new(
@@ -79,7 +79,7 @@ mod tests {
             raw_input.shape().clone(),
         );
 
-        let input_i8 = (quantised_input.cast::<i32>() - 128).cast::<QSmallType>();
+        let input_i8 = (quantised_input.cast::<i32>() - 128).cast::<i8>();
 
         let output_i8 = model.evaluate(input_i8);
 
@@ -119,8 +119,8 @@ mod tests {
 
     #[test]
     fn test_two_layer_perceptron_mnist_all_outputs() {
-        let two_layer_perceptron_mnist: Model<Fr, PoseidonSponge<Fr>, Ligero<Fr>> =
-            build_two_layer_perceptron_mnist();
+        let two_layer_perceptron_mnist =
+            build_two_layer_perceptron_mnist::<Fr, PoseidonSponge<Fr>, Ligero<Fr>>();
 
         let correct_samples: usize = (0..NB_OUTPUTS)
             .into_iter()
@@ -149,8 +149,8 @@ mod tests {
 
     #[test]
     fn test_simple_perceptron_mnist_all_outputs() {
-        let simple_perceptron_mnist: Model<Fr, PoseidonSponge<Fr>, Ligero<Fr>> =
-            build_simple_perceptron_mnist();
+        let simple_perceptron_mnist =
+            build_simple_perceptron_mnist::<Fr, PoseidonSponge<Fr>, Ligero<Fr>>();
 
         let correct_samples: usize = (0..NB_OUTPUTS)
             .into_iter()

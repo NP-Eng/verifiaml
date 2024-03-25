@@ -1,4 +1,4 @@
-use hcs_common::{quantise_f32_u8_nne, Model, Poly, QArray, QSmallType, QTypeArray};
+use hcs_common::{quantise_f32_u8_nne, InferenceProof, Model, Poly, QArray};
 use hcs_prover::ProveModel;
 
 use hcs_verifier::VerifyModel;
@@ -11,7 +11,7 @@ use ark_std::test_rng;
 pub fn prove_inference<F, S, PCS>(
     input_path: &str,
     expected_output_path: &str,
-    model: &Model<F, S, PCS>,
+    model: &Model<i8, i32>,
     qinfo: (f32, u8),
     sponge: S,
     output_shape: Vec<usize>,
@@ -28,17 +28,17 @@ pub fn prove_inference<F, S, PCS>(
         input.shape().clone(),
     );
 
-    let input_i8 = (quantised_input.cast::<i32>() - 128).cast::<QSmallType>();
+    let input_i8 = (quantised_input.cast::<i32>() - 128).cast::<i8>();
 
     let mut sponge = sponge;
 
     let mut rng = test_rng();
-    let (ck, _) = model.setup_keys(&mut rng).unwrap();
+    let (ck, _) = model.setup_keys::<F, S, PCS, _>(&mut rng).unwrap();
 
     let (node_coms, node_com_states): (Vec<_>, Vec<_>) =
         model.commit(&ck, None).into_iter().unzip();
 
-    let inference_proof = model.prove_inference(
+    let inference_proof: InferenceProof<F, S, PCS, i8, i32> = model.prove_inference(
         &ck,
         Some(&mut rng),
         &mut sponge,
@@ -47,12 +47,9 @@ pub fn prove_inference<F, S, PCS>(
         input_i8,
     );
 
-    let output_qtypearray = inference_proof.inputs[0].clone();
+    let output_qtypearray = inference_proof.outputs[0].clone();
 
-    let output_i8 = match output_qtypearray {
-        QTypeArray::S(o) => o,
-        _ => panic!("Expected QTypeArray::S"),
-    };
+    let output_i8 = output_qtypearray.unwrap_small();
 
     let output_u8: QArray<u8> = (output_i8.cast::<i32>() + 128).cast();
 
@@ -64,7 +61,7 @@ pub fn prove_inference<F, S, PCS>(
 pub fn verify_inference<F, S, PCS>(
     input_path: &str,
     expected_output_path: &str,
-    model: &Model<F, S, PCS>,
+    model: &Model<i8, i32>,
     qinfo: (f32, u8),
     sponge: S,
     output_shape: Vec<usize>,
@@ -81,7 +78,7 @@ pub fn verify_inference<F, S, PCS>(
         input.shape().clone(),
     );
 
-    let input_i8 = (quantised_input.cast::<i32>() - 128).cast::<QSmallType>();
+    let input_i8 = (quantised_input.cast::<i32>() - 128).cast::<i8>();
 
     // Cloning the initial state of the sponge to start proof and verification
     // with the same fresh sponge
@@ -89,12 +86,12 @@ pub fn verify_inference<F, S, PCS>(
     let mut verification_sponge = sponge;
 
     let mut rng = test_rng();
-    let (ck, vk) = model.setup_keys(&mut rng).unwrap();
+    let (ck, vk) = model.setup_keys::<F, S, PCS, _>(&mut rng).unwrap();
 
     let (node_coms, node_com_states): (Vec<_>, Vec<_>) =
         model.commit(&ck, None).into_iter().unzip();
 
-    let inference_proof = model.prove_inference(
+    let inference_proof: InferenceProof<F, S, PCS, i8, i32> = model.prove_inference(
         &ck,
         Some(&mut rng),
         &mut proving_sponge,
@@ -107,10 +104,7 @@ pub fn verify_inference<F, S, PCS>(
 
     assert!(model.verify_inference(&vk, &mut verification_sponge, &node_coms, inference_proof));
 
-    let output_i8 = match output_qtypearray {
-        QTypeArray::S(o) => o,
-        _ => panic!("Expected QTypeArray::S"),
-    };
+    let output_i8 = output_qtypearray.unwrap_small();
 
     let output_u8 = (output_i8.cast::<i32>() + 128).cast::<u8>();
 
