@@ -91,7 +91,7 @@ mod tests {
         let expected_input =
             QArray::read("examples/two_layer_perceptron_mnist/data/input_test_150.json");
         assert_eq!(
-            get_model_input("two_layer_perceptron_mnist", 150),
+            get_model_input("QTwoLayerPerceptron", 150),
             expected_input
         );
     }
@@ -101,7 +101,7 @@ mod tests {
         let expected_input =
             QArray::read("examples/simple_perceptron_mnist/data/input_test_150.json");
         assert_eq!(
-            get_model_input("simple_perceptron_mnist", 150),
+            get_model_input("QSimplePerceptron", 150),
             expected_input
         );
     }
@@ -111,7 +111,7 @@ mod tests {
         let expected_output =
             QArray::read("examples/two_layer_perceptron_mnist/data/output_test_150.json");
         assert_eq!(
-            get_model_output("two_layer_perceptron_mnist", 150),
+            get_model_output("QTwoLayerPerceptron", 150),
             expected_output
         );
     }
@@ -121,7 +121,7 @@ mod tests {
         let expected_output =
             QArray::read("examples/simple_perceptron_mnist/data/output_test_150.json");
         assert_eq!(
-            get_model_output("simple_perceptron_mnist", 150),
+            get_model_output("QSimplePerceptron", 150),
             expected_output
         );
     }
@@ -134,8 +134,8 @@ mod tests {
         let correct_samples: usize = (0..NB_OUTPUTS)
             .into_iter()
             .map(|i| {
-                let raw_input = get_model_input("two_layer_perceptron_mnist", i);
-                let expected_output = get_model_output("two_layer_perceptron_mnist", i);
+                let raw_input = get_model_input("QTwoLayerPerceptron", i);
+                let expected_output = get_model_output("QTwoLayerPerceptron", i);
 
                 let output = unpadded_inference(
                     raw_input,
@@ -164,8 +164,8 @@ mod tests {
         let correct_samples: usize = (0..NB_OUTPUTS)
             .into_iter()
             .map(|i| {
-                let raw_input = get_model_input("simple_perceptron_mnist", i);
-                let expected_output = get_model_output("simple_perceptron_mnist", i);
+                let raw_input = get_model_input("QSimplePerceptron", i);
+                let expected_output = get_model_output("QSimplePerceptron", i);
 
                 let output = unpadded_inference(
                     raw_input,
