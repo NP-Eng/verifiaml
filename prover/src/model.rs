@@ -4,17 +4,17 @@ use ark_crypto_primitives::sponge::{Absorb, CryptographicSponge};
 use ark_ff::PrimeField;
 use ark_poly::MultilinearExtension;
 use ark_poly_commit::{LabeledPolynomial, PolynomialCommitment};
-use hcs_common::{InferenceProof, Model};
-use hcs_common::{NodeCommitment, NodeCommitmentState, Poly, QArray, QSmallType, QTypeArray};
+use hcs_common::{InferenceProof, InnerType, Model};
+use hcs_common::{NodeCommitment, NodeCommitmentState, Poly, QArray, QTypeArray};
 
 use crate::NodeOpsProve;
-pub trait ProveModel<F, S, PCS>
+pub trait ProveModel<F, S, PCS, ST, LT>
 where
     F: PrimeField + Absorb,
     S: CryptographicSponge,
     PCS: PolynomialCommitment<F, Poly<F>, S>,
 {
-    fn padded_evaluate(&self, input: QArray<QSmallType>) -> QArray<QSmallType>;
+    fn padded_evaluate(&self, input: QArray<ST>) -> QArray<ST>;
 
     fn prove_inference(
         &self,
@@ -23,8 +23,8 @@ where
         sponge: &mut S,
         node_coms: &Vec<NodeCommitment<F, S, PCS>>,
         node_com_states: &Vec<NodeCommitmentState<F, S, PCS>>,
-        input: QArray<QSmallType>,
-    ) -> InferenceProof<F, S, PCS>;
+        input: QArray<ST>,
+    ) -> InferenceProof<F, S, PCS, ST, LT>;
 
     fn commit(
         &self,
@@ -33,15 +33,17 @@ where
     ) -> Vec<(NodeCommitment<F, S, PCS>, NodeCommitmentState<F, S, PCS>)>;
 }
 
-impl<F, S, PCS> ProveModel<F, S, PCS> for Model<F, S, PCS>
+impl<F, S, PCS, ST, LT> ProveModel<F, S, PCS, ST, LT> for Model<ST, LT>
 where
-    F: PrimeField + Absorb,
+    F: PrimeField + Absorb + From<ST> + From<LT>,
     S: CryptographicSponge,
     PCS: PolynomialCommitment<F, Poly<F>, S>,
+    ST: InnerType + TryFrom<LT>,
+    LT: InnerType + From<ST>,
 {
     /// Unlike the node's `padded_evaluate`, the model's `padded_evaluate` accepts unpadded input
     /// and first re-sizes it before running inference.
-    fn padded_evaluate(&self, input: QArray<QSmallType>) -> QArray<QSmallType> {
+    fn padded_evaluate(&self, input: QArray<ST>) -> QArray<ST> {
         // TODO sanity check: input shape matches model input shape
 
         let input = input.compact_resize(
@@ -50,7 +52,7 @@ where
                 .iter()
                 .map(|x| x.next_power_of_two())
                 .collect(),
-            0,
+            ST::ZERO,
         );
 
         let mut output = QTypeArray::S(input);
@@ -60,10 +62,9 @@ where
         }
 
         // TODO switch to reference in reshape?
-        match output {
-            QTypeArray::S(o) => o.compact_resize(self.output_shape.clone(), 0),
-            _ => panic!("Output QArray type should be QSmallType"),
-        }
+        output
+            .unwrap_small()
+            .compact_resize(self.output_shape.clone(), ST::ZERO)
     }
 
     fn prove_inference(
@@ -73,8 +74,8 @@ where
         sponge: &mut S,
         node_coms: &Vec<NodeCommitment<F, S, PCS>>,
         node_com_states: &Vec<NodeCommitmentState<F, S, PCS>>,
-        input: QArray<QSmallType>,
-    ) -> InferenceProof<F, S, PCS> {
+        input: QArray<ST>,
+    ) -> InferenceProof<F, S, PCS, ST, LT> {
         // TODO Absorb public parameters into s (to be determined what exactly)
 
         let output = input.compact_resize(
@@ -82,7 +83,7 @@ where
                 .iter()
                 .map(|x| x.next_power_of_two())
                 .collect(),
-            0,
+            ST::ZERO,
         );
 
         let output_f: Vec<F> = output.values().iter().map(|x| F::from(*x)).collect();

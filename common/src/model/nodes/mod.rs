@@ -2,9 +2,12 @@ use ark_crypto_primitives::sponge::Absorb;
 use ark_ff::PrimeField;
 use ark_poly_commit::PolynomialCommitment;
 
-use crate::model::{
-    nodes::{bmm::BMMNode, relu::ReLUNode},
-    CryptographicSponge, Poly,
+use crate::{
+    model::{
+        nodes::{bmm::BMMNode, relu::ReLUNode},
+        CryptographicSponge, Poly,
+    },
+    QArray,
 };
 
 use self::{
@@ -16,7 +19,7 @@ use self::{
     reshape::ReshapeNode,
 };
 
-use super::qarray::QTypeArray;
+use super::qarray::{InnerType, QTypeArray};
 
 pub(crate) mod bmm;
 pub(crate) mod relu;
@@ -33,7 +36,7 @@ pub(crate) mod reshape;
 /// It stores information about the transition (such as a matrix and bias, if
 /// applicable), but not about about the specific values of its nodes: these
 /// are handled by the methods only.
-pub(crate) trait NodeOpsNative {
+pub trait NodeOpsNative<I, O> {
     /// Returns the shape of the node's output tensor
     fn shape(&self) -> Vec<usize>;
 
@@ -44,15 +47,10 @@ pub(crate) trait NodeOpsNative {
 
     /// Evaluate the node natively (without padding)
     /// TODO decide whether this method should stay on `NodeOps`, or maybe go to `NodeOpsSNARKVerify`
-    fn evaluate(&self, input: &QTypeArray) -> QTypeArray;
+    fn evaluate(&self, input: &QArray<I>) -> QArray<O>;
 }
 
-pub trait NodeOpsCommon<F, S, PCS>
-where
-    F: PrimeField + Absorb,
-    S: CryptographicSponge,
-    PCS: PolynomialCommitment<F, Poly<F>, S>,
-{
+pub trait NodeOpsPadded<I, O>: NodeOpsNative<I, O> {
     /// Returns the element-wise base-two logarithm of the padded node's
     /// output shape, i.e. the list of numbers of variables of the associated
     /// MLE
@@ -82,18 +80,16 @@ where
     /// Returns the maximum number of variables of the MLEs committed to as part of
     /// this nodes's commitment.
     fn com_num_vars(&self) -> usize;
+
+    /// Evaluate the padded node natively
+    fn padded_evaluate(&self, input: &QArray<I>) -> QArray<O>;
 }
 
-pub enum Node<F, S, PCS>
-where
-    F: PrimeField,
-    S: CryptographicSponge,
-    PCS: PolynomialCommitment<F, Poly<F>, S>,
-{
-    BMM(BMMNode<F, S, PCS>),
-    RequantiseBMM(RequantiseBMMNode<F, S, PCS>),
-    ReLU(ReLUNode<F, S, PCS>),
-    Reshape(ReshapeNode<F, S, PCS>),
+pub enum Node<ST, LT> {
+    BMM(BMMNode<ST, LT>),
+    RequantiseBMM(RequantiseBMMNode<ST>),
+    ReLU(ReLUNode<ST>),
+    Reshape(ReshapeNode),
 }
 
 pub enum NodeProof<F, S, PCS>
@@ -134,30 +130,11 @@ where
 
 // A lot of this overlaps with the NodeOps trait and could be handled more
 // elegantly by simply implementing the trait
-impl<F, S, PCS> Node<F, S, PCS>
+impl<I, O> Node<I, O>
 where
-    F: PrimeField + Absorb,
-    S: CryptographicSponge,
-    PCS: PolynomialCommitment<F, Poly<F>, S>,
+    I: InnerType + TryFrom<O>,
+    O: InnerType + From<I>,
 {
-    fn as_node_ops(&self) -> &dyn NodeOpsNative {
-        match self {
-            Node::BMM(fc) => fc,
-            Node::RequantiseBMM(r) => r,
-            Node::ReLU(r) => r,
-            Node::Reshape(r) => r,
-        }
-    }
-
-    pub fn as_node_ops_snark(&self) -> &dyn NodeOpsCommon<F, S, PCS> {
-        match self {
-            Node::BMM(fc) => fc,
-            Node::RequantiseBMM(r) => r,
-            Node::ReLU(r) => r,
-            Node::Reshape(r) => r,
-        }
-    }
-
     // Print the type of the node. This cannot be cleantly achieved by deriving
     // Debug
     pub fn type_name(&self) -> &'static str {
@@ -168,45 +145,43 @@ where
             Node::Reshape(_) => "Reshape",
         }
     }
-}
-// A lot of this overlaps with the NodeOps trait and could be handled more
-// elegantly by simply implementing the trait
-impl<F, S, PCS> NodeOpsNative for Node<F, S, PCS>
-where
-    F: PrimeField + Absorb,
-    S: CryptographicSponge,
-    PCS: PolynomialCommitment<F, Poly<F>, S>,
-{
-    /// Returns the shape of the node's output tensor
-    fn shape(&self) -> Vec<usize> {
-        self.as_node_ops().shape()
-    }
 
-    /// The number of output units of the node
-    fn num_units(&self) -> usize {
-        self.as_node_ops().num_units()
+    /// Returns the shape of the node's output tensor
+    pub fn shape(&self) -> Vec<usize> {
+        node_op!(self, shape, NodeOpsNative)
     }
 
     /// Evaluate the node natively (without padding)
-    fn evaluate(&self, input: &QTypeArray) -> QTypeArray {
-        self.as_node_ops().evaluate(input)
-    }
-}
-
-impl<F, S, PCS> NodeOpsCommon<F, S, PCS> for Node<F, S, PCS>
-where
-    F: PrimeField + Absorb,
-    S: CryptographicSponge,
-    PCS: PolynomialCommitment<F, Poly<F>, S>,
-{
-    /// Returns the element-wise base-two logarithm of the padded node's
-    /// output shape, i.e. the list of numbers of variables of the associated
-    /// MLE
-    fn padded_shape_log(&self) -> Vec<usize> {
-        self.as_node_ops_snark().padded_shape_log()
+    pub fn evaluate(&self, input: &QTypeArray<I, O>) -> QTypeArray<I, O> {
+        match (self, input) {
+            (Node::BMM(fc), QTypeArray::S(input)) => QTypeArray::L(fc.evaluate(input)),
+            (Node::RequantiseBMM(r), QTypeArray::L(input)) => QTypeArray::S(r.evaluate(input)),
+            (Node::ReLU(r), QTypeArray::S(input)) => QTypeArray::S(r.evaluate(input)),
+            (Node::Reshape(r), QTypeArray::S(input)) => QTypeArray::S(r.evaluate(input)),
+            _ => panic!(
+                "Type mismatch: node of type {} received input of type {}",
+                self.type_name(),
+                input.variant_name()
+            ),
+        }
     }
 
-    fn com_num_vars(&self) -> usize {
-        self.as_node_ops_snark().com_num_vars()
+    pub fn com_num_vars(&self) -> usize {
+        node_op!(self, com_num_vars, NodeOpsPadded)
+    }
+
+    /// Here we perform matching without sanity checks. By design, the input type of the
+    /// next node in the model is the same as the output type of the current node,
+    /// so hiccups should never occur.
+    pub fn padded_evaluate(&self, input: &QTypeArray<I, O>) -> QTypeArray<I, O> {
+        match (self, input) {
+            (Node::BMM(fc), QTypeArray::S(input)) => QTypeArray::L(fc.padded_evaluate(input)),
+            (Node::RequantiseBMM(r), QTypeArray::L(input)) => {
+                QTypeArray::S(r.padded_evaluate(input))
+            }
+            (Node::ReLU(r), QTypeArray::S(input)) => QTypeArray::S(r.padded_evaluate(input)),
+            (Node::Reshape(r), QTypeArray::S(input)) => QTypeArray::S(r.padded_evaluate(input)),
+            _ => panic!("Invalid input type for node"),
+        }
     }
 }
