@@ -4,8 +4,7 @@ use ark_poly_commit::{LabeledCommitment, PolynomialCommitment};
 use ark_std::rand::RngCore;
 
 use hcs_common::{
-    InnerType, LabeledPoly, Node, NodeCommitment, NodeCommitmentState, NodeOpsPadded, NodeProof,
-    Poly, QTypeArray,
+    InnerType, LabeledPoly, Node, NodeCommitment, NodeCommitmentState, NodeProof, Poly,
 };
 
 mod model;
@@ -43,45 +42,6 @@ where
         ck: &PCS::CommitterKey,
         rng: Option<&mut dyn RngCore>,
     ) -> (NodeCommitment<F, S, PCS>, NodeCommitmentState<F, S, PCS>);
-}
-
-/// We don't want:
-/// `fn padded_evaluate(&self, input: &QArray<I>) -> QArray<O>;`
-/// but instead:
-/// `fn padded_evaluate(&self, input: &QTypeArray<I, O>) -> QTypeArray<I, O>;`
-/// so that we can have polymorphism and iterate over the different nodes, in a way that
-/// the output type of the `padded_evaluate` method is the same as the input type
-/// of the next node in the model.
-///
-/// We cannot directly implement a new method `padded_evaluate` on a foreign enum `Node`.
-// /// Instead, we create a private wrapper trait to implement the desired method.
-trait NodeOpsPaddedEvaluateWrapper<I, O>
-where
-    I: InnerType + TryFrom<O>,
-    O: InnerType + From<I>,
-{
-    fn padded_evaluate(&self, input: &QTypeArray<I, O>) -> QTypeArray<I, O>;
-}
-
-impl<I, O> NodeOpsPaddedEvaluateWrapper<I, O> for Node<I, O>
-where
-    I: InnerType + TryFrom<O>,
-    O: InnerType + From<I>,
-{
-    /// Here we perform matching without sanity checks. By design, the input type of the
-    /// next node in the model is the same as the output type of the current node,
-    /// so hiccups should never occur.
-    fn padded_evaluate(&self, input: &QTypeArray<I, O>) -> QTypeArray<I, O> {
-        match (self, input) {
-            (Node::BMM(fc), QTypeArray::S(input)) => QTypeArray::L(fc.padded_evaluate(input)),
-            (Node::RequantiseBMM(r), QTypeArray::L(input)) => {
-                QTypeArray::S(r.padded_evaluate(input))
-            }
-            (Node::ReLU(r), QTypeArray::S(input)) => QTypeArray::S(r.padded_evaluate(input)),
-            (Node::Reshape(r), QTypeArray::S(input)) => QTypeArray::S(r.padded_evaluate(input)),
-            _ => panic!("Invalid input type for node"),
-        }
-    }
 }
 
 impl<F, S, PCS, I, O> NodeOpsProve<F, S, PCS, I, O> for Node<I, O>

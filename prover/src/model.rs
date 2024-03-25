@@ -4,10 +4,10 @@ use ark_crypto_primitives::sponge::{Absorb, CryptographicSponge};
 use ark_ff::PrimeField;
 use ark_poly::MultilinearExtension;
 use ark_poly_commit::{LabeledPolynomial, PolynomialCommitment};
-use hcs_common::{InferenceProof, InnerType, Model, Node};
+use hcs_common::{InferenceProof, InnerType, Model};
 use hcs_common::{NodeCommitment, NodeCommitmentState, Poly, QArray, QTypeArray};
 
-use crate::{NodeOpsPaddedEvaluateWrapper, NodeOpsProve};
+use crate::NodeOpsProve;
 pub trait ProveModel<F, S, PCS, ST, LT>
 where
     F: PrimeField + Absorb,
@@ -58,9 +58,7 @@ where
         let mut output = QTypeArray::S(input);
 
         for node in &self.nodes {
-            output = <Node<ST, LT> as NodeOpsPaddedEvaluateWrapper<ST, LT>>::padded_evaluate(
-                node, &output,
-            );
+            output = node.padded_evaluate(&output);
         }
 
         // TODO switch to reference in reshape?
@@ -102,9 +100,8 @@ where
         )];
 
         for node in &self.nodes {
-            output = <Node<ST, LT> as NodeOpsPaddedEvaluateWrapper<ST, LT>>::padded_evaluate(
-                node, &output,
-            );
+            output = node.padded_evaluate(&output);
+
             let output_f: Vec<F> = match &output {
                 QTypeArray::S(o) => o.values().iter().map(|x| F::from(*x)).collect(),
                 QTypeArray::L(o) => o.values().iter().map(|x| F::from(*x)).collect(),

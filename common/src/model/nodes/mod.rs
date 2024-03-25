@@ -148,12 +148,7 @@ where
 
     /// Returns the shape of the node's output tensor
     pub fn shape(&self) -> Vec<usize> {
-        match self {
-            Node::BMM(fc) => fc.shape(),
-            Node::RequantiseBMM(r) => r.shape(),
-            Node::ReLU(r) => r.shape(),
-            Node::Reshape(r) => NodeOpsNative::<I, _>::shape(r),
-        }
+        node_op!(self, shape, NodeOpsNative)
     }
 
     /// Evaluate the node natively (without padding)
@@ -172,11 +167,21 @@ where
     }
 
     pub fn com_num_vars(&self) -> usize {
-        match &self {
-            Node::BMM(fc) => fc.com_num_vars(),
-            Node::RequantiseBMM(r) => r.com_num_vars(),
-            Node::ReLU(r) => r.com_num_vars(),
-            Node::Reshape(r) => NodeOpsPadded::<I, I>::com_num_vars(r),
+        node_op!(self, com_num_vars, NodeOpsPadded)
+    }
+
+    /// Here we perform matching without sanity checks. By design, the input type of the
+    /// next node in the model is the same as the output type of the current node,
+    /// so hiccups should never occur.
+    pub fn padded_evaluate(&self, input: &QTypeArray<I, O>) -> QTypeArray<I, O> {
+        match (self, input) {
+            (Node::BMM(fc), QTypeArray::S(input)) => QTypeArray::L(fc.padded_evaluate(input)),
+            (Node::RequantiseBMM(r), QTypeArray::L(input)) => {
+                QTypeArray::S(r.padded_evaluate(input))
+            }
+            (Node::ReLU(r), QTypeArray::S(input)) => QTypeArray::S(r.padded_evaluate(input)),
+            (Node::Reshape(r), QTypeArray::S(input)) => QTypeArray::S(r.padded_evaluate(input)),
+            _ => panic!("Invalid input type for node"),
         }
     }
 }
