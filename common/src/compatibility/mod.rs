@@ -90,20 +90,14 @@ mod tests {
     fn test_two_layer_perceptron_mnist_single_input() {
         let expected_input =
             QArray::read("examples/two_layer_perceptron_mnist/data/input_test_150.json");
-        assert_eq!(
-            get_model_input("QTwoLayerPerceptron", None),
-            expected_input
-        );
+        assert_eq!(get_model_input("QTwoLayerPerceptron", None), expected_input);
     }
 
     #[test]
     fn test_simple_perceptron_mnist_single_input() {
         let expected_input =
             QArray::read("examples/simple_perceptron_mnist/data/input_test_150.json");
-        assert_eq!(
-            get_model_input("QSimplePerceptron", None),
-            expected_input
-        );
+        assert_eq!(get_model_input("QSimplePerceptron", None), expected_input);
     }
 
     #[test]
@@ -120,10 +114,7 @@ mod tests {
     fn test_simple_perceptron_mnist_single_output() {
         let expected_output =
             QArray::read("examples/simple_perceptron_mnist/data/output_test_150.json");
-        assert_eq!(
-            get_model_output("QSimplePerceptron", None),
-            expected_output
-        );
+        assert_eq!(get_model_output("QSimplePerceptron", None), expected_output);
     }
 
     #[test]

@@ -21,6 +21,14 @@ ark-bn254 = { workspace = true, features = [ "curve" ] }
 pyo3 = { workspace = true }
 more-asserts = { workspace = true }
 
+[[example]]
+name = "simple_perceptron_mnist"
+required-features = [ "test-types" ]
+
+[[example]]
+name = "two_layer_perceptron_mnist"
+required-features = [ "test-types" ]
+
 [features]
 default = [ "std", "parallel" ]
 std = [ "ark-ff/std", "ark-ec/std", "ark-poly/std", "ark-serialize/std", "ark-crypto-primitives/std", "ark-poly-commit/std", "ark-sumcheck/std" ]
