@@ -14,7 +14,7 @@ macro_rules! PATH {
     () => {
         concat!(
             env!("CARGO_MANIFEST_DIR"),
-            "/examples/simple_perceptron_mnist/{}"
+            "/examples/simple_perceptron_mnist/data/{}"
         )
     };
 }
@@ -34,8 +34,8 @@ fn main() {
     println!("--------------------------");
 
     run_unpadded(
-        &format!(PATH!(), "data/input_test_150.json"),
-        &format!(PATH!(), "data/output_test_150.json"),
+        &format!(PATH!(), "input_test_150.json"),
+        &format!(PATH!(), "output_test_150.json"),
         &simple_perceptron,
         qinfo,
     );
@@ -43,8 +43,8 @@ fn main() {
     // MNIST test samples with index
     // 6393, 1894, 5978, 6120, 817, 3843, 7626, 9272, 498, 4622
     multi_run_unpadded(
-        &format!(PATH!(), "data/10_test_inputs.json"),
-        &format!(PATH!(), "data/10_test_outputs.json"),
+        &format!(PATH!(), "10_test_inputs.json"),
+        &format!(PATH!(), "10_test_outputs.json"),
         &simple_perceptron,
         qinfo,
     );
