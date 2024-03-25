@@ -30,7 +30,9 @@ class QModelWrapper:
                 )
                 
         # Load the quantized model into an interpreter
-        self.quantized_model = tf.lite.Interpreter(model_path=filename, experimental_preserve_all_tensors=True)
+        # Note: In order to access the intermediate tensors, the interpreter must be created with 
+        # the flag experimental_preserve_all_tensors=True.
+        self.quantized_model = tf.lite.Interpreter(model_path=filename)
         
         
     @staticmethod
