@@ -1,10 +1,10 @@
-use ark_std::{fmt::Debug, log2};
+use ark_std::log2;
 
-use crate::model::qarray::{InnerType, QArray, QTypeArray};
+use crate::model::qarray::{InnerType, QArray};
 use crate::quantization::{requantise_fc, BMMQInfo, QInfo, QScaleType, RoundingScheme};
 use crate::{Commitment, CommitmentState};
 
-use super::{NodeOpsCommon, NodeOpsNative};
+use super::{NodeOpsNative, NodeOpsPadded};
 
 // TODO convention: input, bias and output are rows, the op is vec-by-mat (in that order)
 
@@ -32,21 +32,18 @@ pub struct RequantiseBMMNodeProof {
     // this will be the sumcheck proof
 }
 
-impl<ST, LT> NodeOpsNative<ST, LT> for RequantiseBMMNode<ST>
+impl<ST, LT> NodeOpsNative<LT, ST> for RequantiseBMMNode<ST>
 where
     ST: InnerType + TryFrom<LT>,
     LT: InnerType + From<ST>,
-    <ST as TryFrom<LT>>::Error: Debug,
 {
     fn shape(&self) -> Vec<usize> {
         vec![self.size]
     }
 
-    fn evaluate(&self, input: &QTypeArray<ST, LT>) -> QTypeArray<ST, LT> {
+    fn evaluate(&self, input: &QArray<LT>) -> QArray<ST> {
         // Sanity checks
         // TODO systematise
-        let input = input.ref_large();
-
         assert_eq!(
             input.num_dims(),
             1,
@@ -67,17 +64,49 @@ where
         )
         .into();
 
-        QTypeArray::S(output)
+        output
     }
 }
 
-impl<ST> NodeOpsCommon for RequantiseBMMNode<ST> {
+impl<ST, LT> NodeOpsPadded<LT, ST> for RequantiseBMMNode<ST>
+where
+    ST: InnerType + TryFrom<LT>,
+    LT: InnerType + From<ST>,
+{
     fn padded_shape_log(&self) -> Vec<usize> {
         vec![self.padded_size_log]
     }
 
     fn com_num_vars(&self) -> usize {
         self.padded_size_log
+    }
+
+    fn padded_evaluate(&self, input: &QArray<LT>) -> QArray<ST> {
+        let padded_size = 1 << self.padded_size_log;
+
+        // Sanity checks
+        // TODO systematise
+        assert_eq!(
+            input.num_dims(),
+            1,
+            "Incorrect shape: RequantiseBMM node expects a 1-dimensional input array"
+        );
+
+        assert_eq!(
+            padded_size,
+            input.len(),
+            "Length mismatch: Padded fully connected node expected input with {} elements, got {} elements instead",
+            padded_size,
+            input.len()
+        );
+
+        let output: QArray<ST> = requantise_fc::<ST, LT>(
+            input.values(),
+            &self.q_info,
+            RoundingScheme::NearestTiesEven,
+        )
+        .into();
+        output
     }
 }
 

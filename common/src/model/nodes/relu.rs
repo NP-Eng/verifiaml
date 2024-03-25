@@ -1,8 +1,8 @@
 use ark_std::log2;
 
-use crate::model::qarray::{InnerType, QTypeArray};
+use crate::{model::qarray::InnerType, QArray};
 
-use super::{NodeOpsCommon, NodeOpsNative};
+use super::{NodeOpsNative, NodeOpsPadded};
 
 // Rectified linear unit node performing x |-> max(0, x).
 pub struct ReLUNode<ST> {
@@ -11,31 +11,38 @@ pub struct ReLUNode<ST> {
     pub zero_point: ST,
 }
 
-impl<ST, LT> NodeOpsNative<ST, LT> for ReLUNode<ST>
+impl<ST> NodeOpsNative<ST, ST> for ReLUNode<ST>
 where
     ST: InnerType,
-    LT: InnerType + From<ST>,
 {
     fn shape(&self) -> Vec<usize> {
         vec![self.num_units]
     }
 
-    fn evaluate(&self, input: &QTypeArray<ST, LT>) -> QTypeArray<ST, LT> {
+    fn evaluate(&self, input: &QArray<ST>) -> QArray<ST> {
         // TODO sanity checks (cf. BMM); systematise
-        let input = input.ref_small();
-
-        QTypeArray::S(input.maximum(self.zero_point))
+        input.maximum(self.zero_point)
     }
 }
 
 // impl NodeOpsSnark
-impl<ST> NodeOpsCommon for ReLUNode<ST> {
+impl<ST> NodeOpsPadded<ST, ST> for ReLUNode<ST>
+where
+    ST: InnerType,
+{
     fn padded_shape_log(&self) -> Vec<usize> {
         vec![self.log_num_units]
     }
 
     fn com_num_vars(&self) -> usize {
         0
+    }
+
+    // TODO this is the same as evaluate() for now; the two will likely differ
+    // if/when we introduce input size checks
+    fn padded_evaluate(&self, input: &QArray<ST>) -> QArray<ST> {
+        // TODO sanity checks (cf. BMM); systematise
+        input.maximum(self.zero_point)
     }
 }
 

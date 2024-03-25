@@ -1,10 +1,10 @@
-use ark_std::{fmt::Debug, log2, rand::RngCore};
+use ark_std::{log2, rand::RngCore};
 
 use ark_crypto_primitives::sponge::{Absorb, CryptographicSponge};
 use ark_ff::PrimeField;
 use ark_poly::MultilinearExtension;
 use ark_poly_commit::{LabeledPolynomial, PolynomialCommitment};
-use hcs_common::{InferenceProof, InnerType, Model, Node};
+use hcs_common::{InferenceProof, InnerType, Model};
 use hcs_common::{NodeCommitment, NodeCommitmentState, Poly, QArray, QTypeArray};
 
 use crate::NodeOpsProve;
@@ -39,7 +39,6 @@ where
     S: CryptographicSponge,
     PCS: PolynomialCommitment<F, Poly<F>, S>,
     ST: InnerType + TryFrom<LT>,
-    <ST as TryFrom<LT>>::Error: Debug,
     LT: InnerType + From<ST>,
 {
     /// Unlike the node's `padded_evaluate`, the model's `padded_evaluate` accepts unpadded input
@@ -59,8 +58,7 @@ where
         let mut output = QTypeArray::S(input);
 
         for node in &self.nodes {
-            output =
-                <Node<ST, LT> as NodeOpsProve<F, S, PCS, ST, LT>>::padded_evaluate(node, &output);
+            output = node.padded_evaluate(&output);
         }
 
         // TODO switch to reference in reshape?
@@ -102,8 +100,7 @@ where
         )];
 
         for node in &self.nodes {
-            output =
-                <Node<ST, LT> as NodeOpsProve<F, S, PCS, ST, LT>>::padded_evaluate(node, &output);
+            output = node.padded_evaluate(&output);
 
             let output_f: Vec<F> = match &output {
                 QTypeArray::S(o) => o.values().iter().map(|x| F::from(*x)).collect(),

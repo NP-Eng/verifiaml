@@ -1,32 +1,21 @@
 use ark_crypto_primitives::sponge::{Absorb, CryptographicSponge};
 use ark_ff::PrimeField;
 use ark_poly_commit::{LabeledCommitment, PolynomialCommitment};
-use ark_std::{fmt::Debug, rand::RngCore};
+use ark_std::rand::RngCore;
 
 use hcs_common::{
-    InnerType, LabeledPoly, NodeCommitment, NodeCommitmentState, NodeProof, Poly, QTypeArray,
-    ReLUNode,
+    InnerType, LabeledPoly, NodeCommitment, NodeCommitmentState, NodeProof, Poly, ReLUNode,
 };
 
 use crate::NodeOpsProve;
 
-impl<F, S, PCS, ST, LT> NodeOpsProve<F, S, PCS, ST, LT> for ReLUNode<ST>
+impl<F, S, PCS, ST> NodeOpsProve<F, S, PCS, ST, ST> for ReLUNode<ST>
 where
     F: PrimeField + Absorb,
     S: CryptographicSponge,
     PCS: PolynomialCommitment<F, Poly<F>, S>,
     ST: InnerType,
 {
-    // TODO this is the same as evaluate() for now; the two will likely differ
-    // if/when we introduce input size checks
-    fn padded_evaluate(&self, input: &QTypeArray<ST, LT>) -> QTypeArray<ST, LT> {
-        // TODO sanity checks (cf. BMM); systematise
-
-        let input = input.ref_small();
-
-        QTypeArray::S(input.maximum(self.zero_point))
-    }
-
     fn prove(
         &self,
         _ck: &PCS::CommitterKey,

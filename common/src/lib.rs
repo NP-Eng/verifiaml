@@ -1,6 +1,8 @@
+#[macro_use]
+pub(crate) mod utils;
+
 pub(crate) mod model;
 pub(crate) mod quantization;
-pub(crate) mod utils;
 
 trait Commitment {}
 
@@ -16,7 +18,7 @@ pub use model::nodes::{
         RequantiseBMMNodeProof,
     },
     reshape::ReshapeNode,
-    Node, NodeCommitment, NodeCommitmentState, NodeOpsCommon, NodeProof,
+    Node, NodeCommitment, NodeCommitmentState, NodeOpsPadded, NodeProof,
 };
 pub use model::qarray::{InnerType, QArray, QTypeArray};
 pub use model::{InferenceProof, Model};

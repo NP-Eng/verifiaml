@@ -1,16 +1,15 @@
 use ark_crypto_primitives::sponge::{Absorb, CryptographicSponge};
 use ark_ff::PrimeField;
 use ark_poly_commit::{LabeledCommitment, PolynomialCommitment};
-use ark_std::fmt::Debug;
 
-use hcs_common::{InnerType, Node, NodeCommitment, NodeOpsCommon, NodeProof, Poly};
+use hcs_common::{InnerType, Node, NodeCommitment, NodeProof, Poly};
 
 mod model;
 mod nodes;
 
 pub use model::VerifyModel;
 
-pub trait NodeOpsVerify<F, S, PCS>: NodeOpsCommon
+pub trait NodeOpsVerify<F, S, PCS>
 where
     F: PrimeField + Absorb,
     S: CryptographicSponge,
@@ -33,7 +32,6 @@ where
     S: CryptographicSponge,
     PCS: PolynomialCommitment<F, Poly<F>, S>,
     ST: InnerType + TryFrom<LT>,
-    <ST as TryFrom<LT>>::Error: Debug,
     LT: InnerType + From<ST>,
 {
     fn verify(
