@@ -1,8 +1,9 @@
+pub mod example_models;
+
+#[cfg(test)]
 mod tests {
-    use ark_bn254::Fr;
-    use ark_crypto_primitives::sponge::poseidon::PoseidonSponge;
-    use hcs_common::{
-        example_models::{
+    use crate::{
+        compatibility::example_models::{
             simple_perceptron_mnist::{
                 build_simple_perceptron_mnist,
                 parameters::{
@@ -20,6 +21,8 @@ mod tests {
         },
         quantise_f32_u8_nne, Ligero, Model, QArray, QSmallType,
     };
+    use ark_bn254::Fr;
+    use ark_crypto_primitives::sponge::poseidon::PoseidonSponge;
     use more_asserts::*;
 
     use pyo3::prelude::*;

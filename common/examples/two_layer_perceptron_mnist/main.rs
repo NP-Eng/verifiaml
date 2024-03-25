@@ -1,6 +1,5 @@
 use hcs_common::{
-    test_sponge,
-    two_layer_perceptron_mnist::{build_two_layer_perceptron_mnist, parameters::*, OUTPUT_DIM},
+    two_layer_perceptron_mnist::{build_two_layer_perceptron_mnist, parameters::*},
     Ligero, Model,
 };
 
@@ -13,7 +12,10 @@ use common::*;
 
 macro_rules! PATH {
     () => {
-        "prover/examples/two_layer_perceptron_mnist/{}"
+        concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/examples/two_layer_perceptron_mnist/data/{}"
+        )
     };
 }
 
@@ -31,27 +33,19 @@ fn main() {
     println!("\nEXAMPLE: two-layer perceptron");
     println!("-----------------------------");
 
-    // We need to construct the sponge outside the common/lib functions to keep
-    // the latter generic on the sponge type
-    let sponge: PoseidonSponge<Fr> = test_sponge();
-
-    let output_shape = vec![OUTPUT_DIM];
-
-    prove_inference(
-        &format!(PATH!(), "data/input_test_150.json"),
-        &format!(PATH!(), "data/output_test_150.json"),
+    run_unpadded(
+        &format!(PATH!(), "input_test_150.json"),
+        &format!(PATH!(), "output_test_150.json"),
         &two_layer_perceptron,
         qinfo,
-        sponge.clone(),
-        output_shape.clone(),
     );
 
-    verify_inference(
-        &format!(PATH!(), "data/input_test_150.json"),
-        &format!(PATH!(), "data/output_test_150.json"),
+    // MNIST test samples with index
+    // 6393, 1894, 5978, 6120, 817, 3843, 7626, 9272, 498, 4622
+    multi_run_unpadded(
+        &format!(PATH!(), "10_test_inputs.json"),
+        &format!(PATH!(), "10_test_outputs.json"),
         &two_layer_perceptron,
         qinfo,
-        sponge,
-        output_shape,
     );
 }

@@ -1,4 +1,3 @@
-pub mod example_models;
 pub(crate) mod model;
 pub(crate) mod quantization;
 pub(crate) mod utils;
@@ -28,3 +27,9 @@ pub use quantization::{
 
 #[cfg(feature = "test-types")]
 pub use utils::{pcs_types::Ligero, test_sponge::test_sponge};
+
+#[cfg(feature = "test-types")]
+pub mod compatibility;
+
+#[cfg(feature = "test-types")]
+pub use compatibility::example_models::{simple_perceptron_mnist, two_layer_perceptron_mnist};

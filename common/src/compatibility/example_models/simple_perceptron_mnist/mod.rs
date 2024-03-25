@@ -16,7 +16,7 @@ macro_rules! PATH {
     () => {
         concat!(
             env!("CARGO_MANIFEST_DIR"),
-            "/src/example_models/simple_perceptron_mnist/parameters/{}"
+            "/src/compatibility/example_models/simple_perceptron_mnist/parameters/{}"
         )
     };
 }
