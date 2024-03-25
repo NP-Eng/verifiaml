@@ -39,14 +39,14 @@ mod tests {
     // within the allowed error.
     const ALLOWED_ERROR_MARGIN: f32 = 0.1;
 
-    fn get_model_input(model_name: &str, index: usize) -> QArray<f32> {
+    fn get_model_input(model_name: &str, index: Option<usize>) -> QArray<f32> {
         let model_input = Python::with_gil(|py| {
             let perceptron: Py<PyAny> = PyModule::from_code(py, PERCEPTRON_PATH, "", "")
                 .unwrap()
                 .getattr("get_model_input")
                 .unwrap()
                 .into();
-            let result = perceptron.call1(py, (model_name, index));
+            let result = perceptron.call1(py, (model_name, index.unwrap_or(150)));
 
             // Downcast the result to the expected type
             result.unwrap().extract::<Vec<Vec<f32>>>(py).unwrap()
@@ -54,14 +54,14 @@ mod tests {
         QArray::from(model_input)
     }
 
-    fn get_model_output(model_name: &str, index: usize) -> QArray<u8> {
+    fn get_model_output(model_name: &str, index: Option<usize>) -> QArray<u8> {
         let model_output = Python::with_gil(|py| {
             let perceptron: Py<PyAny> = PyModule::from_code(py, PERCEPTRON_PATH, "", "")
                 .unwrap()
                 .getattr("get_model_output")
                 .unwrap()
                 .into();
-            let result = perceptron.call1(py, (model_name, index));
+            let result = perceptron.call1(py, (model_name, index.unwrap_or(150)));
 
             // Downcast the result to the expected type
             result.unwrap().extract::<Vec<u8>>(py).unwrap()
@@ -91,7 +91,7 @@ mod tests {
         let expected_input =
             QArray::read("examples/two_layer_perceptron_mnist/data/input_test_150.json");
         assert_eq!(
-            get_model_input("QTwoLayerPerceptron", 150),
+            get_model_input("QTwoLayerPerceptron", None),
             expected_input
         );
     }
@@ -101,7 +101,7 @@ mod tests {
         let expected_input =
             QArray::read("examples/simple_perceptron_mnist/data/input_test_150.json");
         assert_eq!(
-            get_model_input("QSimplePerceptron", 150),
+            get_model_input("QSimplePerceptron", None),
             expected_input
         );
     }
@@ -111,7 +111,7 @@ mod tests {
         let expected_output =
             QArray::read("examples/two_layer_perceptron_mnist/data/output_test_150.json");
         assert_eq!(
-            get_model_output("QTwoLayerPerceptron", 150),
+            get_model_output("QTwoLayerPerceptron", None),
             expected_output
         );
     }
@@ -121,7 +121,7 @@ mod tests {
         let expected_output =
             QArray::read("examples/simple_perceptron_mnist/data/output_test_150.json");
         assert_eq!(
-            get_model_output("QSimplePerceptron", 150),
+            get_model_output("QSimplePerceptron", None),
             expected_output
         );
     }
@@ -134,8 +134,8 @@ mod tests {
         let correct_samples: usize = (0..NB_OUTPUTS)
             .into_iter()
             .map(|i| {
-                let raw_input = get_model_input("QTwoLayerPerceptron", i);
-                let expected_output = get_model_output("QTwoLayerPerceptron", i);
+                let raw_input = get_model_input("QTwoLayerPerceptron", Some(i));
+                let expected_output = get_model_output("QTwoLayerPerceptron", Some(i));
 
                 let output = unpadded_inference(
                     raw_input,
@@ -164,8 +164,8 @@ mod tests {
         let correct_samples: usize = (0..NB_OUTPUTS)
             .into_iter()
             .map(|i| {
-                let raw_input = get_model_input("QSimplePerceptron", i);
-                let expected_output = get_model_output("QSimplePerceptron", i);
+                let raw_input = get_model_input("QSimplePerceptron", Some(i));
+                let expected_output = get_model_output("QSimplePerceptron", Some(i));
 
                 let output = unpadded_inference(
                     raw_input,
