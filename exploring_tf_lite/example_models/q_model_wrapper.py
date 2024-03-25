@@ -48,11 +48,11 @@ class QModelWrapper:
         
         return model
     
-    def __quantize(self, model: tf.keras.Model, x_train: np.ndarray) -> bytes:
+    def __quantize(self, model: tf.keras.Model, x_train: np.ndarray, representative_data_samples: int = 1000) -> bytes:
 
         # Quantize the model
         def representative_data_gen():
-            for input_value in tf.data.Dataset.from_tensor_slices(x_train).batch(1).take(1000):
+            for input_value in tf.data.Dataset.from_tensor_slices(x_train).batch(1).take(representative_data_samples):
                 yield [input_value]
         
         converter = tf.lite.TFLiteConverter.from_keras_model(model)
