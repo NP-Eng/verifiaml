@@ -11,7 +11,7 @@ use ark_std::test_rng;
 // Auxiliary function
 fn unpadded_inference<F, S, PCS>(
     raw_input: QArray<f32>,
-    model: &Model<i8, i32>,
+    model: &Model<i8, i32, F>,
     qinfo: (f32, u8),
 ) -> QArray<u8>
 where
@@ -34,7 +34,7 @@ where
 // Auxiliary function
 fn padded_inference<F, S, PCS>(
     raw_input: QArray<f32>,
-    model: &Model<i8, i32>,
+    model: &Model<i8, i32, F>,
     qinfo: (f32, u8),
 ) -> QArray<u8>
 where
@@ -50,7 +50,7 @@ where
     let input_i8 = (quantised_input.cast::<i32>() - 128).cast::<i8>();
 
     let output_i8 =
-        <Model<i8, i32> as ProveModel<F, S, PCS, i8, i32>>::padded_evaluate(model, input_i8);
+        <Model<i8, i32, F> as ProveModel<F, S, PCS, i8, i32>>::padded_evaluate(model, input_i8);
 
     (output_i8.cast::<i32>() + 128).cast()
 }
@@ -58,7 +58,7 @@ where
 pub fn run_unpadded<F, S, PCS>(
     input_path: &str,
     expected_output_path: &str,
-    model: &Model<i8, i32>,
+    model: &Model<i8, i32, F>,
     qinfo: (f32, u8),
 ) where
     F: PrimeField + Absorb,
@@ -78,7 +78,7 @@ pub fn run_unpadded<F, S, PCS>(
 pub fn run_padded<F, S, PCS>(
     input_path: &str,
     expected_output_path: &str,
-    model: &Model<i8, i32>,
+    model: &Model<i8, i32, F>,
     qinfo: (f32, u8),
 ) where
     F: PrimeField + Absorb,
@@ -98,7 +98,7 @@ pub fn run_padded<F, S, PCS>(
 pub fn multi_run_unpadded<F, S, PCS>(
     inputs_path: &str,
     expected_outputs_path: &str,
-    model: &Model<i8, i32>,
+    model: &Model<i8, i32, F>,
     qinfo: (f32, u8),
 ) where
     F: PrimeField + Absorb,
@@ -121,7 +121,7 @@ pub fn multi_run_unpadded<F, S, PCS>(
 pub fn multi_run_padded<F, S, PCS>(
     inputs_path: &str,
     expected_outputs_path: &str,
-    model: &Model<i8, i32>,
+    model: &Model<i8, i32, F>,
     qinfo: (f32, u8),
 ) where
     F: PrimeField + Absorb,
@@ -144,7 +144,7 @@ pub fn multi_run_padded<F, S, PCS>(
 pub fn prove_inference<F, S, PCS>(
     input_path: &str,
     expected_output_path: &str,
-    model: &Model<i8, i32>,
+    model: &Model<i8, i32, F>,
     qinfo: (f32, u8),
     sponge: S,
     output_shape: Vec<usize>,
@@ -166,7 +166,7 @@ pub fn prove_inference<F, S, PCS>(
     let mut sponge = sponge;
 
     let mut rng = test_rng();
-    let (ck, _) = model.setup_keys::<F, S, PCS, _>(&mut rng).unwrap();
+    let (ck, _) = model.setup_keys::<S, PCS, _>(&mut rng).unwrap();
 
     let (node_coms, node_com_states): (Vec<_>, Vec<_>) =
         model.commit(&ck, None).into_iter().unzip();
@@ -194,7 +194,7 @@ pub fn prove_inference<F, S, PCS>(
 pub fn verify_inference<F, S, PCS>(
     input_path: &str,
     expected_output_path: &str,
-    model: &Model<i8, i32>,
+    model: &Model<i8, i32, F>,
     qinfo: (f32, u8),
     sponge: S,
     output_shape: Vec<usize>,
@@ -219,7 +219,7 @@ pub fn verify_inference<F, S, PCS>(
     let mut verification_sponge = sponge;
 
     let mut rng = test_rng();
-    let (ck, vk) = model.setup_keys::<F, S, PCS, _>(&mut rng).unwrap();
+    let (ck, vk) = model.setup_keys::<S, PCS, _>(&mut rng).unwrap();
 
     let (node_coms, node_com_states): (Vec<_>, Vec<_>) =
         model.commit(&ck, None).into_iter().unzip();

@@ -1,6 +1,7 @@
 use ark_crypto_primitives::sponge::{Absorb, CryptographicSponge};
 use ark_ff::PrimeField;
-use ark_poly_commit::{LabeledCommitment, PolynomialCommitment};
+use ark_poly::DenseMultilinearExtension;
+use ark_poly_commit::{LabeledCommitment, LabeledPolynomial, PolynomialCommitment};
 use ark_std::log2;
 
 use ark_sumcheck::ml_sumcheck::Proof;
@@ -14,8 +15,12 @@ use super::{NodeOpsNative, NodeOpsPadded};
 // TODO convention: input, bias and output are rows, the op is vec-by-mat (in that order)
 
 /// Start with 2D matrices, and Mat-by-vector multiplication only
-pub struct BMMNode<ST, LT> {
-    /// The row-major flattened unpadded vector of weights
+pub struct BMMNode<ST, LT, F: PrimeField> {
+    /// The MLE of the weight matrix as a labeled polynomial
+    pub weight_mle: LabeledPolynomial<F, DenseMultilinearExtension<F>>,
+    /// The MLE of the bias vector as a labeled polynomial
+    pub bias_mle: LabeledPolynomial<F, DenseMultilinearExtension<F>>,
+    /// The row-major flattened padded vector of weights
     weights: QArray<ST>,
     /// The padded weight vector
     pub padded_weights: QArray<ST>,
@@ -103,10 +108,11 @@ pub struct BMMNodeProof<
     pub bias_opening_value: F,
 }
 
-impl<ST, LT> NodeOpsNative<ST, LT> for BMMNode<ST, LT>
+impl<ST, LT, F> NodeOpsNative<ST, LT> for BMMNode<ST, LT, F>
 where
     ST: InnerType,
     LT: InnerType + From<ST>,
+    F: PrimeField,
 {
     fn shape(&self) -> Vec<usize> {
         vec![self.dims.1]
@@ -151,10 +157,11 @@ where
     }
 }
 
-impl<ST, LT> NodeOpsPadded<ST, LT> for BMMNode<ST, LT>
+impl<ST, LT, F> NodeOpsPadded<ST, LT> for BMMNode<ST, LT, F>
 where
     ST: InnerType + TryFrom<LT>,
     LT: InnerType + From<ST>,
+    F: PrimeField,
 {
     fn padded_shape_log(&self) -> Vec<usize> {
         vec![self.padded_dims_log.1]
@@ -210,10 +217,11 @@ where
     }
 }
 
-impl<ST, LT> BMMNode<ST, LT>
+impl<ST, LT, F> BMMNode<ST, LT, F>
 where
     ST: InnerType,
     LT: InnerType,
+    F: PrimeField + Absorb + From<ST> + From<LT>,
 {
     pub fn new(weights: QArray<ST>, bias: QArray<LT>, input_zero_point: ST) -> Self {
         let dims = (weights.shape()[0], weights.shape()[1]);
@@ -239,7 +247,29 @@ where
             .clone()
             .compact_resize(vec![dims.1.next_power_of_two()], LT::ZERO);
 
+        let weight_f = padded_weights
+            .values()
+            .iter()
+            .map(|w| F::from(*w))
+            .collect();
+
+        // Dual of the MLE of the row-major flattening of the weight matrix
+        let weight_poly =
+            Poly::from_evaluations_vec(padded_dims_log.0 + padded_dims_log.1, weight_f);
+
+        let weight_mle =
+            LabeledPolynomial::new("weight_mle".to_string(), weight_poly, Some(1), None);
+
+        let bias_f = padded_bias.values().iter().map(|w| F::from(*w)).collect();
+
+        // Dual of the MLE of the bias vector
+        let bias_poly = Poly::from_evaluations_vec(padded_dims_log.1, bias_f);
+
+        let bias_mle = LabeledPolynomial::new("bias_mle".to_string(), bias_poly, Some(1), None);
+
         Self {
+            weight_mle,
+            bias_mle,
             weights,
             padded_weights,
             bias,

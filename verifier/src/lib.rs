@@ -26,7 +26,7 @@ where
     ) -> bool;
 }
 
-impl<F, S, PCS, ST, LT> NodeOpsVerify<F, S, PCS> for Node<ST, LT>
+impl<F, S, PCS, ST, LT> NodeOpsVerify<F, S, PCS> for Node<ST, LT, F>
 where
     F: PrimeField + Absorb + From<ST>,
     S: CryptographicSponge,
@@ -47,7 +47,9 @@ where
     }
 }
 
-fn node_as_node_ops_snark<F, S, PCS, ST, LT>(node: &Node<ST, LT>) -> &dyn NodeOpsVerify<F, S, PCS>
+fn node_as_node_ops_snark<F, S, PCS, ST, LT>(
+    node: &Node<ST, LT, F>,
+) -> &dyn NodeOpsVerify<F, S, PCS>
 where
     F: PrimeField + Absorb + From<ST>,
     S: CryptographicSponge,

@@ -3,18 +3,18 @@ use std::rc::Rc;
 use ark_crypto_primitives::sponge::{Absorb, CryptographicSponge};
 use ark_ff::PrimeField;
 use ark_poly::{MultilinearExtension, Polynomial};
-use ark_poly_commit::{LabeledCommitment, LabeledPolynomial, PolynomialCommitment};
+use ark_poly_commit::{LabeledCommitment, PolynomialCommitment};
 use ark_std::rand::RngCore;
 use ark_sumcheck::ml_sumcheck::{protocol::ListOfProductsOfPolynomials, MLSumcheck};
 
 use hcs_common::{
     BMMNode, BMMNodeCommitment, BMMNodeCommitmentState, BMMNodeProof, InnerType, LabeledPoly,
-    NodeCommitment, NodeCommitmentState, NodeOpsPadded, NodeProof, Poly,
+    NodeCommitment, NodeCommitmentState, NodeProof, Poly,
 };
 
 use crate::NodeOpsProve;
 
-impl<F, S, PCS, ST, LT> NodeOpsProve<F, S, PCS, ST, LT> for BMMNode<ST, LT>
+impl<F, S, PCS, ST, LT> NodeOpsProve<F, S, PCS, ST, LT> for BMMNode<ST, LT, F>
 where
     F: PrimeField + Absorb + From<ST> + From<LT>,
     S: CryptographicSponge,
@@ -65,33 +65,12 @@ where
             input.polynomial().iter().map(|x| *x - i_z_p_f).collect(),
         );
 
-        // TODO consider whether this can be done once and stored
-        let weights_f = self
-            .padded_weights
-            .values()
-            .iter()
-            .map(|w| F::from(*w))
-            .collect();
-
-        // Dual of the MLE of the row-major flattening of the weight matrix
-        let weight_mle = Poly::from_evaluations_vec(self.com_num_vars(), weights_f);
-
-        // TODO consider whether this can be done once and stored
-        let bias_f = self
-            .padded_bias
-            .values()
-            .iter()
-            .map(|w| F::from(*w))
-            .collect();
-        // Dual of the MLE of the bias vector
-        let bias_mle = Poly::from_evaluations_vec(self.padded_dims_log.1, bias_f);
-
-        let bias_opening_value = bias_mle.evaluate(&r);
+        let bias_opening_value = self.bias_mle.evaluate(&r);
         let output_opening_value = output.evaluate(&r);
 
         // Constructing the sumcheck polynomial
         // g(x) = (input - zero_point)^(x) * W^(r, x),
-        let bound_weight_mle = weight_mle.fix_variables(&r);
+        let bound_weight_mle = self.weight_mle.polynomial().fix_variables(&r);
         let mut g = ListOfProductsOfPolynomials::new(self.padded_dims_log.0);
 
         // TODO we are cloning the input here, can we do better?
@@ -138,12 +117,7 @@ where
 
         let weight_opening_proof = PCS::open(
             ck,
-            [&LabeledPolynomial::new(
-                "weight_mle".to_string(),
-                weight_mle,
-                Some(1),
-                None,
-            )],
+            [&self.weight_mle],
             [weight_com],
             &r.clone()
                 .into_iter()
@@ -159,10 +133,7 @@ where
         // with a single call to PCS::open
         let output_bias_opening_proof = PCS::open(
             ck,
-            [
-                output,
-                &LabeledPolynomial::new("bias_mle".to_string(), bias_mle, Some(1), None),
-            ],
+            [output, &self.bias_mle],
             [output_com, bias_com],
             &r,
             sponge,
@@ -188,38 +159,7 @@ where
         ck: &PCS::CommitterKey,
         rng: Option<&mut dyn RngCore>,
     ) -> (NodeCommitment<F, S, PCS>, NodeCommitmentState<F, S, PCS>) {
-        // TODO should we separate the associated commitment type into one with state and one without?
-        let padded_weights_f: Vec<F> = self
-            .padded_weights
-            .values()
-            .iter()
-            .map(|w| F::from(*w))
-            .collect();
-
-        // TODO part of this code is duplicated in prove, another hint that this should probs
-        // be stored
-        let weight_poly = LabeledPolynomial::new(
-            "weight_poly".to_string(),
-            Poly::from_evaluations_vec(self.com_num_vars(), padded_weights_f),
-            Some(1),
-            None,
-        );
-
-        let padded_bias_f: Vec<F> = self
-            .padded_bias
-            .values()
-            .iter()
-            .map(|b| F::from(*b))
-            .collect();
-
-        let bias_poly = LabeledPolynomial::new(
-            "bias_poly".to_string(),
-            Poly::from_evaluations_vec(self.padded_dims_log.1, padded_bias_f),
-            Some(1),
-            None,
-        );
-
-        let coms = PCS::commit(ck, vec![&weight_poly, &bias_poly], rng).unwrap();
+        let coms = PCS::commit(ck, vec![&self.weight_mle, &self.bias_mle], rng).unwrap();
 
         (
             NodeCommitment::BMM(BMMNodeCommitment {

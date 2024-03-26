@@ -33,7 +33,7 @@ where
     ) -> Vec<(NodeCommitment<F, S, PCS>, NodeCommitmentState<F, S, PCS>)>;
 }
 
-impl<F, S, PCS, ST, LT> ProveModel<F, S, PCS, ST, LT> for Model<ST, LT>
+impl<F, S, PCS, ST, LT> ProveModel<F, S, PCS, ST, LT> for Model<ST, LT, F>
 where
     F: PrimeField + Absorb + From<ST> + From<LT>,
     S: CryptographicSponge,
