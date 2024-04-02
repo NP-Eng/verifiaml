@@ -3,7 +3,6 @@ name = "hcs-prover"
 version = "0.1.0"
 edition = "2021"
 
-
 [dependencies]
 ark-std = { workspace = true }
 ark-ff = { workspace = true }
@@ -19,13 +18,17 @@ hcs-verifier = { path = "../verifier", optional = true }
 
 [dev-dependencies]
 ark-bn254 = { workspace = true, features = [ "curve" ] }
+pyo3 = { workspace = true }
+more-asserts = { workspace = true }
 
 [[example]]
-name = "simple_perceptron_mnist"
+path = "examples/simple_perceptron_mnist/main.rs"
+name = "simple_perceptron_mnist_proof"
 required-features = [ "test-types" ]
 
 [[example]]
-name = "two_layer_perceptron_mnist"
+path = "examples/two_layer_perceptron_mnist/main.rs"
+name = "two_layer_perceptron_mnist_proof"
 required-features = [ "test-types" ]
 
 [features]

@@ -1,5 +1,5 @@
-pub(crate) const S_INPUT: f32 = 0.003921568859368563;
-pub(crate) const Z_INPUT: u8 = 0;
+pub const S_INPUT: f32 = 0.003921568859368563;
+pub const Z_INPUT: u8 = 0;
 
 pub(crate) const S_1_I: f32 = 0.003921568859368563;
 pub(crate) const Z_1_I: i8 = -128;
