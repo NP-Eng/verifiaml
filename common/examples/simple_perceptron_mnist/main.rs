@@ -1,6 +1,6 @@
 use hcs_common::{
-    simple_perceptron_mnist::{build_simple_perceptron_mnist, parameters::*, OUTPUT_DIM},
-    test_sponge, Ligero,
+    simple_perceptron_mnist::{build_simple_perceptron_mnist, parameters::*},
+    Ligero,
 };
 
 use ark_bn254::Fr;
@@ -12,7 +12,10 @@ use common::*;
 
 macro_rules! PATH {
     () => {
-        "prover/examples/simple_perceptron_mnist/{}"
+        concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/examples/simple_perceptron_mnist/data/{}"
+        )
     };
 }
 
@@ -29,27 +32,19 @@ fn main() {
     println!("\nEXAMPLE: simple perceptron");
     println!("--------------------------");
 
-    // We need to construct the sponge outside the common/lib functions to keep
-    // the latter generic on the sponge type
-    let sponge: PoseidonSponge<Fr> = test_sponge();
-
-    let output_shape = vec![OUTPUT_DIM];
-
-    prove_inference::<Fr, PoseidonSponge<Fr>, Ligero<Fr>>(
-        &format!(PATH!(), "data/input_test_150.json"),
-        &format!(PATH!(), "data/output_test_150.json"),
+    run_unpadded::<Fr, PoseidonSponge<Fr>, Ligero<Fr>>(
+        &format!(PATH!(), "input_test_150.json"),
+        &format!(PATH!(), "output_test_150.json"),
         &simple_perceptron,
         qinfo,
-        sponge.clone(),
-        output_shape.clone(),
     );
 
-    verify_inference::<Fr, PoseidonSponge<Fr>, Ligero<Fr>>(
-        &format!(PATH!(), "data/input_test_150.json"),
-        &format!(PATH!(), "data/output_test_150.json"),
+    // MNIST test samples with index
+    // 6393, 1894, 5978, 6120, 817, 3843, 7626, 9272, 498, 4622
+    multi_run_unpadded::<Fr, PoseidonSponge<Fr>, Ligero<Fr>>(
+        &format!(PATH!(), "10_test_inputs.json"),
+        &format!(PATH!(), "10_test_outputs.json"),
         &simple_perceptron,
         qinfo,
-        sponge,
-        output_shape,
     );
 }

@@ -13,7 +13,14 @@ To run the examples, use:
 cargo run --example <example_name> --features "test-types"
 ```
 
-where `<example_name>` is one of `simple_perceptron_mnist`/`two_layer_perceptron_mnist`.
+where `<example_name>` is one of the following:
+
+- `simple_perceptron_mnist_inference`
+- `simple_perceptron_mnist_proof`
+- `two_layer_perceptron_mnist_inference`
+- `two_layer_perceptron_mnist_proof`
+
+In order to run any tests involving python code, such as compatibility tests with TF Lite, the feature `python` must be activated (which automatically enables `test-types`).
 
 ## From `ndarray` to `QArray`
 
