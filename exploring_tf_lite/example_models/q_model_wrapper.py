@@ -32,6 +32,8 @@ class QModelWrapper:
         # Load the quantized model into an interpreter
         # Note: In order to access the intermediate tensors, the interpreter must be created with 
         # the flag experimental_preserve_all_tensors=True.
+        # Warning: this flag does affect the output and therefore compatibility with the reference
+        # Rust inference engine
         self.quantized_model = tf.lite.Interpreter(model_path=filename)
         
         
