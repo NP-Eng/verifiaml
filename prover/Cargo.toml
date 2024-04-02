@@ -22,11 +22,13 @@ pyo3 = { workspace = true }
 more-asserts = { workspace = true }
 
 [[example]]
-name = "simple_perceptron_mnist"
+path = "examples/simple_perceptron_mnist/main.rs"
+name = "simple_perceptron_mnist_proof"
 required-features = [ "test-types" ]
 
 [[example]]
-name = "two_layer_perceptron_mnist"
+path = "examples/two_layer_perceptron_mnist/main.rs"
+name = "two_layer_perceptron_mnist_proof"
 required-features = [ "test-types" ]
 
 [features]
