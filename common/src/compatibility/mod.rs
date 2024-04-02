@@ -1,6 +1,6 @@
 pub mod example_models;
 
-#[cfg(test)]
+#[cfg(all(test, feature = "python"))]
 mod tests {
     use crate::{
         compatibility::example_models::{
@@ -141,6 +141,12 @@ mod tests {
             })
             .sum();
 
+        println!(
+            "Two-layer perceptron discrepancies: {} out of {}",
+            NB_OUTPUTS - correct_samples,
+            NB_OUTPUTS
+        );
+
         assert_ge!(
             correct_samples as f32 / NB_OUTPUTS as f32,
             1.0 - ALLOWED_ERROR_MARGIN
@@ -170,6 +176,12 @@ mod tests {
                 (output == expected_output) as usize
             })
             .sum();
+
+        println!(
+            "Simple perceptron discrepancies: {} out of {}",
+            NB_OUTPUTS - correct_samples,
+            NB_OUTPUTS
+        );
 
         assert_ge!(
             correct_samples as f32 / NB_OUTPUTS as f32,

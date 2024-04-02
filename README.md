@@ -15,6 +15,8 @@ cargo run --example <example_name> --features "test-types"
 
 where `<example_name>` is one of `simple_perceptron_mnist`/`two_layer_perceptron_mnist`.
 
+In order to run any tests involving python code, such as compatibility tests with TF Lite, the feature `python` must be activated (which automatically enables `test-types`).
+
 ## From `ndarray` to `QArray`
 
 In order to save a `numpy` `ndarray` (python side) as a serialised JSON which can be directly read into a `QArray` of ours (Rust side),
