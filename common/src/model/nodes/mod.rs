@@ -85,8 +85,8 @@ pub trait NodeOpsPadded<I, O>: NodeOpsNative<I, O> {
     fn padded_evaluate(&self, input: &QArray<I>) -> QArray<O>;
 }
 
-pub enum Node<ST, LT> {
-    BMM(BMMNode<ST, LT>),
+pub enum Node<ST, LT, F: PrimeField> {
+    BMM(BMMNode<ST, LT, F>),
     RequantiseBMM(RequantiseBMMNode<ST>),
     ReLU(ReLUNode<ST>),
     Reshape(ReshapeNode),
@@ -130,10 +130,11 @@ where
 
 // A lot of this overlaps with the NodeOps trait and could be handled more
 // elegantly by simply implementing the trait
-impl<I, O> Node<I, O>
+impl<I, O, F> Node<I, O, F>
 where
     I: InnerType + TryFrom<O>,
     O: InnerType + From<I>,
+    F: PrimeField,
 {
     // Print the type of the node. This cannot be cleantly achieved by deriving
     // Debug

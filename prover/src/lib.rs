@@ -44,7 +44,7 @@ where
     ) -> (NodeCommitment<F, S, PCS>, NodeCommitmentState<F, S, PCS>);
 }
 
-impl<F, S, PCS, I, O> NodeOpsProve<F, S, PCS, I, O> for Node<I, O>
+impl<F, S, PCS, I, O> NodeOpsProve<F, S, PCS, I, O> for Node<I, O, F>
 where
     F: PrimeField + Absorb + From<I> + From<O> + From<O>,
     S: CryptographicSponge,

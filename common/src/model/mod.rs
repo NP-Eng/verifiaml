@@ -45,18 +45,19 @@ where
 
 // TODO: for now, we require all nodes to use the same PCS; this might change
 // in the future
-pub struct Model<ST, LT> {
+pub struct Model<ST, LT, F: PrimeField> {
     pub input_shape: Vec<usize>,
     pub output_shape: Vec<usize>,
-    pub nodes: Vec<Node<ST, LT>>,
+    pub nodes: Vec<Node<ST, LT, F>>,
 }
 
-impl<ST, LT> Model<ST, LT>
+impl<ST, LT, F> Model<ST, LT, F>
 where
     ST: InnerType + TryFrom<LT>,
     LT: InnerType + From<ST>,
+    F: PrimeField + Absorb + From<ST> + From<LT>,
 {
-    pub fn new(input_shape: Vec<usize>, nodes: Vec<Node<ST, LT>>) -> Self {
+    pub fn new(input_shape: Vec<usize>, nodes: Vec<Node<ST, LT, F>>) -> Self {
         // An empty model would cause panics later down the line e.g. when
         // determining the number of variables needed to commit to it.
         assert!(!nodes.is_empty(), "A model cannot have no nodes",);
@@ -72,12 +73,11 @@ where
         &self.input_shape
     }
 
-    pub fn setup_keys<F, S, PCS, R>(
+    pub fn setup_keys<S, PCS, R>(
         &self,
         rng: &mut R,
     ) -> Result<(PCS::CommitterKey, PCS::VerifierKey), PCS::Error>
     where
-        F: PrimeField + Absorb + From<ST> + From<LT>,
         S: CryptographicSponge,
         PCS: PolynomialCommitment<F, Poly<F>, S>,
         R: RngCore,

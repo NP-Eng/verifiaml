@@ -22,7 +22,7 @@ where
     ) -> bool;
 }
 
-impl<F, S, PCS, ST, LT> VerifyModel<F, S, PCS, ST, LT> for Model<ST, LT>
+impl<F, S, PCS, ST, LT> VerifyModel<F, S, PCS, ST, LT> for Model<ST, LT, F>
 where
     F: PrimeField + Absorb + From<ST> + From<LT>,
     S: CryptographicSponge,
