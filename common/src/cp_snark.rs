@@ -2,34 +2,34 @@
 trait CPSNARK {
     const ARITY: usize;
 
-    type CommitmentKeyType; // ck used to commit and open commitments
-    type EvaluationKeyType; // ek used to produce proofs
-    type VerificationKeyType; // vk used rto verify proofs
+    type CommitmentKey; // ck used to commit and open commitments
+    type EvaluationKey; // ek used to produce proofs
+    type VerificationKey; // vk used rto verify proofs
 
-    type CommitmentType; // C
+    type Commitment; // C
     type OpeningType; // O (a.k.a. opening hint)
 
-    type InstanceType; // D_x
-    type ValueType; // D containing D_i for 1 <= i <= arity
-    type WitnessType; // D_omega
+    type Instance; // D_x
+    type Value; // D containing D_i for 1 <= i <= arity
+    type Witness; // D_omega
 
-    type ProofType; // pi
+    type Proof; // pi
 
     fn key_gen(
-        ck: &Self::CommitmentKeyType,
-        r: dyn Fn(&Self::InstanceType, &[Self::ValueType; Self::ARITY], &Self::WitnessType) -> bool,
-    ) -> (Self::EvaluationKeyType, Self::VerificationKeyType);
+        ck: &Self::CommitmentKey,
+        r: dyn Fn(&Self::Instance, &[Self::Value; Self::ARITY], &Self::Witness) -> bool,
+    ) -> (Self::EvaluationKey, Self::VerificationKey);
     fn prove(
-        ek: &Self::EvaluationKeyType,
-        x: &Self::InstanceType,
-        commitments: &[Self::CommitmentType; Self::ARITY],
-        values: &[Self::ValueType; Self::ARITY],
-        omega: &Self::WitnessType,
-    ) -> Self::ProofType;
+        ek: &Self::EvaluationKey,
+        x: &Self::Instance,
+        commitments: &[Self::Commitment; Self::ARITY],
+        values: &[Self::Value; Self::ARITY],
+        omega: &Self::Witness,
+    ) -> Self::Proof;
     fn verify_proof(
-        vk: &Self::VerificationKeyType,
-        x: &Self::InstanceType,
-        commitments: &[Self::CommitmentType; Self::ARITY],
-        pi: &Self::ProofType,
+        vk: &Self::VerificationKey,
+        x: &Self::Instance,
+        commitments: &[Self::Commitment; Self::ARITY],
+        pi: &Self::Proof,
     ) -> bool;
 }
