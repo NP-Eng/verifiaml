@@ -15,13 +15,6 @@ trait CPSNARK {
 
     type ProofType; // pi
 
-    // All of the Vec below should have fixed size, e.g. an associated constant
-    //     const arity: usize;
-    // Unfortunately, the ability to write expressions such as
-    //      commitments: [Self::CommitmentType; Self::arity]
-    // is not supported in stable Rust yet (some nightly features are available)
-    // which could help
-
     fn key_gen(
         ck: &Self::CommitmentKeyType,
         r: dyn Fn(&Self::InstanceType, &[Self::ValueType; Self::ARITY], &Self::WitnessType) -> bool,
