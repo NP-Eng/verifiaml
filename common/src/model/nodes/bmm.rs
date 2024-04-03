@@ -7,7 +7,6 @@ use ark_sumcheck::ml_sumcheck::Proof;
 
 use crate::model::qarray::{InnerType, QArray};
 use crate::model::Poly;
-use crate::{Commitment, CommitmentState};
 
 use super::{NodeOpsNative, NodeOpsPadded};
 
@@ -43,14 +42,6 @@ where
     pub bias_com: LabeledCommitment<PCS::Commitment>,
 }
 
-impl<F, S, PCS> Commitment for BMMNodeCommitment<F, S, PCS>
-where
-    F: PrimeField,
-    S: CryptographicSponge,
-    PCS: PolynomialCommitment<F, Poly<F>, S>,
-{
-}
-
 /// Commitment states associated to a BMMNodeCommitment: one for the weight and
 /// one for the bias
 pub struct BMMNodeCommitmentState<F, S, PCS>
@@ -61,14 +52,6 @@ where
 {
     pub weight_com_state: PCS::CommitmentState,
     pub bias_com_state: PCS::CommitmentState,
-}
-
-impl<F, S, PCS> CommitmentState for BMMNodeCommitmentState<F, S, PCS>
-where
-    F: PrimeField,
-    S: CryptographicSponge,
-    PCS: PolynomialCommitment<F, Poly<F>, S>,
-{
 }
 
 /// Proof of execution of a BMM node, consisting of a sumcheck proof and four

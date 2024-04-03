@@ -5,8 +5,7 @@ use ark_std::rand::RngCore;
 
 use hcs_common::{
     InnerType, LabeledPoly, NodeCommitment, NodeCommitmentState, NodeProof, Poly,
-    RequantiseBMMNode, RequantiseBMMNodeCommitment, RequantiseBMMNodeCommitmentState,
-    RequantiseBMMNodeProof,
+    RequantiseBMMNode, RequantiseBMMNodeProof,
 };
 
 use crate::NodeOpsProve;
@@ -41,8 +40,8 @@ where
         _rng: Option<&mut dyn RngCore>,
     ) -> (NodeCommitment<F, S, PCS>, NodeCommitmentState<F, S, PCS>) {
         (
-            NodeCommitment::RequantiseBMM(RequantiseBMMNodeCommitment()),
-            NodeCommitmentState::RequantiseBMM(RequantiseBMMNodeCommitmentState()),
+            NodeCommitment::RequantiseBMM(),
+            NodeCommitmentState::RequantiseBMM(),
         )
     }
 }

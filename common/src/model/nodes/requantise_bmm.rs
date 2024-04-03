@@ -2,7 +2,6 @@ use ark_std::log2;
 
 use crate::model::qarray::{InnerType, QArray};
 use crate::quantization::{requantise_fc, BMMQInfo, QInfo, QScaleType, RoundingScheme};
-use crate::{Commitment, CommitmentState};
 
 use super::{NodeOpsNative, NodeOpsPadded};
 
@@ -19,14 +18,6 @@ pub struct RequantiseBMMNode<ST> {
     /// Quantisation info associated to the input BMM result
     pub q_info: BMMQInfo<ST>,
 }
-
-pub struct RequantiseBMMNodeCommitment();
-
-impl Commitment for RequantiseBMMNodeCommitment {}
-
-pub struct RequantiseBMMNodeCommitmentState();
-
-impl CommitmentState for RequantiseBMMNodeCommitmentState {}
 
 pub struct RequantiseBMMNodeProof {
     // this will be the sumcheck proof

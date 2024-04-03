@@ -1,22 +1,17 @@
+#![feature(generic_const_exprs)]
+
 #[macro_use]
 pub(crate) mod utils;
 
 pub(crate) mod model;
 pub(crate) mod quantization;
 
-trait Commitment {}
-
-trait CommitmentState {}
-
-trait Proof {}
+pub mod cp_snark;
 
 pub use model::nodes::{
     bmm::{BMMNode, BMMNodeCommitment, BMMNodeCommitmentState, BMMNodeProof},
     relu::ReLUNode,
-    requantise_bmm::{
-        RequantiseBMMNode, RequantiseBMMNodeCommitment, RequantiseBMMNodeCommitmentState,
-        RequantiseBMMNodeProof,
-    },
+    requantise_bmm::{RequantiseBMMNode, RequantiseBMMNodeProof},
     reshape::ReshapeNode,
     Node, NodeCommitment, NodeCommitmentState, NodeOpsPadded, NodeProof,
 };

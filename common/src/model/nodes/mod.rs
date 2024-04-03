@@ -12,10 +12,7 @@ use crate::{
 
 use self::{
     bmm::{BMMNodeCommitment, BMMNodeCommitmentState, BMMNodeProof},
-    requantise_bmm::{
-        RequantiseBMMNode, RequantiseBMMNodeCommitment, RequantiseBMMNodeCommitmentState,
-        RequantiseBMMNodeProof,
-    },
+    requantise_bmm::{RequantiseBMMNode, RequantiseBMMNodeProof},
     reshape::ReshapeNode,
 };
 
@@ -111,7 +108,7 @@ where
     PCS: PolynomialCommitment<F, Poly<F>, S>,
 {
     BMM(BMMNodeCommitment<F, S, PCS>),
-    RequantiseBMM(RequantiseBMMNodeCommitment),
+    RequantiseBMM(),
     ReLU(()),
     Reshape(()),
 }
@@ -123,7 +120,7 @@ where
     PCS: PolynomialCommitment<F, Poly<F>, S>,
 {
     BMM(BMMNodeCommitmentState<F, S, PCS>),
-    RequantiseBMM(RequantiseBMMNodeCommitmentState),
+    RequantiseBMM(),
     ReLU(()),
     Reshape(()),
 }
