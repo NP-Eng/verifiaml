@@ -1,6 +1,8 @@
 use crate::{Node, NodeCommitment};
 
 // In this trait, we closely follow the notation of the LegoSNARK paper
+// This trait should be used by the composition engine, but not directly
+// implmemented
 trait CPSNARK {
     const ARITY: usize;
 
@@ -44,6 +46,7 @@ trait CPSNARK {
 }
 
 // Taylored version of CPSNARK adapted to node proofs
+// This is the trait that should be implemented by each node struct
 trait NodeCPSNARK {
     type CommitmentKey; // ck used to commit and open commitments to parameters, inputs and outputs
     type EvaluationKey; // ek used to produce proofs
@@ -149,15 +152,15 @@ impl<NCPS: NodeCPSNARK> CPSNARK for NCPS {
         NCPS::prove(
             ek,
             x,
-            &param_commitment,
-            &input_commitment,
-            &output_commitment,
-            &param_value,
-            &input_value,
-            &output_value,
-            &param_hint,
-            &input_hint,
-            &output_hint,
+            param_commitment,
+            input_commitment,
+            output_commitment,
+            param_value,
+            input_value,
+            output_value,
+            param_hint,
+            input_hint,
+            output_hint,
         )
     }
 
@@ -173,9 +176,9 @@ impl<NCPS: NodeCPSNARK> CPSNARK for NCPS {
         NCPS::verify_proof(
             vk,
             x,
-            &param_commitment,
-            &input_commitment,
-            &output_commitment,
+            param_commitment,
+            input_commitment,
+            output_commitment,
             pi,
         )
     }
