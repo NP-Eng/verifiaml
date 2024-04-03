@@ -29,20 +29,21 @@ trait CPSNARK {
     fn prove(
         ek: &Self::EvaluationKey,
         x: &Self::Instance,
-        commitments: &[Self::Commitment; Self::ARITY],
-        values: &[Self::Value; Self::ARITY],
-        openings: &[Self::Opening; Self::ARITY],
+        commitments: [&Self::Commitment; Self::ARITY],
+        values: [&Self::Value; Self::ARITY],
+        openings: [&Self::Opening; Self::ARITY],
         omega: &Self::Witness,
     ) -> Self::Proof;
 
     fn verify_proof(
         vk: &Self::VerificationKey,
         x: &Self::Instance,
-        commitments: &[Self::Commitment; Self::ARITY],
+        commitments: [&Self::Commitment; Self::ARITY],
         pi: &Self::Proof,
     ) -> bool;
 }
 
+// Taylored version of CPSNARK adapted to node proofs
 trait NodeCPSNARK {
     type CommitmentKey; // ck used to commit and open commitments to parameters, inputs and outputs
     type EvaluationKey; // ek used to produce proofs
@@ -60,41 +61,32 @@ trait NodeCPSNARK {
 
     type Proof; // pi
 
-    // A description of a relation on Instance x (Value x Witness)
-    // which is used to generate the evaluation and verification keys
-    type Relation;
-
-    fn get_param_commmitment(&self) -> &Self::ParamCommitment;
-
-    fn get_param_value(&self) -> &Self::ParamValue;
-
-    fn get_param_hint(&self) -> &Self::ParamHint;
-
-    fn key_gen(&self, ck: &Self::CommitmentKey) -> (Self::EvaluationKey, Self::VerificationKey);
+    fn key_gen(
+        ck: &Self::CommitmentKey,
+        node: &Self,
+    ) -> (Self::EvaluationKey, Self::VerificationKey);
 
     fn prove(
-        &self,
         ek: &Self::EvaluationKey,
-        // the instance is read from self
+        instance: &Self::Instance,
+        param_commitment: &Self::ParamCommitment,
         input_commitment: &Self::IOCommitment,
         ouput_commitment: &Self::IOCommitment,
-        // the param commitment is read from self
+        param_value: &Self::ParamValue,
         input_value: &Self::IOValue,
         output_value: &Self::IOValue,
-        // the param value(s) are read from self
+        param_hint: &Self::ParamHint,
         input_hint: &Self::IOHint,
         output_hint: &Self::IOHint,
-        // the param hint is read from self
         // no non-committed witness omega
     ) -> Self::Proof;
 
     fn verify_proof(
-        &self,
         vk: &Self::VerificationKey,
-        // the instance is read from self
+        instance: &Self::Instance,
+        param_commitment: &Self::ParamCommitment,
         input_commitment: &Self::IOCommitment,
         ouput_commitment: &Self::IOCommitment,
-        // the param commitment is read from self
         pi: &Self::Proof,
     ) -> bool;
 }
@@ -102,6 +94,15 @@ trait NodeCPSNARK {
 enum ParamOrIO<ParamType, IOType> {
     Param(ParamType),
     IO(IOType),
+}
+
+fn get_param_input_output<ParamType, IOType>(
+    array: [&ParamOrIO<ParamType, IOType>; 3],
+) -> (&ParamType, &IOType, &IOType) {
+    match array {
+        [ParamOrIO::Param(p), ParamOrIO::IO(i), ParamOrIO::IO(o)] => (p, i, o),
+        _ => panic!("Invalid structure"),
+    }
 }
 
 impl<NCPS: NodeCPSNARK> CPSNARK for NCPS {
@@ -123,32 +124,59 @@ impl<NCPS: NodeCPSNARK> CPSNARK for NCPS {
 
     type Proof = NCPS::Proof;
 
-    type Relation = NCPS::Relation;
+    type Relation = Self;
 
     fn key_gen(
         ck: &Self::CommitmentKey,
         r: &Self::Relation,
     ) -> (Self::EvaluationKey, Self::VerificationKey) {
-        todo!()
+        NCPS::key_gen(ck, r)
     }
 
     fn prove(
         ek: &Self::EvaluationKey,
         x: &Self::Instance,
-        commitments: &[Self::Commitment; Self::ARITY],
-        values: &[Self::Value; Self::ARITY],
-        openings: &[Self::Opening; Self::ARITY],
+        commitments: [&Self::Commitment; Self::ARITY],
+        values: [&Self::Value; Self::ARITY],
+        openings: [&Self::Opening; Self::ARITY],
         omega: &Self::Witness,
     ) -> Self::Proof {
-        todo!()
+        let (param_commitment, input_commitment, output_commitment) =
+            get_param_input_output(commitments);
+        let (param_value, input_value, output_value) = get_param_input_output(values);
+        let (param_hint, input_hint, output_hint) = get_param_input_output(openings);
+
+        NCPS::prove(
+            ek,
+            x,
+            &param_commitment,
+            &input_commitment,
+            &output_commitment,
+            &param_value,
+            &input_value,
+            &output_value,
+            &param_hint,
+            &input_hint,
+            &output_hint,
+        )
     }
 
     fn verify_proof(
         vk: &Self::VerificationKey,
         x: &Self::Instance,
-        commitments: &[Self::Commitment; Self::ARITY],
+        commitments: [&Self::Commitment; Self::ARITY],
         pi: &Self::Proof,
     ) -> bool {
-        todo!()
+        let (param_commitment, input_commitment, output_commitment) =
+            get_param_input_output(commitments);
+
+        NCPS::verify_proof(
+            vk,
+            x,
+            &param_commitment,
+            &input_commitment,
+            &output_commitment,
+            pi,
+        )
     }
 }
