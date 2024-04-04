@@ -88,10 +88,6 @@ where
     type ParamHint; // O_1 (a.k.a. opening hint)
     type ParamValue; // D_1
 
-    type IOCommitment; // C_2, space for the input as well as output
-    type IOHint; // O_2 (a.k.a. opening hint)
-    type IOValue; // D_2
-
     type Instance; // D_x
 
     type Proof; // pi
@@ -105,14 +101,14 @@ where
         ek: &Self::EvaluationKey,
         instance: &Self::Instance,
         param_commitment: &Self::ParamCommitment,
-        input_commitment: &Self::IOCommitment,
-        output_commitment: &Self::IOCommitment,
+        input_commitment: &PCS::Commitment,
+        output_commitment: &PCS::Commitment,
         param_value: &Self::ParamValue,
-        input_value: &Self::IOValue,
-        output_value: &Self::IOValue,
+        input_value: &Vec<F>,
+        output_value: &Vec<F>,
         param_hint: &Self::ParamHint,
-        input_hint: &Self::IOHint,
-        output_hint: &Self::IOHint,
+        input_hint: &PCS::CommitmentState,
+        output_hint: &PCS::CommitmentState,
         // no non-committed witness omega
     ) -> Self::Proof;
 
@@ -120,8 +116,8 @@ where
         vk: &Self::VerificationKey,
         instance: &Self::Instance,
         param_commitment: &Self::ParamCommitment,
-        input_commitment: &Self::IOCommitment,
-        output_commitment: &Self::IOCommitment,
+        input_commitment: &PCS::Commitment,
+        output_commitment: &PCS::Commitment,
         pi: &Self::Proof,
     ) -> bool;
 }
@@ -153,9 +149,9 @@ where
     type EvaluationKey = NCPS::EvaluationKey;
     type VerificationKey = NCPS::VerificationKey;
 
-    type Commitment = ParamOrIO<NCPS::ParamCommitment, NCPS::IOCommitment>;
-    type Opening = ParamOrIO<NCPS::ParamHint, NCPS::IOHint>;
-    type Value = ParamOrIO<NCPS::ParamValue, NCPS::IOValue>;
+    type Commitment = ParamOrIO<NCPS::ParamCommitment, PCS::Commitment>;
+    type Opening = ParamOrIO<NCPS::ParamHint, PCS::CommitmentState>;
+    type Value = ParamOrIO<NCPS::ParamValue, Vec<F>>;
 
     type Instance = NCPS::Instance;
 

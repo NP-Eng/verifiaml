@@ -5,6 +5,7 @@ use ark_std::log2;
 
 use ark_sumcheck::ml_sumcheck::Proof;
 
+use crate::cp_snark::NodeCPSNARK;
 use crate::model::qarray::{InnerType, QArray};
 use crate::model::Poly;
 
@@ -245,3 +246,136 @@ where
 }
 // TODO in constructor, add quantisation information checks? (s_bias = s_input * s_weight, z_bias = 0, z_weight = 0, etc.)
 // TODO in constructor, check bias length matches appropriate matrix dimension
+
+pub struct BMMParamCommitment<F, S, PCS>
+where
+    F: PrimeField + Absorb,
+    S: CryptographicSponge,
+    PCS: PolynomialCommitment<F, Poly<F>, S>,
+{
+    padded_weight_com: LabeledCommitment<PCS::Commitment>,
+    padded_bias_com: LabeledCommitment<PCS::Commitment>,
+}
+
+pub struct BMMParamHint<F, S, PCS>
+where
+    F: PrimeField + Absorb,
+    S: CryptographicSponge,
+    PCS: PolynomialCommitment<F, Poly<F>, S>,
+{
+    padded_weight_hint: PCS::CommitmentState,
+    padded_bias_hint: PCS::CommitmentState,
+}
+
+pub struct BMMParamValue<F: PrimeField> {
+    padded_weights: Vec<F>,
+    padded_bias: Vec<F>,
+}
+
+pub struct BMMEvaluationKey<F, S, PCS>
+where
+    F: PrimeField + Absorb,
+    S: CryptographicSponge,
+    PCS: PolynomialCommitment<F, Poly<F>, S>,
+{
+    key: PCS::CommitterKey,
+    padded_dims_log: (usize, usize),
+}
+
+pub struct BMMVerificationKey<F, S, PCS>
+where
+    F: PrimeField + Absorb,
+    S: CryptographicSponge,
+    PCS: PolynomialCommitment<F, Poly<F>, S>,
+{
+    key: PCS::VerifierKey,
+    padded_dims_log: (usize, usize),
+}
+
+pub struct BMMInstance<F: PrimeField> {
+    input_zero_point: F,
+}
+
+pub struct BMMProof<
+    F: PrimeField + Absorb,
+    S: CryptographicSponge,
+    PCS: PolynomialCommitment<F, Poly<F>, S>,
+> {
+    /// Sumcheck protocol proof for the polynomial
+    /// g(x) = (input - zero_point)^(x) * W^(r, x),
+    /// where v^ denotes the dual of the MLE of v and r is a challenge point
+    pub sumcheck_proof: Proof<F>,
+
+    /// Value of the *dual* of the input MLE at the challenge point s and proof
+    /// of opening
+    pub input_opening_proof: PCS::Proof,
+    pub input_opening_value: F,
+
+    /// Value of the *dual* of the weight MLE at the challenge point r || s and proof of
+    /// opening
+    pub weight_opening_proof: PCS::Proof,
+    pub weight_opening_value: F,
+
+    /// Proof of opening of the *duals* of the output and bias MLEs at the
+    // challenge point
+    pub output_bias_opening_proof: PCS::Proof,
+
+    /// Value of the *dual* of the weight MLE at the challenge point and proof of
+    /// opening
+    pub output_opening_value: F,
+    pub bias_opening_value: F,
+}
+
+impl<F, S, PCS, ST, LT> NodeCPSNARK<F, S, PCS> for BMMNode<ST, LT>
+where
+    F: PrimeField + Absorb,
+    S: CryptographicSponge,
+    PCS: PolynomialCommitment<F, Poly<F>, S>,
+{
+    type CommitmentKey = PCS::CommitterKey;
+    type EvaluationKey = BMMEvaluationKey<F, S, PCS>;
+    type VerificationKey = BMMVerificationKey<F, S, PCS>;
+
+    type ParamCommitment = BMMParamCommitment<F, S, PCS>;
+    type ParamHint = BMMParamHint<F, S, PCS>;
+    type ParamValue = BMMParamValue<F>;
+
+    type Instance = BMMInstance<F>;
+
+    type Proof = BMMProof<F, S, PCS>;
+
+    fn key_gen(
+        ck: &Self::CommitmentKey,
+        node: &Self,
+    ) -> (Self::EvaluationKey, Self::VerificationKey) {
+        unimplemented!()
+    }
+
+    fn prove(
+        ek: &Self::EvaluationKey,
+        instance: &Self::Instance,
+        param_commitment: &Self::ParamCommitment,
+        input_commitment: &PCS::Commitment,
+        output_commitment: &PCS::Commitment,
+        param_value: &Self::ParamValue,
+        input_value: &Vec<F>,
+        output_value: &Vec<F>,
+        param_hint: &Self::ParamHint,
+        input_hint: &PCS::CommitmentState,
+        output_hint: &PCS::CommitmentState,
+        // no non-committed witness omega
+    ) -> Self::Proof {
+        unimplemented!()
+    }
+
+    fn verify_proof(
+        vk: &Self::VerificationKey,
+        instance: &Self::Instance,
+        param_commitment: &Self::ParamCommitment,
+        input_commitment: &PCS::Commitment,
+        output_commitment: &PCS::Commitment,
+        pi: &Self::Proof,
+    ) -> bool {
+        unimplemented!()
+    }
+}
