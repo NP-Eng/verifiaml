@@ -1,9 +1,36 @@
-use crate::{Node, NodeCommitment};
+use crate::{model::Poly, Node, NodeCommitment};
+use ark_crypto_primitives::sponge::{Absorb, CryptographicSponge};
+use ark_ff::PrimeField;
+use ark_poly_commit::{LabeledCommitment, PolynomialCommitment};
 
-// In this trait, we closely follow the notation of the LegoSNARK paper
-// This trait should be used by the composition engine, but not directly
-// implmemented
-trait CPSNARK {
+// In this trait, we closely follow the notation of the LegoSNARK paper. This
+// trait should be used by the composition engine, but not directly implemented
+
+// On PCS genericity. The fact that this trait is generic on the PCS is a
+// consequence of our design needs: either the closely related trait
+// NodeCPSNARK or the node structs themselves need to be generic on the PCS so
+// that we can implement the latter trait for the nodes for any choice of a
+// PCS. Genericity on the PCS and related params was deemed to be a good design
+// choice, which only leaves us with the option of making NodeCPSNARK generic.
+// In turn, this genericity forces CPSNARK itself to be generic on the PCS due
+// to our blanket implementation of CPSNARK for all implementors of
+// NodeCPSNARK.
+//
+// It should be stressed that the PCS this trait is generic on is *not* the
+// commitment scheme from the definition of a CP-SNARK in the LegoSNARK paper.
+// Indeed, commitment schemes and polynomial commitment schemes are different,
+// incompatible cryptographic primitives.
+//
+// Note that the PCS does not appear in the associated types or methods of this
+// trait. If this trait needs to be implemented for a struct which is genuinely
+// unrelated to any PCS (which is never the case for our node-proving SNARKS),
+// a dummy PCS should be used for the generic type.
+trait CPSNARK<F, S, PCS>
+where
+    F: PrimeField + Absorb,
+    S: CryptographicSponge,
+    PCS: PolynomialCommitment<F, Poly<F>, S>,
+{
     const ARITY: usize;
 
     type CommitmentKey; // ck used to commit and open commitments
@@ -47,7 +74,12 @@ trait CPSNARK {
 
 // Taylored version of CPSNARK adapted to node proofs
 // This is the trait that should be implemented by each node struct
-trait NodeCPSNARK {
+pub trait NodeCPSNARK<F, S, PCS>
+where
+    F: PrimeField + Absorb,
+    S: CryptographicSponge,
+    PCS: PolynomialCommitment<F, Poly<F>, S>,
+{
     type CommitmentKey; // ck used to commit and open commitments to parameters, inputs and outputs
     type EvaluationKey; // ek used to produce proofs
     type VerificationKey; // vk used to verify proofs
@@ -74,7 +106,7 @@ trait NodeCPSNARK {
         instance: &Self::Instance,
         param_commitment: &Self::ParamCommitment,
         input_commitment: &Self::IOCommitment,
-        ouput_commitment: &Self::IOCommitment,
+        output_commitment: &Self::IOCommitment,
         param_value: &Self::ParamValue,
         input_value: &Self::IOValue,
         output_value: &Self::IOValue,
@@ -89,7 +121,7 @@ trait NodeCPSNARK {
         instance: &Self::Instance,
         param_commitment: &Self::ParamCommitment,
         input_commitment: &Self::IOCommitment,
-        ouput_commitment: &Self::IOCommitment,
+        output_commitment: &Self::IOCommitment,
         pi: &Self::Proof,
     ) -> bool;
 }
@@ -108,7 +140,13 @@ fn get_param_input_output<ParamType, IOType>(
     }
 }
 
-impl<NCPS: NodeCPSNARK> CPSNARK for NCPS {
+impl<F, S, PCS, NCPS> CPSNARK<F, S, PCS> for NCPS
+where
+    F: PrimeField + Absorb,
+    S: CryptographicSponge,
+    PCS: PolynomialCommitment<F, Poly<F>, S>,
+    NCPS: NodeCPSNARK<F, S, PCS>,
+{
     const ARITY: usize = 3;
 
     type CommitmentKey = NCPS::CommitmentKey;
@@ -116,9 +154,7 @@ impl<NCPS: NodeCPSNARK> CPSNARK for NCPS {
     type VerificationKey = NCPS::VerificationKey;
 
     type Commitment = ParamOrIO<NCPS::ParamCommitment, NCPS::IOCommitment>;
-
     type Opening = ParamOrIO<NCPS::ParamHint, NCPS::IOHint>;
-
     type Value = ParamOrIO<NCPS::ParamValue, NCPS::IOValue>;
 
     type Instance = NCPS::Instance;
