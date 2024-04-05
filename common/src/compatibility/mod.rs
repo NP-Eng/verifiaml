@@ -1,5 +1,43 @@
 pub mod example_models;
 
+use crate::QArray;
+use pyo3::prelude::*;
+
+const PERCEPTRON_PATH: &str = include_str!(concat!(
+    env!("CARGO_MANIFEST_DIR"),
+    "/../exploring_tf_lite/q_model_runner.py"
+));
+
+pub fn get_model_input(model_name: &str, index: Option<usize>) -> QArray<f32> {
+    let model_input = Python::with_gil(|py| {
+        let perceptron: Py<PyAny> = PyModule::from_code(py, PERCEPTRON_PATH, "", "")
+            .unwrap()
+            .getattr("get_model_input")
+            .unwrap()
+            .into();
+        let result = perceptron.call1(py, (model_name, index.unwrap_or(150)));
+
+        // Downcast the result to the expected type
+        result.unwrap().extract::<Vec<Vec<f32>>>(py).unwrap()
+    });
+    QArray::from(model_input)
+}
+
+pub fn get_model_output(model_name: &str, index: Option<usize>) -> QArray<u8> {
+    let model_output = Python::with_gil(|py| {
+        let perceptron: Py<PyAny> = PyModule::from_code(py, PERCEPTRON_PATH, "", "")
+            .unwrap()
+            .getattr("get_model_output")
+            .unwrap()
+            .into();
+        let result = perceptron.call1(py, (model_name, index.unwrap_or(150)));
+
+        // Downcast the result to the expected type
+        result.unwrap().extract::<Vec<u8>>(py).unwrap()
+    });
+    QArray::from(model_output)
+}
+
 #[cfg(all(test, feature = "python"))]
 mod tests {
     use crate::{
@@ -19,55 +57,21 @@ mod tests {
                 },
             },
         },
-        quantise_f32_u8_nne, Ligero, Model, QArray,
+        quantise_f32_u8_nne, Ligero, Model, 
     };
     use ark_bn254::Fr;
     use ark_crypto_primitives::sponge::poseidon::PoseidonSponge;
-    use more_asserts::*;
+    use more_asserts::assert_ge;
 
-    use pyo3::prelude::*;
-
-    const PERCEPTRON_PATH: &str = include_str!(concat!(
-        env!("CARGO_MANIFEST_DIR"),
-        "/../exploring_tf_lite/q_model_runner.py"
-    ));
+    use super::*;
 
     const NB_OUTPUTS: usize = 1000;
 
-    // TODO: We allow incorrect outputs because the quantisation from tf lite
-    // is inexact. We should fix this in the future. Currently, the outputs are
-    // within the allowed error.
-    const ALLOWED_ERROR_MARGIN: f32 = 0.1;
+// TODO: We allow incorrect outputs because the quantisation from tf lite
+// is inexact. We should fix this in the future. Currently, the outputs are
+// within the allowed error.
+const ALLOWED_ERROR_MARGIN: f32 = 0.1;
 
-    fn get_model_input(model_name: &str, index: Option<usize>) -> QArray<f32> {
-        let model_input = Python::with_gil(|py| {
-            let perceptron: Py<PyAny> = PyModule::from_code(py, PERCEPTRON_PATH, "", "")
-                .unwrap()
-                .getattr("get_model_input")
-                .unwrap()
-                .into();
-            let result = perceptron.call1(py, (model_name, index.unwrap_or(150)));
-
-            // Downcast the result to the expected type
-            result.unwrap().extract::<Vec<Vec<f32>>>(py).unwrap()
-        });
-        QArray::from(model_input)
-    }
-
-    fn get_model_output(model_name: &str, index: Option<usize>) -> QArray<u8> {
-        let model_output = Python::with_gil(|py| {
-            let perceptron: Py<PyAny> = PyModule::from_code(py, PERCEPTRON_PATH, "", "")
-                .unwrap()
-                .getattr("get_model_output")
-                .unwrap()
-                .into();
-            let result = perceptron.call1(py, (model_name, index.unwrap_or(150)));
-
-            // Downcast the result to the expected type
-            result.unwrap().extract::<Vec<u8>>(py).unwrap()
-        });
-        QArray::from(model_output)
-    }
 
     fn unpadded_inference(
         raw_input: QArray<f32>,
@@ -187,5 +191,10 @@ mod tests {
             correct_samples as f32 / NB_OUTPUTS as f32,
             1.0 - ALLOWED_ERROR_MARGIN
         );
+    }
+
+    #[test]
+    fn test_fully_connected_layer() {
+        println!("{:?}", get_model_input("QFullyConnectedLayer", Some(0)));
     }
 }

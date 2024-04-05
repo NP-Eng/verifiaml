@@ -6,10 +6,12 @@ sys.path.append('../exploring_tf_lite')
 from example_models.q_model_wrapper import QModelWrapper
 from example_models.q_two_layer_perceptron import QTwoLayerPerceptron
 from example_models.q_simple_perceptron import QSimplePerceptron
+from example_models.q_fully_connected_layer import QFullyConnectedLayer
 
 AVAILABLE_MODELS = {
     "QTwoLayerPerceptron": (QTwoLayerPerceptron, int),
-    "QSimplePerceptron": (QSimplePerceptron, int)
+    "QSimplePerceptron": (QSimplePerceptron, int),
+    "QFullyConnectedLayer": (QFullyConnectedLayer, int)
 }
 
 def get_model(model_name: str) -> Tuple[QModelWrapper, type]:

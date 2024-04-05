@@ -15,6 +15,7 @@ ark-sumcheck = { workspace = true }
 rayon = { workspace = true, optional = true }
 hcs-common = { path = "../common" }
 hcs-verifier = { path = "../verifier", optional = true }
+criterion = { workspace = true }
 
 [dev-dependencies]
 ark-bn254 = { workspace = true, features = [ "curve" ] }
@@ -30,6 +31,10 @@ required-features = [ "test-types" ]
 path = "examples/two_layer_perceptron_mnist/main.rs"
 name = "two_layer_perceptron_mnist_proof"
 required-features = [ "test-types" ]
+
+[[bench]]
+name = "bmm"
+harness = false
 
 [features]
 default = [ "std", "parallel" ]

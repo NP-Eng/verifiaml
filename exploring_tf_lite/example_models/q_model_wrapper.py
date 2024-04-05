@@ -17,6 +17,7 @@ class QModelWrapper:
         rescale = lambda x: x.astype(np.float32) / 255.0
         (x_train, y_train), (x_test, y_test) = dataset
         self.dataset = (rescale(x_train), y_train), (rescale(x_test), y_test)
+        (x_train, y_train), (x_test, y_test) = self.dataset
 
         # Train and quantize the model if it doesn't exist
         if not os.path.exists(filename):
@@ -52,18 +53,22 @@ class QModelWrapper:
         
         return model
     
-    def __quantize(self, model: tf.keras.Model, x_train: np.ndarray, representative_data_samples: int = 1000) -> bytes:
+    @staticmethod
+    def __quantize(model: tf.keras.Model, x_train: np.ndarray, representative_data_samples: int = 1000) -> bytes:
 
         # Quantize the model
         def representative_data_gen():
-            for input_value in tf.data.Dataset.from_tensor_slices(x_train).batch(1).take(representative_data_samples):
+            for input_value in tf.data.Dataset.from_tensor_slices(x_train).batch(1).take(1000):
                 yield [input_value]
         
         converter = tf.lite.TFLiteConverter.from_keras_model(model)
+        converter.convert()
 
         converter.optimizations = [tf.lite.Optimize.DEFAULT]
         converter.representative_dataset = representative_data_gen
+        # Ensure that if any ops can't be quantized, the converter throws an error
         converter.target_spec.supported_ops = [tf.lite.OpsSet.TFLITE_BUILTINS_INT8]
+        # Set the input and output tensors to uint8 (APIs added in r2.3)
         converter.inference_input_type = tf.uint8
         converter.inference_output_type = tf.uint8
 
