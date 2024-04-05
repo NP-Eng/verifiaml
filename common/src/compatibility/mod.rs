@@ -67,10 +67,10 @@ mod tests {
 
     const NB_OUTPUTS: usize = 1000;
 
-// TODO: We allow incorrect outputs because the quantisation from tf lite
-// is inexact. We should fix this in the future. Currently, the outputs are
-// within the allowed error.
-const ALLOWED_ERROR_MARGIN: f32 = 0.1;
+    // TODO: We allow incorrect outputs because the quantisation from tf lite
+    // is inexact. We should fix this in the future. Currently, the outputs are
+    // within the allowed error.
+    const ALLOWED_ERROR_MARGIN: f32 = 0.1;
 
 
     fn unpadded_inference(
@@ -191,10 +191,5 @@ const ALLOWED_ERROR_MARGIN: f32 = 0.1;
             correct_samples as f32 / NB_OUTPUTS as f32,
             1.0 - ALLOWED_ERROR_MARGIN
         );
-    }
-
-    #[test]
-    fn test_fully_connected_layer() {
-        println!("{:?}", get_model_input("QFullyConnectedLayer", Some(0)));
     }
 }
