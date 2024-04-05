@@ -219,16 +219,19 @@ where
             None,
         );
 
-        let coms = PCS::commit(ck, vec![&weight_poly, &bias_poly], rng).unwrap();
+        let (coms, com_states) = PCS::commit(ck, vec![&weight_poly, &bias_poly], rng).unwrap();
+
+        let mut coms = coms.into_iter();
+        let mut com_states = com_states.into_iter();
 
         (
             NodeCommitment::BMM(BMMNodeCommitment {
-                weight_com: coms.0[0].clone(),
-                bias_com: coms.0[1].clone(),
+                weight_com: coms.next().unwrap(),
+                bias_com: coms.next().unwrap(),
             }),
             NodeCommitmentState::BMM(BMMNodeCommitmentState {
-                weight_com_state: coms.1[0].clone(),
-                bias_com_state: coms.1[1].clone(),
+                weight_com_state: com_states.next().unwrap(),
+                bias_com_state: com_states.next().unwrap(),
             }),
         )
     }
