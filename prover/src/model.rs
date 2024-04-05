@@ -114,16 +114,19 @@ where
             ));
         }
 
+        let input_node_f = node_output_mles.first().unwrap().to_evaluations();
+        let output_node_f = node_output_mles.last().unwrap().to_evaluations();
+
         // Committing to node outputs as MLEs (individual per node for now)
         let labeled_output_mles: Vec<LabeledPolynomial<F, Poly<F>>> = node_output_mles
-            .iter()
+            .into_iter()
             .map(|mle|
             // TODO change dummy label once we e.g. have given numbers to the
             // nodes in the model: fc_1, fc_2, relu_1, etc.
             // TODO maybe we don't need to clone, if `prove` can take a reference
             LabeledPolynomial::new(
                 "dummy".to_string(),
-                mle.clone(),
+                mle,
                 None,
                 None,
             ))
@@ -167,14 +170,14 @@ where
         // TODO maybe this can be made more efficient by not committing to the
         // output nodes and instead working witht their plain values all along,
         // but that would require messy node-by-node handling
-        let input_node = node_outputs.first().unwrap();
-        let input_node_f = node_output_mles.first().unwrap().to_evaluations();
+        let mut node_outputs = node_outputs.into_iter();
+        let input_node = node_outputs.next().unwrap();
+        let output_node = node_outputs.last().unwrap();
+
         let input_labeled_value = labeled_output_mles.first().unwrap();
         let input_node_com = output_coms.first().unwrap();
         let input_node_com_state = output_com_states.first().unwrap();
 
-        let output_node = node_outputs.last().unwrap();
-        let output_node_f = node_output_mles.last().unwrap().to_evaluations();
         let output_labeled_value = labeled_output_mles.last().unwrap();
         let output_node_com = output_coms.last().unwrap();
         let output_node_com_state = output_com_states.last().unwrap();
@@ -218,8 +221,8 @@ where
 
         // TODO prove that inputs match input commitments?
         InferenceProof {
-            inputs: vec![input_node.clone()],
-            outputs: vec![output_node.clone()],
+            inputs: vec![input_node],
+            outputs: vec![output_node],
             node_value_commitments: output_coms,
             node_proofs,
             input_opening_proofs: vec![input_opening_proof],
