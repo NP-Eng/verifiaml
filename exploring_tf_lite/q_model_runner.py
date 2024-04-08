@@ -14,31 +14,16 @@ AVAILABLE_MODELS = {
     "QFullyConnectedLayer": (QFullyConnectedLayer, int)
 }
 
-def get_model(model_name: str) -> Tuple[QModelWrapper, type]:
+def get_model(model_name: str) -> QModelWrapper:
     """
     Returns a quantized model wrapper together with the type of the input data.
     """
-    model, input_type = AVAILABLE_MODELS.get(model_name, (None, None))
+    model, _ = AVAILABLE_MODELS.get(model_name, (None, None))
     assert model is not None, f"Model {model_name} is not available."
-    return model(), input_type
+    return model()
     
 def get_model_parameters(model_name: str) -> Tuple:
     """
     Returns the model parameters as a tuple.
     """
-    return get_model(model_name)[0].get_model_parameters()
-
-def get_model_output(model_name: str, input_data: Any) -> Any:
-    """
-    Returns the model output on a given input.
-    """
-    model, input_type = get_model(model_name)
-    assert isinstance(input_data, input_type), f"Input data must be of type {input_type}."
-    return model.get_output(input_data)
-
-def get_model_input(model_name: str, input_index: int) -> Any:
-    """
-    Returns the input data at a given index.
-    """
-    model, _ = get_model(model_name)
-    return model.get_input(input_index)
+    return get_model(model_name).get_model_parameters()

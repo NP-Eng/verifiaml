@@ -33,3 +33,6 @@ pub mod compatibility;
 
 #[cfg(feature = "test-types")]
 pub use compatibility::example_models::{simple_perceptron_mnist, two_layer_perceptron_mnist};
+
+#[cfg(feature = "python")]
+pub use compatibility::python::{get_model, get_model_input, get_model_output, run_python};
