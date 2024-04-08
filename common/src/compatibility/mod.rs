@@ -41,34 +41,34 @@ mod tests {
 
     fn run_python<F, K>(f: F) -> K
     where
-        F: FnOnce(&Python) -> K,
+        F: FnOnce(Python) -> K,
     {
-        Python::with_gil(|py| f(&py))
+        Python::with_gil(|py| f(py))
     }
 
-    fn get_model(py: &Python, model_name: &str) -> Py<PyAny> {
-        let func: Py<PyAny> = PyModule::from_code(*py, PERCEPTRON_PATH, "", "")
+    fn get_model(py: Python, model_name: &str) -> Py<PyAny> {
+        let func: Py<PyAny> = PyModule::from_code(py, PERCEPTRON_PATH, "", "")
             .unwrap()
             .getattr("get_model")
             .unwrap()
             .into();
-        func.call1(*py, (model_name,)).unwrap()
+        func.call1(py, (model_name,)).unwrap()
     }
 
-    fn get_model_input(py: &Python, model: &Py<PyAny>, index: Option<usize>) -> QArray<f32> {
-        let result = model.call_method1(*py, "get_input", (index.unwrap_or(150),));
+    fn get_model_input(py: Python, model: &Py<PyAny>, index: Option<usize>) -> QArray<f32> {
+        let result = model.call_method1(py, "get_input", (index.unwrap_or(150),));
 
         // Downcast the result to the expected type
-        let model_input = result.unwrap().extract::<Vec<Vec<f32>>>(*py).unwrap();
+        let model_input = result.unwrap().extract::<Vec<Vec<f32>>>(py).unwrap();
 
         QArray::from(model_input)
     }
 
-    fn get_model_output(py: &Python, model: &Py<PyAny>, index: Option<usize>) -> QArray<u8> {
-        let result = model.call_method1(*py, "get_output", (index.unwrap_or(150),));
+    fn get_model_output(py: Python, model: &Py<PyAny>, index: Option<usize>) -> QArray<u8> {
+        let result = model.call_method1(py, "get_output", (index.unwrap_or(150),));
 
         // Downcast the result to the expected type
-        let model_output = result.unwrap().extract::<Vec<u8>>(*py).unwrap();
+        let model_output = result.unwrap().extract::<Vec<u8>>(py).unwrap();
 
         QArray::from(model_output)
     }
@@ -95,7 +95,7 @@ mod tests {
         let expected_input =
             QArray::read("examples/simple_perceptron_mnist/data/input_test_150.json");
         assert_eq!(
-            run_python(|py| { get_model_input(py, &get_model(py, "QSimplePerceptron"), None) }),
+            run_python(|py| get_model_input(py, &get_model(py, "QSimplePerceptron"), None)),
             expected_input
         );
     }
@@ -105,7 +105,7 @@ mod tests {
         let expected_input =
             QArray::read("examples/two_layer_perceptron_mnist/data/input_test_150.json");
         assert_eq!(
-            run_python(|py| { get_model_input(py, &get_model(py, "QTwoLayerPerceptron"), None) }),
+            run_python(|py| get_model_input(py, &get_model(py, "QTwoLayerPerceptron"), None)),
             expected_input
         );
     }
