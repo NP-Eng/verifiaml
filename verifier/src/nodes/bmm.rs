@@ -25,7 +25,7 @@ where
         node_com: &NodeCommitment<F, S, PCS>,
         input_com: &LabeledCommitment<PCS::Commitment>,
         output_com: &LabeledCommitment<PCS::Commitment>,
-        proof: NodeProof<F, S, PCS>,
+        proof: &NodeProof<F, S, PCS>,
     ) -> bool {
         let NodeCommitment::BMM(BMMNodeCommitment {
             weight_com,
@@ -54,7 +54,7 @@ where
 
         // The hypercube sum proved in sumcheck should be the difference between
         // the output and the bias
-        let sumcheck_evaluation = output_opening_value - bias_opening_value;
+        let sumcheck_evaluation = *output_opening_value - *bias_opening_value;
 
         // Public information about the sumchecked polynomial
         // g(x) = (input - zero_point)^(x) * W^(r, x),
@@ -79,7 +79,7 @@ where
         // Verify g(s) agrees with the claims for (input - zero_point)^(s) and
         // W^(r, s)
         if oracle_evaluation
-            != (input_opening_value - F::from(self.input_zero_point)) * weight_opening_value
+            != (*input_opening_value - F::from(self.input_zero_point)) * weight_opening_value
         {
             return false;
         }
@@ -91,7 +91,7 @@ where
             vk,
             [input_com],
             &oracle_point,
-            [input_opening_value],
+            [*input_opening_value],
             &input_opening_proof,
             sponge,
             None,
@@ -108,7 +108,7 @@ where
             vk,
             [weight_com],
             &r.clone().into_iter().chain(oracle_point).collect(),
-            [weight_opening_value],
+            [*weight_opening_value],
             &weight_opening_proof,
             sponge,
             None,
@@ -122,7 +122,7 @@ where
             vk,
             [output_com, bias_com],
             &r,
-            [output_opening_value, bias_opening_value],
+            [*output_opening_value, *bias_opening_value],
             &output_bias_opening_proof,
             sponge,
             None,
