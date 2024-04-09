@@ -45,18 +45,19 @@ where
 
 // TODO: for now, we require all nodes to use the same PCS; this might change
 // in the future
-pub struct Model<ST, LT> {
+pub struct Model<ST, LT, XT> {
     pub input_shape: Vec<usize>,
     pub output_shape: Vec<usize>,
-    pub nodes: Vec<Node<ST, LT>>,
+    pub nodes: Vec<Node<ST, LT, XT>>,
 }
 
-impl<ST, LT> Model<ST, LT>
+impl<ST, LT, XT> Model<ST, LT, XT>
 where
     ST: InnerType + TryFrom<LT>,
-    LT: InnerType + From<ST>,
+    LT: InnerType + From<ST> + From<u32>,
+    XT: InnerType + From<LT>,
 {
-    pub fn new(input_shape: Vec<usize>, nodes: Vec<Node<ST, LT>>) -> Self {
+    pub fn new(input_shape: Vec<usize>, nodes: Vec<Node<ST, LT, XT>>) -> Self {
         // An empty model would cause panics later down the line e.g. when
         // determining the number of variables needed to commit to it.
         assert!(!nodes.is_empty(), "A model cannot have no nodes",);

@@ -1,8 +1,9 @@
 use ark_ff::Zero;
 use ark_std::log2;
+use std::marker::PhantomData;
 
 use crate::model::qarray::{InnerType, QArray};
-use crate::quantization::{requantise_fc, requantise_ref, BMMQInfo, QInfo, RoundingScheme};
+use crate::quantization::requantise_ref;
 use crate::{Commitment, CommitmentState};
 
 use super::{NodeOpsNative, NodeOpsPadded};
@@ -42,10 +43,11 @@ pub struct RequantiseBMMRefNodeProof {
     // this will be the sumcheck proof
 }
 
-impl<ST, LT, XT> NodeOpsNative<LT, ST> for RequantiseBMMRefNode<ST, LT, XT>
+impl<ST, LT, XT> NodeOpsNative<LT, ST, XT> for RequantiseBMMRefNode<ST, LT, XT>
 where
     ST: InnerType + TryFrom<LT>,
-    LT: InnerType + From<ST>,
+    LT: InnerType + From<ST> + From<u32>,
+    XT: InnerType + From<LT>,
 {
     fn shape(&self) -> Vec<usize> {
         vec![self.size]
@@ -79,10 +81,11 @@ where
     }
 }
 
-impl<ST, LT, XT> NodeOpsPadded<LT, ST> for RequantiseBMMRefNode<ST, LT, XT>
+impl<ST, LT, XT> NodeOpsPadded<LT, ST, XT> for RequantiseBMMRefNode<ST, LT, XT>
 where
     ST: InnerType + TryFrom<LT>,
-    LT: InnerType + From<ST>,
+    LT: InnerType + From<ST> + From<u32>,
+    XT: InnerType + From<LT>,
 {
     fn padded_shape_log(&self) -> Vec<usize> {
         vec![self.padded_size_log]
@@ -139,7 +142,7 @@ impl RequantiseBMMRefNode<i8, i32, i64> {
             effective_shift,
             effective_multiplier,
             output_zero_point: z_o,
-            extended_type: i64,
+            extended_type: PhantomData::<i64>,
         }
     }
 }
@@ -157,7 +160,7 @@ fn quantize_multiplier(double_multiplier: f64) -> (i32, usize) {
     assert!(expon < 0, "expon should be negative. Got: {}", expon);
 
     // Negate expon to obtain the number of right-shift bits
-    let shift: usize = -expon;
+    let mut shift: usize = -expon as usize;
 
     // TF Lite uses C++'s round function under the hood as can be seen here:
     // https://github.com/tensorflow/tensorflow/blob/46f028f94dcd974705cd14e8abf05b9bd8f20bf0/tensorflow/lite/kernels/internal/cppmath.h#L35
@@ -183,12 +186,12 @@ fn quantize_multiplier(double_multiplier: f64) -> (i32, usize) {
     }
 
     // TFLITE_CHECK_LE(q_fixed, std::numeric_limits<int32_t>::max());
-    if q_fixed > i32::MAX {
+    if q_fixed > i32::MAX as i64 {
         panic!("q_fixed must not exceed {}. Got: {}", i32::MAX, q_fixed);
     }
 
     // If exponent is too small.
-    if expon < -(i32::BITS - 1) {
+    if (-expon as u32) < i32::BITS - 1 {
         // expon < -31
         shift = 0;
         q_fixed = 0;
@@ -213,10 +216,10 @@ fn frexp(x: f64) -> (f64, isize) {
     let x_bits: u64 = x.to_bits();
 
     // truncate low order bits to compute the biased exponent
-    let expon = ((x_bits & F64_EXPONENT_MASK) / (1 << F64_EXPONENT_SHIFT)) as i32;
+    let mut expon = ((x_bits & F64_EXPONENT_MASK) / (1 << F64_EXPONENT_SHIFT)) as i32;
 
-    // assert expon > 0 and expon < 2046 = 1023<<1
-    assert!(expon > 0 && expon < (F64_EXPONENT_BIAS << 1));
+    // assert 0 < expon < 1023<<1
+    assert!(expon > 0 && expon < ((F64_EXPONENT_BIAS as i32) << 1));
 
     // unbias exponent
     expon -= (F64_EXPONENT_BIAS as i32) + 1;
@@ -226,5 +229,5 @@ fn frexp(x: f64) -> (f64, isize) {
     let q = ((mantissa + (1 << F64_EXPONENT_SHIFT)) as f64)
         / ((1_u64 << (F64_EXPONENT_SHIFT + 1)) as f64);
 
-    (q, expon)
+    (q, expon as isize)
 }

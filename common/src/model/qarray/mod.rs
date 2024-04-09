@@ -29,6 +29,7 @@ pub trait InnerType:
     + Sub<Output = Self>
     + Mul<Output = Self>
     + Div<Output = Self>
+    + From<bool>
     + AddAssign
     + SubAssign
     + MulAssign
@@ -39,6 +40,7 @@ pub trait InnerType:
     const ZERO: Self;
     const MIN: Self;
     const MAX: Self;
+    const BITS: u32;
 
     // TODO if we decide to make the model generic on the quantisation process
     // types, this will change
@@ -50,6 +52,7 @@ impl InnerType for i8 {
     const ZERO: Self = 0;
     const MIN: Self = Self::MIN;
     const MAX: Self = Self::MAX;
+    const BITS: u32 = Self::BITS;
 
     fn from_qscaletype(x: QScaleType) -> Self {
         x as Self
@@ -63,6 +66,7 @@ impl InnerType for i32 {
     const ZERO: Self = 0;
     const MIN: Self = Self::MIN;
     const MAX: Self = Self::MAX;
+    const BITS: u32 = Self::BITS;
 
     fn from_qscaletype(x: QScaleType) -> Self {
         x as Self
@@ -72,10 +76,27 @@ impl InnerType for i32 {
         *self as QScaleType
     }
 }
+
+impl InnerType for i64 {
+    const ZERO: Self = 0;
+    const MIN: Self = Self::MIN;
+    const MAX: Self = Self::MAX;
+    const BITS: u32 = Self::BITS;
+
+    fn from_qscaletype(x: QScaleType) -> Self {
+        x as Self
+    }
+
+    fn to_qscaletype(&self) -> QScaleType {
+        *self as QScaleType
+    }
+}
+
 impl InnerType for u8 {
     const ZERO: Self = 0;
     const MIN: Self = Self::MIN;
     const MAX: Self = Self::MAX;
+    const BITS: u32 = Self::BITS;
 
     fn from_qscaletype(x: QScaleType) -> Self {
         x as Self
@@ -90,6 +111,7 @@ impl InnerType for f32 {
     const ZERO: Self = 0.0;
     const MIN: Self = Self::MIN;
     const MAX: Self = Self::MAX;
+    const BITS: u32 = 32; // f32 does not have a "BITS" associated constant (also, this field is unused)
 
     fn from_qscaletype(x: QScaleType) -> Self {
         x as Self

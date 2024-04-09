@@ -127,6 +127,57 @@ where
         .collect()
 }
 
+// Implementation of TF Lite's reference requantization.
+pub fn requantise_ref<ST, LT, XT>(
+    output: &[LT],
+    effective_multiplier: LT,
+    effective_shift: usize,
+    output_zero_point: ST,
+) -> Vec<ST>
+where
+    ST: InnerType + TryFrom<LT>,
+    LT: InnerType + From<ST> + From<u32>,
+    XT: InnerType + From<LT>,
+{
+    let mask: LT = LT::from((1 << effective_shift) - 1);
+    let effective_multiplier = XT::from(effective_multiplier);
+
+    // Requantize
+    // TODO add rayon for parallelization?
+    output
+        .iter()
+        .map(|x| {
+            let x = (XT::from(*x)) * effective_multiplier;
+
+            let nudge: LT = if x >= XT::ZERO {
+                LT::from(1 << (LT::BITS - 2))
+            } else {
+                LT::from(1 - (1 << (LT::BITS - 2)))
+            };
+
+            // higher order bits
+            // LT = i32 | XT = i64 | ST = i8
+            // i32 + i64 = i64
+            // i64 / u32 = i32
+            let x_high: LT = (nudge + x) / (1 << (LT::BITS - 1));
+
+            // assert(right_shift <= 31);
+
+            let remainder: LT = x_high & mask;
+            let threshold: LT = (mask >> 1) + LT::from(x < XT::ZERO);
+
+            let mut out = (LT::from(x_high >> effective_shift.try_into().unwrap()))
+                + (LT::from(remainder > threshold));
+
+            out += LT::from(output_zero_point);
+
+            ST::try_from(partial_ord_clamp(out, LT::from(ST::MIN), LT::from(ST::MAX)))
+                .map_err(|_| "Unable to convert Large Type to Small Type")
+                .unwrap()
+        })
+        .collect()
+}
+
 // This function is used to quantise model model inputs and its types are fixed
 pub fn quantise_f32_u8_nne(values: &[f32], scale: QScaleType, zero: u8) -> Vec<u8> {
     values

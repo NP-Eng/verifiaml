@@ -16,6 +16,10 @@ use self::{
         RequantiseBMMNode, RequantiseBMMNodeCommitment, RequantiseBMMNodeCommitmentState,
         RequantiseBMMNodeProof,
     },
+    requantise_bmm_ref::{
+        RequantiseBMMRefNode, RequantiseBMMRefNodeCommitment, RequantiseBMMRefNodeCommitmentState,
+        RequantiseBMMRefNodeProof,
+    },
     reshape::ReshapeNode,
 };
 
@@ -24,6 +28,8 @@ use super::qarray::{InnerType, QTypeArray};
 pub(crate) mod bmm;
 pub(crate) mod relu;
 pub(crate) mod requantise_bmm;
+pub(crate) mod requantise_bmm_ref;
+pub(crate) mod requantise_bmm_simplified;
 pub(crate) mod reshape;
 
 // mod parser;
@@ -36,7 +42,7 @@ pub(crate) mod reshape;
 /// It stores information about the transition (such as a matrix and bias, if
 /// applicable), but not about about the specific values of its nodes: these
 /// are handled by the methods only.
-pub trait NodeOpsNative<I, O> {
+pub trait NodeOpsNative<I, O, X> {
     /// Returns the shape of the node's output tensor
     fn shape(&self) -> Vec<usize>;
 
@@ -50,7 +56,7 @@ pub trait NodeOpsNative<I, O> {
     fn evaluate(&self, input: &QArray<I>) -> QArray<O>;
 }
 
-pub trait NodeOpsPadded<I, O>: NodeOpsNative<I, O> {
+pub trait NodeOpsPadded<I, O, X>: NodeOpsNative<I, O, X> {
     /// Returns the element-wise base-two logarithm of the padded node's
     /// output shape, i.e. the list of numbers of variables of the associated
     /// MLE
@@ -85,9 +91,10 @@ pub trait NodeOpsPadded<I, O>: NodeOpsNative<I, O> {
     fn padded_evaluate(&self, input: &QArray<I>) -> QArray<O>;
 }
 
-pub enum Node<ST, LT> {
+pub enum Node<ST, LT, XT> {
     BMM(BMMNode<ST, LT>),
     RequantiseBMM(RequantiseBMMNode<ST>),
+    RequantiseBMMRef(RequantiseBMMRefNode<ST, LT, XT>),
     ReLU(ReLUNode<ST>),
     Reshape(ReshapeNode),
 }
@@ -100,6 +107,7 @@ where
 {
     BMM(BMMNodeProof<F, S, PCS>),
     RequantiseBMM(RequantiseBMMNodeProof),
+    RequantiseBMRef(RequantiseBMMRefNodeProof),
     ReLU(()),
     Reshape(()),
 }
@@ -112,6 +120,7 @@ where
 {
     BMM(BMMNodeCommitment<F, S, PCS>),
     RequantiseBMM(RequantiseBMMNodeCommitment),
+    RequantiseBMMRef(RequantiseBMMRefNodeCommitment),
     ReLU(()),
     Reshape(()),
 }
@@ -124,16 +133,18 @@ where
 {
     BMM(BMMNodeCommitmentState<F, S, PCS>),
     RequantiseBMM(RequantiseBMMNodeCommitmentState),
+    RequantiseBMMRef(RequantiseBMMRefNodeCommitmentState),
     ReLU(()),
     Reshape(()),
 }
 
 // A lot of this overlaps with the NodeOps trait and could be handled more
 // elegantly by simply implementing the trait
-impl<I, O> Node<I, O>
+impl<I, O, X> Node<I, O, X>
 where
     I: InnerType + TryFrom<O>,
     O: InnerType + From<I>,
+    X: InnerType + From<O>,
 {
     // Print the type of the node. This cannot be cleantly achieved by deriving
     // Debug
@@ -141,6 +152,7 @@ where
         match self {
             Node::BMM(_) => "BMM",
             Node::RequantiseBMM(_r) => "RequantiseBMM",
+            Node::RequantiseBMMRef(_r) => "RequantiseBMMRef",
             Node::ReLU(_) => "ReLU",
             Node::Reshape(_) => "Reshape",
         }
@@ -156,6 +168,7 @@ where
         match (self, input) {
             (Node::BMM(fc), QTypeArray::S(input)) => QTypeArray::L(fc.evaluate(input)),
             (Node::RequantiseBMM(r), QTypeArray::L(input)) => QTypeArray::S(r.evaluate(input)),
+            (Node::RequantiseBMMRef(r), QTypeArray::L(input)) => QTypeArray::S(r.evaluate(input)),
             (Node::ReLU(r), QTypeArray::S(input)) => QTypeArray::S(r.evaluate(input)),
             (Node::Reshape(r), QTypeArray::S(input)) => QTypeArray::S(r.evaluate(input)),
             _ => panic!(
@@ -177,6 +190,9 @@ where
         match (self, input) {
             (Node::BMM(fc), QTypeArray::S(input)) => QTypeArray::L(fc.padded_evaluate(input)),
             (Node::RequantiseBMM(r), QTypeArray::L(input)) => {
+                QTypeArray::S(r.padded_evaluate(input))
+            }
+            (Node::RequantiseBMMRef(r), QTypeArray::L(input)) => {
                 QTypeArray::S(r.padded_evaluate(input))
             }
             (Node::ReLU(r), QTypeArray::S(input)) => QTypeArray::S(r.padded_evaluate(input)),
