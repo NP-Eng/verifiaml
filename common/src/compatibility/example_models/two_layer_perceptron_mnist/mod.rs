@@ -5,7 +5,10 @@ use ark_poly_commit::PolynomialCommitment;
 pub mod parameters;
 use parameters::*;
 
-use crate::{BMMNode, Model, Node, Poly, QArray, ReLUNode, RequantiseBMMNode, ReshapeNode};
+use crate::{
+    model::nodes::requantise_bmm_ref::RequantiseBMMRefNode, BMMNode, Model, Node, Poly, QArray,
+    ReLUNode, RequantiseBMMNode, ReshapeNode,
+};
 
 pub const INPUT_DIMS: &[usize] = &[28, 28];
 pub const INTER_DIM: usize = 28;
@@ -22,7 +25,7 @@ macro_rules! PATH {
     };
 }
 
-pub fn build_two_layer_perceptron_mnist<F, S, PCS>() -> Model<i8, i32>
+pub fn build_two_layer_perceptron_mnist<F, S, PCS>(use_requantise_ref: bool) -> Model<i8, i32>
 where
     F: PrimeField + Absorb,
     S: CryptographicSponge,
@@ -41,6 +44,8 @@ where
 
     let req_bmm_1: RequantiseBMMNode<i8> =
         RequantiseBMMNode::new(INTER_DIM, S_1_I, Z_1_I, S_1_W, Z_1_W, S_1_O, Z_1_O);
+    let req_bmm_ref_1: RequantiseBMMRefNode<i8, i32> =
+        RequantiseBMMRefNode::new(INTER_DIM, S_1_I, S_1_W, S_1_O, Z_1_O);
 
     let relu: ReLUNode<i8> = ReLUNode::new(28, Z_1_O);
 
@@ -48,16 +53,26 @@ where
 
     let req_bmm_2: RequantiseBMMNode<i8> =
         RequantiseBMMNode::new(OUTPUT_DIM, S_2_I, Z_2_I, S_2_W, Z_2_W, S_2_O, Z_2_O);
+    let req_bmm_ref_2: RequantiseBMMRefNode<i8, i32> =
+        RequantiseBMMRefNode::new(OUTPUT_DIM, S_2_I, S_2_W, S_2_O, Z_2_O);
 
     Model::new(
         INPUT_DIMS.to_vec(),
         vec![
             Node::Reshape(reshape),
             Node::BMM(bmm_1),
-            Node::RequantiseBMM(req_bmm_1),
+            if use_requantise_ref {
+                Node::RequantiseBMMRef(req_bmm_ref_1)
+            } else {
+                Node::RequantiseBMM(req_bmm_1)
+            },
             Node::ReLU(relu),
             Node::BMM(bmm_2),
-            Node::RequantiseBMM(req_bmm_2),
+            if use_requantise_ref {
+                Node::RequantiseBMMRef(req_bmm_ref_2)
+            } else {
+                Node::RequantiseBMM(req_bmm_2)
+            },
         ],
     )
 }

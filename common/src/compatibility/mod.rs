@@ -130,7 +130,7 @@ mod tests {
     #[test]
     fn test_two_layer_perceptron_mnist_all_outputs() {
         let two_layer_perceptron_mnist =
-            build_two_layer_perceptron_mnist::<Fr, PoseidonSponge<Fr>, Ligero<Fr>>();
+            build_two_layer_perceptron_mnist::<Fr, PoseidonSponge<Fr>, Ligero<Fr>>(false);
 
         let correct_samples: usize = Python::with_gil(|py| {
             let tf_lite_model = get_model(py, "QTwoLayerPerceptron");
@@ -169,7 +169,7 @@ mod tests {
     #[test]
     fn test_simple_perceptron_mnist_all_outputs() {
         let simple_perceptron_mnist =
-            build_simple_perceptron_mnist::<Fr, PoseidonSponge<Fr>, Ligero<Fr>>();
+            build_simple_perceptron_mnist::<Fr, PoseidonSponge<Fr>, Ligero<Fr>>(false);
 
         let correct_samples: usize = Python::with_gil(|py| {
             let tf_lite_model = get_model(py, "QSimplePerceptron");
