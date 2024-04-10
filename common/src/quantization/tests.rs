@@ -45,11 +45,49 @@ fn test_nnafz_halves() {
 }
 
 #[test]
-fn test_frexp() {
+fn test_frexp_positive_expon() {
     let num = 1.0;
     let expected = (0.5, 1);
     let actual = frexp(num);
-    println!("actual = {:?}", actual);
+    assert_eq!(expected, actual);
+}
+
+#[test]
+fn test_frexp_negative_expon() {
+    let num = 0.1;
+    let expected = (0.8, -3);
+    let actual = frexp(num);
+    assert_eq!(expected, actual);
+}
+
+#[test]
+fn test_frexp_zero_expon() {
+    let num = 1.0 / 2.0 + 1.0 / ((1_i64 << 53) as f64);
+    let expected = 0;
+    let actual = frexp(num).1;
+    assert_eq!(expected, actual);
+}
+
+#[test]
+fn test_quantize_multiplier_zero() {
+    let double_multiplier = 0_f64;
+    let expected = (0, 0);
+    let actual = quantize_multiplier(double_multiplier);
+    assert_eq!(actual, expected);
+}
+
+#[test]
+#[should_panic]
+fn test_quantize_multiplier_non_negative_expon() {
+    let double_multiplier = 1.0 / 2.0 + 1.0 / ((1_i64 << 53) as f64);
+    let _ = quantize_multiplier(double_multiplier);
+}
+
+#[test]
+fn test_quantize_multiplier_negative_expon() {
+    let double_multiplier = 0.1;
+    let expected = (1_717_986_918, 3);
+    let actual = quantize_multiplier(double_multiplier);
     assert_eq!(expected, actual);
 }
 

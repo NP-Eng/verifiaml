@@ -209,7 +209,11 @@ pub(crate) fn quantize_multiplier(double_multiplier: f64) -> (i32, usize) {
 
     let (q, expon) = frexp(double_multiplier);
 
-    assert!(expon < 0, "expon should be negative. Got: {}", expon);
+    assert!(
+        expon < 0,
+        "expon should be negative. Got: {} instead.",
+        expon
+    );
 
     // Negate expon to obtain the number of right-shift bits
     let mut shift = -expon as usize;
@@ -220,18 +224,18 @@ pub(crate) fn quantize_multiplier(double_multiplier: f64) -> (i32, usize) {
     // The same strategy is implemented in Rust's round method:
     // https://doc.rust-lang.org/std/primitive.f64.html#method.round
     // See also: https://en.cppreference.com/w/c/numeric/fenv/FE_round
-    let mut q_fixed = (q * ((1 << (i32::BITS - 1)) as f64)).round() as i64; // q * (1 << 31)
+    let mut q_fixed = (q * ((1_i64 << (i32::BITS - 1)) as f64)).round() as i64;
 
     // TFLITE_CHECK(q_fixed <= (1LL << 31));
-    if q_fixed > 1 << i32::BITS - 1 {
+    if q_fixed > 1_i64 << (i32::BITS - 1) {
         panic!(
-            "q_fixed must not exceed {}. Got: {}",
+            "q_fixed must not exceed {}. Got: {} instead.",
             i32::BITS - 1,
             q_fixed
         );
     }
 
-    if q_fixed == (1 << (i32::BITS - 1)) {
+    if q_fixed == (1_i64 << (i32::BITS - 1)) {
         // 1 << 31
         q_fixed /= 2;
         shift += 1;
@@ -239,11 +243,16 @@ pub(crate) fn quantize_multiplier(double_multiplier: f64) -> (i32, usize) {
 
     // TFLITE_CHECK_LE(q_fixed, std::numeric_limits<int32_t>::max());
     if q_fixed > i32::MAX as i64 {
-        panic!("q_fixed must not exceed {}. Got: {}", i32::MAX, q_fixed);
+        panic!(
+            "q_fixed must not exceed {}. Got: {} instead.",
+            i32::MAX,
+            q_fixed
+        );
     }
 
     // If exponent is too small.
-    if (-expon as u32) < i32::BITS - 1 {
+    // if (-expon as u32) < i32::BITS - 1 {
+    if expon < -((i32::BITS - 1) as isize) {
         // expon < -31
         shift = 0;
         q_fixed = 0;
