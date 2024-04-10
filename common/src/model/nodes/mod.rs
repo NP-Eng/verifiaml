@@ -42,7 +42,7 @@ pub(crate) mod reshape;
 /// It stores information about the transition (such as a matrix and bias, if
 /// applicable), but not about about the specific values of its nodes: these
 /// are handled by the methods only.
-pub trait NodeOpsNative<I, O, X> {
+pub trait NodeOpsNative<I, O> {
     /// Returns the shape of the node's output tensor
     fn shape(&self) -> Vec<usize>;
 
@@ -56,7 +56,7 @@ pub trait NodeOpsNative<I, O, X> {
     fn evaluate(&self, input: &QArray<I>) -> QArray<O>;
 }
 
-pub trait NodeOpsPadded<I, O, X>: NodeOpsNative<I, O, X> {
+pub trait NodeOpsPadded<I, O>: NodeOpsNative<I, O> {
     /// Returns the element-wise base-two logarithm of the padded node's
     /// output shape, i.e. the list of numbers of variables of the associated
     /// MLE
@@ -91,10 +91,10 @@ pub trait NodeOpsPadded<I, O, X>: NodeOpsNative<I, O, X> {
     fn padded_evaluate(&self, input: &QArray<I>) -> QArray<O>;
 }
 
-pub enum Node<ST, LT, XT> {
+pub enum Node<ST, LT> {
     BMM(BMMNode<ST, LT>),
     RequantiseBMM(RequantiseBMMNode<ST>),
-    RequantiseBMMRef(RequantiseBMMRefNode<ST, LT, XT>),
+    RequantiseBMMRef(RequantiseBMMRefNode<ST, LT>),
     ReLU(ReLUNode<ST>),
     Reshape(ReshapeNode),
 }
@@ -140,11 +140,10 @@ where
 
 // A lot of this overlaps with the NodeOps trait and could be handled more
 // elegantly by simply implementing the trait
-impl<I, O, X> Node<I, O, X>
+impl<I, O> Node<I, O>
 where
     I: InnerType + TryFrom<O>,
     O: InnerType + From<I>,
-    X: InnerType + From<O>,
 {
     // Print the type of the node. This cannot be cleantly achieved by deriving
     // Debug

@@ -11,8 +11,11 @@ ark-std = { version = "^0.4.0", default-features = false }
 ark-ff = { version = "^0.4.0", default-features = false }
 ark-ec = { version = "^0.4.0", default-features = false }
 ark-serialize = { version = "^0.4.0", default-features = false, features = [ "derive" ] }
+
+ark-poly-commit = { git = "https://github.com/HungryCatsStudio/poly-commit", branch = "cesar/apply-fix-ci" }
 ark-poly = {version = "^0.4.0", default-features = false }
-ark-poly-commit = {version = "^0.4.0", default-features = false }
+
+#ark-poly-commit = {version = "^0.4.0", default-features = false }
 ark-crypto-primitives = {version = "^0.4.0", default-features = false }
 ark-sumcheck = { git = "ssh://git@github.com/HungryCatsStudio/sumcheck-private.git", default-features = false }
 rayon = { version = "1.5", default-features = false }
@@ -28,6 +31,10 @@ ark-ff = { git = "https://github.com/arkworks-rs/algebra/" }
 ark-ec = { git = "https://github.com/arkworks-rs/algebra/" }
 ark-serialize = { git = "https://github.com/arkworks-rs/algebra/" }
 ark-poly = { git = "https://github.com/arkworks-rs/algebra/" }
-ark-poly-commit = { git = "https://github.com/HungryCatsStudio/poly-commit", branch = "ligero-uni-and-ml-absorb" }
+
+
+ark-poly-commit = { git = "https://github.com/HungryCatsStudio/poly-commit", branch = "cesar/apply-fix-ci" }
+
+#ark-poly-commit = { git = "https://github.com/HungryCatsStudio/poly-commit", branch = "ligero-uni-and-ml-absorb" }
 ark-crypto-primitives = { git = "https://github.com/arkworks-rs/crypto-primitives" }
 ark-bn254 = { git = "https://github.com/arkworks-rs/algebra/" }

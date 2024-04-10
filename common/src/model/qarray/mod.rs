@@ -1,11 +1,11 @@
 use std::ops::{AddAssign, DivAssign, MulAssign, SubAssign};
 
-use ark_std::ops::Index;
-
 use ark_std::any::type_name;
 use ark_std::cmp::PartialOrd;
 use ark_std::fmt;
 use ark_std::fmt::Debug;
+use ark_std::mem;
+use ark_std::ops::Index;
 use ark_std::ops::{Add, Div, Mul, Sub};
 use ark_std::vec;
 use ark_std::vec::Vec;
@@ -29,7 +29,6 @@ pub trait InnerType:
     + Sub<Output = Self>
     + Mul<Output = Self>
     + Div<Output = Self>
-    + From<bool>
     + AddAssign
     + SubAssign
     + MulAssign
@@ -38,21 +37,51 @@ pub trait InnerType:
     + DeserializeOwned
 {
     const ZERO: Self;
+    const ONE: Self;
+    const TWO: Self;
     const MIN: Self;
     const MAX: Self;
-    const BITS: u32;
+    const BITS: usize;
+
+    type Double: From<Self>
+        + Mul<Output = Self::Double>
+        + Div<Output = Self::Double>
+        + // TODO to be readded after the "InnerType split" + TryInto<Self>;
+        Add<Output = Self::Double>
+        + Sub<Output = Self::Double>
+        + Copy;
 
     // TODO if we decide to make the model generic on the quantisation process
     // types, this will change
     fn from_qscaletype(x: QScaleType) -> Self;
+
     fn to_qscaletype(&self) -> QScaleType;
+
+    fn pow2(e: usize) -> Self {
+        let mut pow = Self::ONE;
+
+        for _ in 0..e {
+            pow *= Self::TWO;
+        }
+
+        pow
+    }
+
+    // This ugly function will go away after the "InnerType split"
+    fn inner_try_from(x: Self::Double) -> Result<Self, ()>;
+
+    fn inner_bit_and(self, rhs: Self) -> Self;
 }
 
 impl InnerType for i8 {
     const ZERO: Self = 0;
+    const ONE: Self = 1;
+    const TWO: Self = 2;
     const MIN: Self = Self::MIN;
     const MAX: Self = Self::MAX;
-    const BITS: u32 = Self::BITS;
+    const BITS: usize = 8 * mem::size_of::<Self>();
+
+    type Double = i16;
 
     fn from_qscaletype(x: QScaleType) -> Self {
         x as Self
@@ -60,13 +89,26 @@ impl InnerType for i8 {
 
     fn to_qscaletype(&self) -> QScaleType {
         *self as QScaleType
+    }
+
+    fn inner_try_from(x: Self::Double) -> Result<Self, ()> {
+        Self::try_from(x).map_err(|_| ())
+    }
+
+    fn inner_bit_and(self, rhs: Self) -> Self {
+        self & rhs
     }
 }
+
 impl InnerType for i32 {
     const ZERO: Self = 0;
+    const ONE: Self = 1;
+    const TWO: Self = 2;
     const MIN: Self = Self::MIN;
     const MAX: Self = Self::MAX;
-    const BITS: u32 = Self::BITS;
+    const BITS: usize = 8 * mem::size_of::<Self>();
+
+    type Double = i64;
 
     fn from_qscaletype(x: QScaleType) -> Self {
         x as Self
@@ -74,14 +116,26 @@ impl InnerType for i32 {
 
     fn to_qscaletype(&self) -> QScaleType {
         *self as QScaleType
+    }
+
+    fn inner_try_from(x: Self::Double) -> Result<Self, ()> {
+        Self::try_from(x).map_err(|_| ())
+    }
+
+    fn inner_bit_and(self, rhs: Self) -> Self {
+        self & rhs
     }
 }
 
 impl InnerType for i64 {
     const ZERO: Self = 0;
+    const ONE: Self = 1;
+    const TWO: Self = 2;
     const MIN: Self = Self::MIN;
     const MAX: Self = Self::MAX;
-    const BITS: u32 = Self::BITS;
+    const BITS: usize = 8 * mem::size_of::<Self>();
+
+    type Double = i128;
 
     fn from_qscaletype(x: QScaleType) -> Self {
         x as Self
@@ -89,14 +143,26 @@ impl InnerType for i64 {
 
     fn to_qscaletype(&self) -> QScaleType {
         *self as QScaleType
+    }
+
+    fn inner_try_from(x: Self::Double) -> Result<Self, ()> {
+        Self::try_from(x).map_err(|_| ())
+    }
+
+    fn inner_bit_and(self, rhs: Self) -> Self {
+        self & rhs
     }
 }
 
 impl InnerType for u8 {
     const ZERO: Self = 0;
+    const ONE: Self = 1;
+    const TWO: Self = 2;
     const MIN: Self = Self::MIN;
     const MAX: Self = Self::MAX;
-    const BITS: u32 = Self::BITS;
+    const BITS: usize = 8 * mem::size_of::<Self>();
+
+    type Double = u16;
 
     fn from_qscaletype(x: QScaleType) -> Self {
         x as Self
@@ -104,14 +170,26 @@ impl InnerType for u8 {
 
     fn to_qscaletype(&self) -> QScaleType {
         *self as QScaleType
+    }
+
+    fn inner_try_from(x: Self::Double) -> Result<Self, ()> {
+        Self::try_from(x).map_err(|_| ())
+    }
+
+    fn inner_bit_and(self, rhs: Self) -> Self {
+        self & rhs
     }
 }
 
 impl InnerType for f32 {
     const ZERO: Self = 0.0;
+    const ONE: Self = 1.0;
+    const TWO: Self = 2.0;
     const MIN: Self = Self::MIN;
     const MAX: Self = Self::MAX;
-    const BITS: u32 = 32; // f32 does not have a "BITS" associated constant (also, this field is unused)
+    const BITS: usize = 8 * mem::size_of::<Self>();
+
+    type Double = f64;
 
     fn from_qscaletype(x: QScaleType) -> Self {
         x as Self
@@ -119,6 +197,14 @@ impl InnerType for f32 {
 
     fn to_qscaletype(&self) -> QScaleType {
         *self as QScaleType
+    }
+
+    fn inner_try_from(_x: Self::Double) -> Result<Self, ()> {
+        Err(())
+    }
+
+    fn inner_bit_and(self, _rhs: Self) -> Self {
+        panic!("Bitwise operations are not supported for f32");
     }
 }
 

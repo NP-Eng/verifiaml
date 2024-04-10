@@ -128,7 +128,8 @@ where
 }
 
 // Implementation of TF Lite's reference requantization.
-pub fn requantise_ref<ST, LT, XT>(
+pub fn requantise_ref<ST, LT>(
+    // TODO Think whether we can afford to pass ownership here and change the iter() below by into_iter()
     output: &[LT],
     effective_multiplier: LT,
     effective_shift: usize,
@@ -136,44 +137,60 @@ pub fn requantise_ref<ST, LT, XT>(
 ) -> Vec<ST>
 where
     ST: InnerType + TryFrom<LT>,
-    LT: InnerType + From<ST> + From<u32>,
-    XT: InnerType + From<LT>,
+    LT: InnerType + From<ST>,
 {
-    let mask: LT = LT::from((1 << effective_shift) - 1);
-    let effective_multiplier = XT::from(effective_multiplier);
+    // Computing auxiliary constants used for every input
+    let effective_multiplier = LT::Double::from(effective_multiplier);
+    let output_zero_point = LT::from(output_zero_point);
+    let pow2_effective_shift = LT::pow2(effective_shift);
+    let xt_pow2_bits_minus_one = LT::Double::from(LT::pow2(LT::BITS - 1));
+
+    // Mask consists of effective_shift ones
+    let mask = LT::pow2(effective_shift) - LT::ONE;
+    let mask_div2 = mask / LT::TWO;
+
+    // Constants used during nudging
+    let non_neg_nudge = LT::pow2(LT::BITS - 2);
+    let neg_nudge = LT::ONE - LT::pow2(LT::BITS - 2);
 
     // Requantize
     // TODO add rayon for parallelization?
     output
         .iter()
         .map(|x| {
-            let x = (XT::from(*x)) * effective_multiplier;
-
-            let nudge: LT = if x >= XT::ZERO {
-                LT::from(1 << (LT::BITS - 2))
+            let (is_negative, nudge) = if *x >= LT::ZERO {
+                (LT::ZERO, non_neg_nudge)
             } else {
-                LT::from(1 - (1 << (LT::BITS - 2)))
+                (LT::ONE, neg_nudge)
             };
 
-            // higher order bits
-            // LT = i32 | XT = i64 | ST = i8
-            // i32 + i64 = i64
-            // i64 / u32 = i32
-            let x_high: LT = (nudge + x) / (1 << (LT::BITS - 1));
+            let x = LT::Double::from(*x) * effective_multiplier;
+
+            let x_high =
+                LT::inner_try_from((LT::Double::from(nudge) + x) / xt_pow2_bits_minus_one).unwrap();
 
             // assert(right_shift <= 31);
 
-            let remainder: LT = x_high & mask;
-            let threshold: LT = (mask >> 1) + LT::from(x < XT::ZERO);
+            // TODO: change inner_bit_and by & after the "InnerType split"
+            let remainder = x_high.inner_bit_and(mask);
+            let threshold = mask_div2 + is_negative;
 
-            let mut out = (LT::from(x_high >> effective_shift.try_into().unwrap()))
-                + (LT::from(remainder > threshold));
+            let out = x_high / pow2_effective_shift
+                + if remainder > threshold {
+                    LT::ONE
+                } else {
+                    LT::ZERO
+                };
 
-            out += LT::from(output_zero_point);
+            let shifted_out = out + output_zero_point;
 
-            ST::try_from(partial_ord_clamp(out, LT::from(ST::MIN), LT::from(ST::MAX)))
-                .map_err(|_| "Unable to convert Large Type to Small Type")
-                .unwrap()
+            ST::try_from(partial_ord_clamp(
+                shifted_out,
+                LT::from(ST::MIN),
+                LT::from(ST::MAX),
+            ))
+            .map_err(|_| "Unable to convert Large Type to Small Type")
+            .unwrap()
         })
         .collect()
 }

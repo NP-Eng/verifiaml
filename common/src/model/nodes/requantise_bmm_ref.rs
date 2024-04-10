@@ -1,6 +1,5 @@
 use ark_ff::Zero;
 use ark_std::log2;
-use std::marker::PhantomData;
 
 use crate::model::qarray::{InnerType, QArray};
 use crate::quantization::requantise_ref;
@@ -11,7 +10,7 @@ use super::{NodeOpsNative, NodeOpsPadded};
 // TODO convention: input, bias and output are rows, the op is vec-by-mat (in that order)
 
 /// Apply requantisation after a BMM argument
-pub struct RequantiseBMMRefNode<ST, LT, XT> {
+pub struct RequantiseBMMRefNode<ST, LT> {
     // Number of units
     size: usize,
 
@@ -26,9 +25,6 @@ pub struct RequantiseBMMRefNode<ST, LT, XT> {
 
     //
     output_zero_point: ST,
-
-    //
-    extended_type: PhantomData<XT>,
 }
 
 pub struct RequantiseBMMRefNodeCommitment();
@@ -43,11 +39,10 @@ pub struct RequantiseBMMRefNodeProof {
     // this will be the sumcheck proof
 }
 
-impl<ST, LT, XT> NodeOpsNative<LT, ST, XT> for RequantiseBMMRefNode<ST, LT, XT>
+impl<ST, LT> NodeOpsNative<LT, ST> for RequantiseBMMRefNode<ST, LT>
 where
     ST: InnerType + TryFrom<LT>,
-    LT: InnerType + From<ST> + From<u32>,
-    XT: InnerType + From<LT>,
+    LT: InnerType + From<ST>,
 {
     fn shape(&self) -> Vec<usize> {
         vec![self.size]
@@ -69,7 +64,7 @@ where
             input.len()
         );
 
-        let output: QArray<ST> = requantise_ref::<ST, LT, XT>(
+        let output: QArray<ST> = requantise_ref::<ST, LT>(
             input.values(),
             self.effective_multiplier,
             self.effective_shift,
@@ -81,11 +76,10 @@ where
     }
 }
 
-impl<ST, LT, XT> NodeOpsPadded<LT, ST, XT> for RequantiseBMMRefNode<ST, LT, XT>
+impl<ST, LT> NodeOpsPadded<LT, ST> for RequantiseBMMRefNode<ST, LT>
 where
     ST: InnerType + TryFrom<LT>,
-    LT: InnerType + From<ST> + From<u32>,
-    XT: InnerType + From<LT>,
+    LT: InnerType + From<ST>,
 {
     fn padded_shape_log(&self) -> Vec<usize> {
         vec![self.padded_size_log]
@@ -114,7 +108,7 @@ where
             input.len()
         );
 
-        let output: QArray<ST> = requantise_ref::<ST, LT, XT>(
+        let output: QArray<ST> = requantise_ref::<ST, LT>(
             input.values(),
             self.effective_multiplier,
             self.effective_shift,
@@ -125,7 +119,7 @@ where
     }
 }
 
-impl RequantiseBMMRefNode<i8, i32, i64> {
+impl RequantiseBMMRefNode<i8, i32> {
     pub fn new(size: usize, s_i: f32, s_w: f32, s_o: f32, z_o: i8) -> Self {
         let padded_size_log = log2(size.next_power_of_two()) as usize;
 
@@ -142,7 +136,6 @@ impl RequantiseBMMRefNode<i8, i32, i64> {
             effective_shift,
             effective_multiplier,
             output_zero_point: z_o,
-            extended_type: PhantomData::<i64>,
         }
     }
 }
@@ -160,7 +153,7 @@ fn quantize_multiplier(double_multiplier: f64) -> (i32, usize) {
     assert!(expon < 0, "expon should be negative. Got: {}", expon);
 
     // Negate expon to obtain the number of right-shift bits
-    let mut shift: usize = -expon as usize;
+    let mut shift = -expon as usize;
 
     // TF Lite uses C++'s round function under the hood as can be seen here:
     // https://github.com/tensorflow/tensorflow/blob/46f028f94dcd974705cd14e8abf05b9bd8f20bf0/tensorflow/lite/kernels/internal/cppmath.h#L35
