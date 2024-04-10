@@ -39,13 +39,6 @@ mod tests {
     // within the allowed error.
     const ALLOWED_ERROR_MARGIN: f32 = 0.1;
 
-    fn run_python<F, K>(f: F) -> K
-    where
-        F: FnOnce(Python) -> K,
-    {
-        Python::with_gil(|py| f(py))
-    }
-
     fn get_model(py: Python, model_name: &str) -> Py<PyAny> {
         let func: Py<PyAny> = PyModule::from_code(py, PERCEPTRON_PATH, "", "")
             .unwrap()
@@ -95,7 +88,7 @@ mod tests {
         let expected_input =
             QArray::read("examples/simple_perceptron_mnist/data/input_test_150.json");
         assert_eq!(
-            run_python(|py| get_model_input(py, &get_model(py, "QSimplePerceptron"), None)),
+            Python::with_gil(|py| get_model_input(py, &get_model(py, "QSimplePerceptron"), None)),
             expected_input
         );
     }
@@ -105,7 +98,7 @@ mod tests {
         let expected_input =
             QArray::read("examples/two_layer_perceptron_mnist/data/input_test_150.json");
         assert_eq!(
-            run_python(|py| get_model_input(py, &get_model(py, "QTwoLayerPerceptron"), None)),
+            Python::with_gil(|py| get_model_input(py, &get_model(py, "QTwoLayerPerceptron"), None)),
             expected_input
         );
     }
@@ -115,7 +108,7 @@ mod tests {
         let expected_output =
             QArray::read("examples/simple_perceptron_mnist/data/output_test_150.json");
         assert_eq!(
-            run_python(|py| get_model_output(py, &get_model(py, "QSimplePerceptron"), None)),
+            Python::with_gil(|py| get_model_output(py, &get_model(py, "QSimplePerceptron"), None)),
             expected_output
         );
     }
@@ -125,7 +118,7 @@ mod tests {
         let expected_output =
             QArray::read("examples/two_layer_perceptron_mnist/data/output_test_150.json");
         assert_eq!(
-            run_python(|py| get_model_output(py, &get_model(py, "QTwoLayerPerceptron"), None)),
+            Python::with_gil(|py| get_model_output(py, &get_model(py, "QTwoLayerPerceptron"), None)),
             expected_output
         );
     }
@@ -135,7 +128,7 @@ mod tests {
         let two_layer_perceptron_mnist =
             build_two_layer_perceptron_mnist::<Fr, PoseidonSponge<Fr>, Ligero<Fr>>();
 
-        let correct_samples: usize = run_python(|py| {
+        let correct_samples: usize = Python::with_gil(|py| {
             let tf_lite_model = get_model(py, "QTwoLayerPerceptron");
             (0..NB_OUTPUTS)
                 .into_iter()
@@ -174,7 +167,7 @@ mod tests {
         let simple_perceptron_mnist =
             build_simple_perceptron_mnist::<Fr, PoseidonSponge<Fr>, Ligero<Fr>>();
 
-        let correct_samples: usize = run_python(|py| {
+        let correct_samples: usize = Python::with_gil(|py| {
             let tf_lite_model = get_model(py, "QSimplePerceptron");
             (0..NB_OUTPUTS)
                 .into_iter()
