@@ -1,4 +1,9 @@
+use ark_std::Zero;
+
 use crate::model::qarray::InnerType;
+
+#[cfg(test)]
+pub mod tests;
 
 // TODO if we decide to make the model generic on the quantisation process
 // types (which is probably correct now that the qtypes are generics), these
@@ -195,6 +200,91 @@ where
         .collect()
 }
 
+//
+// https://github.com/tensorflow/tensorflow/blob/master/tensorflow/lite/kernels/internal/quantization_util.cc#L53-L104
+pub(crate) fn quantize_multiplier(double_multiplier: f64) -> (i32, usize) {
+    if double_multiplier.is_zero() {
+        return (0, 0);
+    }
+
+    let (q, expon) = frexp(double_multiplier);
+
+    assert!(expon < 0, "expon should be negative. Got: {}", expon);
+
+    // Negate expon to obtain the number of right-shift bits
+    let mut shift = -expon as usize;
+
+    // TF Lite uses C++'s round function under the hood as can be seen here:
+    // https://github.com/tensorflow/tensorflow/blob/46f028f94dcd974705cd14e8abf05b9bd8f20bf0/tensorflow/lite/kernels/internal/cppmath.h#L35
+    // The function rounds to the nearest integer, breaking ties away from zero.
+    // The same strategy is implemented in Rust's round method:
+    // https://doc.rust-lang.org/std/primitive.f64.html#method.round
+    // See also: https://en.cppreference.com/w/c/numeric/fenv/FE_round
+    let mut q_fixed = (q * ((1 << (i32::BITS - 1)) as f64)).round() as i64; // q * (1 << 31)
+
+    // TFLITE_CHECK(q_fixed <= (1LL << 31));
+    if q_fixed > 1 << i32::BITS - 1 {
+        panic!(
+            "q_fixed must not exceed {}. Got: {}",
+            i32::BITS - 1,
+            q_fixed
+        );
+    }
+
+    if q_fixed == (1 << (i32::BITS - 1)) {
+        // 1 << 31
+        q_fixed /= 2;
+        shift += 1;
+    }
+
+    // TFLITE_CHECK_LE(q_fixed, std::numeric_limits<int32_t>::max());
+    if q_fixed > i32::MAX as i64 {
+        panic!("q_fixed must not exceed {}. Got: {}", i32::MAX, q_fixed);
+    }
+
+    // If exponent is too small.
+    if (-expon as u32) < i32::BITS - 1 {
+        // expon < -31
+        shift = 0;
+        q_fixed = 0;
+    }
+
+    (q_fixed as i32, shift)
+}
+
+// This function returns the normalized fraction and exponent of a double-precision number x.
+// If the argument x is not zero, the normalized fraction is x times a power of two, and its
+// absolute value is always in the range 0.5 (inclusive) to 1 (exclusive). If x is zero, then
+// the normalized fraction and exponent should be zero. However, for our purposes, x should
+// always be positive.
+fn frexp(x: f64) -> (f64, isize) {
+    const F64_EXPONENT_SHIFT: u64 = 52;
+    const F64_EXPONENT_BIAS: u64 = 1023;
+    const F64_EXPONENT_MASK: u64 = 0x7ff0000000000000;
+    const F64_FRACTION_MASK: u64 = 0x000fffffffffffff;
+
+    assert!(x > 0.0);
+
+    let x_bits: u64 = x.to_bits();
+
+    // truncate low order bits to compute the biased exponent
+    let mut expon = ((x_bits & F64_EXPONENT_MASK) / (1 << F64_EXPONENT_SHIFT)) as i32;
+
+    // assert 0 < expon < 1023<<1
+    assert!(expon > 0 && expon < ((F64_EXPONENT_BIAS as i32) << 1));
+
+    // unbias exponent
+    // expon -= (F64_EXPONENT_BIAS as i32) + 1;
+    expon = expon - (F64_EXPONENT_BIAS as i32) + 1;
+
+    let mantissa = x_bits & F64_FRACTION_MASK;
+
+    let q = ((mantissa + (1 << F64_EXPONENT_SHIFT)) as f64)
+        / ((1_u64 << (F64_EXPONENT_SHIFT + 1)) as f64);
+
+    (q, expon as isize)
+}
+
 // This function is used to quantise model model inputs and its types are fixed
 pub fn quantise_f32_u8_nne(values: &[f32], scale: QScaleType, zero: u8) -> Vec<u8> {
     values
@@ -204,54 +294,4 @@ pub fn quantise_f32_u8_nne(values: &[f32], scale: QScaleType, zero: u8) -> Vec<u
                 .clamp(u8::MIN as i32, u8::MAX as i32) as u8
         })
         .collect()
-}
-
-#[cfg(test)]
-mod tests {
-
-    use super::*;
-    #[test]
-    fn test_nnafz_noop() {
-        let output = vec![0, 1, 2, 3, 4, 5, 6, 7];
-        let q_info = BMMQInfo {
-            input_info: QInfo {
-                scale: 1.0,
-                zero_point: 0,
-            },
-            weight_info: QInfo {
-                scale: 1.0,
-                zero_point: 0,
-            },
-            output_info: QInfo {
-                scale: 1.0,
-                zero_point: 0,
-            },
-        };
-        let expected = vec![0, 1, 2, 3, 4, 5, 6, 7];
-        let actual = requantise_fc(&output, &q_info, RoundingScheme::NearestTiesAwayFromZero);
-        assert_eq!(expected, actual);
-    }
-
-    #[test]
-    fn test_nnafz_halves() {
-        // test when the output lands at .5 intervals
-        let output = vec![-3, -2, -1, 0, 1, 2, 3];
-        let q_info = BMMQInfo {
-            input_info: QInfo {
-                scale: 0.5,
-                zero_point: 0,
-            },
-            weight_info: QInfo {
-                scale: 1.0,
-                zero_point: 0,
-            },
-            output_info: QInfo {
-                scale: 1.0,
-                zero_point: 0,
-            },
-        };
-        let expected = vec![-2, -1, -1, 0, 1, 1, 2];
-        let actual = requantise_fc(&output, &q_info, RoundingScheme::NearestTiesAwayFromZero);
-        assert_eq!(expected, actual);
-    }
 }
