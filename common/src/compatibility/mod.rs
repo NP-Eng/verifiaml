@@ -118,7 +118,11 @@ mod tests {
         let expected_output =
             QArray::read("examples/two_layer_perceptron_mnist/data/output_test_150.json");
         assert_eq!(
-            Python::with_gil(|py| get_model_output(py, &get_model(py, "QTwoLayerPerceptron"), None)),
+            Python::with_gil(|py| get_model_output(
+                py,
+                &get_model(py, "QTwoLayerPerceptron"),
+                None
+            )),
             expected_output
         );
     }
