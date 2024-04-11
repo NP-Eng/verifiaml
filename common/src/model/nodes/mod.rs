@@ -91,9 +91,11 @@ pub trait NodeOpsPadded<I, O>: NodeOpsNative<I, O> {
     fn padded_evaluate(&self, input: &QArray<I>) -> QArray<O>;
 }
 
-pub enum Node<ST, LT> {
+pub enum Node<ST, LT, FT> {
     BMM(BMMNode<ST, LT>),
-    RequantiseBMM(RequantiseBMMNode<ST>),
+    // TODO study how to make RequantiseBMMNode generic on FT without having to
+    // add the generic to Node (maybe as an associated type of FT)
+    RequantiseBMM(RequantiseBMMNode<ST, FT>),
     RequantiseBMMRef(RequantiseBMMRefNode<ST, LT>),
     ReLU(ReLUNode<ST>),
     Reshape(ReshapeNode),
@@ -140,7 +142,7 @@ where
 
 // A lot of this overlaps with the NodeOps trait and could be handled more
 // elegantly by simply implementing the trait
-impl<I, O> Node<I, O>
+impl<I, O, F> Node<I, O, F>
 where
     I: InnerType + TryFrom<O>,
     O: InnerType + From<I>,

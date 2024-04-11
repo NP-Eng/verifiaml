@@ -2,7 +2,7 @@ use super::*;
 #[test]
 fn test_nnafz_noop() {
     let output = vec![0, 1, 2, 3, 4, 5, 6, 7];
-    let q_info = BMMQInfo {
+    let q_info: BMMQInfo<i8, f32> = BMMQInfo {
         input_info: QInfo {
             scale: 1.0,
             zero_point: 0,
@@ -25,7 +25,7 @@ fn test_nnafz_noop() {
 fn test_nnafz_halves() {
     // test when the output lands at .5 intervals
     let output = vec![-3, -2, -1, 0, 1, 2, 3];
-    let q_info = BMMQInfo {
+    let q_info: BMMQInfo<i8, f32> = BMMQInfo {
         input_info: QInfo {
             scale: 0.5,
             zero_point: 0,

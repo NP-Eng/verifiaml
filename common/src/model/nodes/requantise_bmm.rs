@@ -1,7 +1,7 @@
 use ark_std::log2;
 
 use crate::model::qarray::{InnerType, QArray};
-use crate::quantization::{requantise_fc, BMMQInfo, QInfo, QScaleType, RoundingScheme};
+use crate::quantization::{requantise_fc, BMMQInfo, QInfo, RoundInt, RoundingScheme};
 use crate::{Commitment, CommitmentState};
 
 use super::{NodeOpsNative, NodeOpsPadded};
@@ -9,7 +9,7 @@ use super::{NodeOpsNative, NodeOpsPadded};
 // TODO convention: input, bias and output are rows, the op is vec-by-mat (in that order)
 
 /// Apply requantisation after a BMM argument
-pub struct RequantiseBMMNode<ST> {
+pub struct RequantiseBMMNode<ST, FT> {
     // Number of units
     size: usize,
 
@@ -17,7 +17,7 @@ pub struct RequantiseBMMNode<ST> {
     pub padded_size_log: usize,
 
     /// Quantisation info associated to the input BMM result
-    pub q_info: BMMQInfo<ST>,
+    pub q_info: BMMQInfo<ST, FT>,
 }
 
 pub struct RequantiseBMMNodeCommitment();
@@ -32,10 +32,12 @@ pub struct RequantiseBMMNodeProof {
     // this will be the sumcheck proof
 }
 
-impl<ST, LT> NodeOpsNative<LT, ST> for RequantiseBMMNode<ST>
+impl<ST, LT, FT> NodeOpsNative<LT, ST> for RequantiseBMMNode<ST, FT>
 where
     ST: InnerType + TryFrom<LT>,
     LT: InnerType + From<ST>,
+    FT: InnerType + From<LT>,
+    FT::Double: From<LT> + RoundInt<LT>,
 {
     fn shape(&self) -> Vec<usize> {
         vec![self.size]
@@ -68,10 +70,12 @@ where
     }
 }
 
-impl<ST, LT> NodeOpsPadded<LT, ST> for RequantiseBMMNode<ST>
+impl<ST, LT, FT> NodeOpsPadded<LT, ST> for RequantiseBMMNode<ST, FT>
 where
     ST: InnerType + TryFrom<LT>,
     LT: InnerType + From<ST>,
+    FT: InnerType + From<LT>,
+    FT::Double: From<LT> + RoundInt<LT>,
 {
     fn padded_shape_log(&self) -> Vec<usize> {
         vec![self.padded_size_log]
@@ -100,7 +104,7 @@ where
             input.len()
         );
 
-        let output: QArray<ST> = requantise_fc::<ST, LT>(
+        let output: QArray<ST> = requantise_fc(
             input.values(),
             &self.q_info,
             RoundingScheme::NearestTiesEven,
@@ -110,16 +114,8 @@ where
     }
 }
 
-impl<ST> RequantiseBMMNode<ST> {
-    pub fn new(
-        size: usize,
-        s_i: QScaleType,
-        z_i: ST,
-        s_w: QScaleType,
-        z_w: ST,
-        s_o: QScaleType,
-        z_o: ST,
-    ) -> Self {
+impl<ST> RequantiseBMMNode<ST, f32> {
+    pub fn new(size: usize, s_i: f32, z_i: ST, s_w: f32, z_w: ST, s_o: f32, z_o: ST) -> Self {
         let padded_size_log = log2(size.next_power_of_two()) as usize;
 
         // TODO not all of these are needed
