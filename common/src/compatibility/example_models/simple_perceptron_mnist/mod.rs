@@ -1,6 +1,7 @@
 use crate::{
-    model::nodes::requantise_bmm_ref::RequantiseBMMRefNode, BMMNode, Model, Node, Poly, QArray,
-    RequantiseBMMNode, ReshapeNode,
+    model::nodes::requantise_bmm_ref::RequantiseBMMRefNode,
+    quantization::BMMRequantizationStrategy, BMMNode, Model, Node, Poly, QArray, RequantiseBMMNode,
+    ReshapeNode,
 };
 
 use ark_crypto_primitives::sponge::{Absorb, CryptographicSponge};
@@ -55,5 +56,5 @@ where
     Model::new(
         INPUT_DIMS.to_vec(),
         vec![Node::Reshape(reshape), Node::BMM(bmm), req_bmm],
-    );
+    )
 }

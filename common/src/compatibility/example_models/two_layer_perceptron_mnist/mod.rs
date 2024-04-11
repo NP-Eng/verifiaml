@@ -6,8 +6,9 @@ pub mod parameters;
 use parameters::*;
 
 use crate::{
-    model::nodes::requantise_bmm_ref::RequantiseBMMRefNode, BMMNode, Model, Node, Poly, QArray,
-    ReLUNode, RequantiseBMMNode, ReshapeNode,
+    model::nodes::requantise_bmm_ref::RequantiseBMMRefNode,
+    quantization::BMMRequantizationStrategy, BMMNode, Model, Node, Poly, QArray, ReLUNode,
+    RequantiseBMMNode, ReshapeNode,
 };
 
 pub const INPUT_DIMS: &[usize] = &[28, 28];

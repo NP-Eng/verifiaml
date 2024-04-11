@@ -19,7 +19,7 @@ mod tests {
                 },
             },
         },
-        quantise_f32_u8_nne, Ligero, Model, QArray,
+        quantise_f32_u8_nne, BMMRequantizationStrategy, Ligero, Model, QArray,
     };
     use ark_bn254::Fr;
     use ark_crypto_primitives::sponge::poseidon::PoseidonSponge;
@@ -83,21 +83,21 @@ mod tests {
         (output_i8.cast::<i32>() + 128).cast()
     }
 
-    fn run_model_all_outputs(model_name: &str, use_requantise_ref: bool) {
+    fn run_model_all_outputs(model_name: &str, req_strategy: BMMRequantizationStrategy) {
         let correct_samples: usize = Python::with_gil(|py| {
             let (s_input, z_input, rust_model) = match model_name {
                 "QSimplePerceptron" => (
                     S_INPUT_SIMPLE_PERCEPTRON_MNIST,
                     Z_INPUT_SIMPLE_PERCEPTRON_MNIST,
                     build_simple_perceptron_mnist::<Fr, PoseidonSponge<Fr>, Ligero<Fr>>(
-                        use_requantise_ref,
+                        req_strategy,
                     ),
                 ),
                 "QTwoLayerPerceptron" => (
                     S_INPUT_TWO_LAYER_PERCEPTRON_MNIST,
                     Z_INPUT_TWO_LAYER_PERCEPTRON_MNIST,
                     build_two_layer_perceptron_mnist::<Fr, PoseidonSponge<Fr>, Ligero<Fr>>(
-                        use_requantise_ref,
+                        req_strategy,
                     ),
                 ),
                 _ => panic!("Model not found"),
@@ -115,9 +115,9 @@ mod tests {
         });
 
         println!(
-            "{} with{} reference requantisation discrepancies: {} out of {}",
+            "{} with requantisation strategy {:?}, discrepancies: {} out of {}",
             model_name,
-            if use_requantise_ref { "" } else { "out" },
+            req_strategy,
             NB_OUTPUTS - correct_samples,
             NB_OUTPUTS
         );
@@ -174,21 +174,21 @@ mod tests {
 
     #[test]
     fn test_two_layer_perceptron_without_ref_requantisation() {
-        run_model_all_outputs("QTwoLayerPerceptron", false);
+        run_model_all_outputs("QTwoLayerPerceptron", BMMRequantizationStrategy::Floating);
     }
 
     #[test]
     fn test_simple_perceptron_without_ref_requantisation() {
-        run_model_all_outputs("QSimplePerceptron", false);
+        run_model_all_outputs("QSimplePerceptron", BMMRequantizationStrategy::Floating);
     }
 
     #[test]
     fn test_two_layer_perceptron_with_ref_requantisation() {
-        run_model_all_outputs("QTwoLayerPerceptron", true);
+        run_model_all_outputs("QTwoLayerPerceptron", BMMRequantizationStrategy::Reference);
     }
 
     #[test]
     fn test_simple_perceptron_with_ref_requantisation() {
-        run_model_all_outputs("QSimplePerceptron", true);
+        run_model_all_outputs("QSimplePerceptron", BMMRequantizationStrategy::Reference);
     }
 }

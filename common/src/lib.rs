@@ -23,7 +23,9 @@ pub use model::nodes::{
 pub use model::qarray::{InnerType, QArray, QTypeArray};
 pub use model::{InferenceProof, Model};
 pub use model::{LabeledPoly, Poly};
-pub use quantization::{quantise_f32_u8_nne, requantise_fc, BMMQInfo, QInfo, RoundingScheme};
+pub use quantization::{
+    quantise_f32_u8_nne, requantise_fc, BMMQInfo, BMMRequantizationStrategy, QInfo, RoundingScheme,
+};
 
 #[cfg(feature = "test-types")]
 pub use utils::{pcs_types::Ligero, test_sponge::test_sponge};

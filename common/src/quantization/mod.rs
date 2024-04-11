@@ -30,6 +30,7 @@ pub struct BMMQInfo<ST> {
 }
 
 // Strategies to requantise the output of a BMM node
+#[derive(Debug, Clone, Copy)]
 pub enum BMMRequantizationStrategy {
     Floating,  // Core: multiply the input by the floating-point scale
     Reference, // Core: fixed-point-multiply the input by the quantised
