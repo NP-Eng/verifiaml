@@ -210,8 +210,8 @@ pub(crate) fn quantize_multiplier(double_multiplier: f64) -> (i32, usize) {
     let (q, expon) = frexp(double_multiplier);
 
     assert!(
-        expon < 0,
-        "expon should be negative. Got: {} instead.",
+        expon <= 0,
+        "expon should be non-positive. Got: {} instead.",
         expon
     );
 

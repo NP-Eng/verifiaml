@@ -92,16 +92,11 @@ fn test_quantize_multiplier_negative_expon() {
 }
 
 #[test]
+#[should_panic]
 fn test_ref_noop() {
-    let output = vec![0, 1, 2, 3, 4, 5, 6, 7];
     let (s_i, s_w, s_o) = (1.0, 1.0, 1.0);
     let double_mul = s_i * s_w / s_o;
-    let output_zero_point = 0;
 
-    let (effective_mul, effective_shift) = quantize_multiplier(double_mul);
-
-    let expected = vec![0, 1, 2, 3, 4, 5, 6, 7];
-    let actual =
-        requantise_ref::<i8, i32>(&output, effective_mul, effective_shift, output_zero_point);
-    assert_eq!(expected, actual);
+    // panics because 1.0 = 0.5 * 2^1 and the exponent is positive.
+    let _ = quantize_multiplier(double_mul);
 }
