@@ -83,6 +83,51 @@ mod tests {
         (output_i8.cast::<i32>() + 128).cast()
     }
 
+    fn run_model_all_outputs(model_name: &str, use_requantise_ref: bool) {
+        let correct_samples: usize = Python::with_gil(|py| {
+            let (s_input, z_input, rust_model) = match model_name {
+                "QSimplePerceptron" => (
+                    S_INPUT_SIMPLE_PERCEPTRON_MNIST,
+                    Z_INPUT_SIMPLE_PERCEPTRON_MNIST,
+                    build_simple_perceptron_mnist::<Fr, PoseidonSponge<Fr>, Ligero<Fr>>(
+                        use_requantise_ref,
+                    ),
+                ),
+                "QTwoLayerPerceptron" => (
+                    S_INPUT_TWO_LAYER_PERCEPTRON_MNIST,
+                    Z_INPUT_TWO_LAYER_PERCEPTRON_MNIST,
+                    build_two_layer_perceptron_mnist::<Fr, PoseidonSponge<Fr>, Ligero<Fr>>(
+                        use_requantise_ref,
+                    ),
+                ),
+                _ => panic!("Model not found"),
+            };
+            let tf_lite_model = get_model(py, model_name);
+            (0..NB_OUTPUTS)
+                .into_iter()
+                .map(|i| {
+                    let raw_input = get_model_input(py, &tf_lite_model, Some(i));
+                    let expected_output = get_model_output(py, &tf_lite_model, Some(i));
+                    let output = unpadded_inference(raw_input, &rust_model, (s_input, z_input));
+                    (output == expected_output) as usize
+                })
+                .sum()
+        });
+
+        println!(
+            "{} with{} reference requantisation discrepancies: {} out of {}",
+            model_name,
+            if use_requantise_ref { "" } else { "out" },
+            NB_OUTPUTS - correct_samples,
+            NB_OUTPUTS
+        );
+
+        assert_ge!(
+            correct_samples as f32 / NB_OUTPUTS as f32,
+            1.0 - ALLOWED_ERROR_MARGIN
+        );
+    }
+
     #[test]
     fn test_simple_perceptron_mnist_single_input() {
         let expected_input =
@@ -128,80 +173,22 @@ mod tests {
     }
 
     #[test]
-    fn test_two_layer_perceptron_mnist_all_outputs() {
-        let two_layer_perceptron_mnist =
-            build_two_layer_perceptron_mnist::<Fr, PoseidonSponge<Fr>, Ligero<Fr>>(false);
-
-        let correct_samples: usize = Python::with_gil(|py| {
-            let tf_lite_model = get_model(py, "QTwoLayerPerceptron");
-            (0..NB_OUTPUTS)
-                .into_iter()
-                .map(|i| {
-                    let raw_input = get_model_input(py, &tf_lite_model, Some(i));
-                    let expected_output = get_model_output(py, &tf_lite_model, Some(i));
-
-                    let output = unpadded_inference(
-                        raw_input,
-                        &two_layer_perceptron_mnist,
-                        (
-                            S_INPUT_TWO_LAYER_PERCEPTRON_MNIST,
-                            Z_INPUT_TWO_LAYER_PERCEPTRON_MNIST,
-                        ),
-                    );
-
-                    (output == expected_output) as usize
-                })
-                .sum()
-        });
-
-        println!(
-            "Two-layer perceptron discrepancies: {} out of {}",
-            NB_OUTPUTS - correct_samples,
-            NB_OUTPUTS
-        );
-
-        assert_ge!(
-            correct_samples as f32 / NB_OUTPUTS as f32,
-            1.0 - ALLOWED_ERROR_MARGIN
-        );
+    fn test_two_layer_perceptron_without_ref_requantisation() {
+        run_model_all_outputs("QTwoLayerPerceptron", false);
     }
 
     #[test]
-    fn test_simple_perceptron_mnist_all_outputs() {
-        let simple_perceptron_mnist =
-            build_simple_perceptron_mnist::<Fr, PoseidonSponge<Fr>, Ligero<Fr>>(false);
+    fn test_simple_perceptron_without_ref_requantisation() {
+        run_model_all_outputs("QSimplePerceptron", false);
+    }
 
-        let correct_samples: usize = Python::with_gil(|py| {
-            let tf_lite_model = get_model(py, "QSimplePerceptron");
-            (0..NB_OUTPUTS)
-                .into_iter()
-                .map(|i| {
-                    let raw_input = get_model_input(py, &tf_lite_model, Some(i));
-                    let expected_output = get_model_output(py, &tf_lite_model, Some(i));
+    #[test]
+    fn test_two_layer_perceptron_with_ref_requantisation() {
+        run_model_all_outputs("QTwoLayerPerceptron", true);
+    }
 
-                    let output = unpadded_inference(
-                        raw_input,
-                        &simple_perceptron_mnist,
-                        (
-                            S_INPUT_SIMPLE_PERCEPTRON_MNIST,
-                            Z_INPUT_SIMPLE_PERCEPTRON_MNIST,
-                        ),
-                    );
-
-                    (output == expected_output) as usize
-                })
-                .sum()
-        });
-
-        println!(
-            "Simple perceptron discrepancies: {} out of {}",
-            NB_OUTPUTS - correct_samples,
-            NB_OUTPUTS
-        );
-
-        assert_ge!(
-            correct_samples as f32 / NB_OUTPUTS as f32,
-            1.0 - ALLOWED_ERROR_MARGIN
-        );
+    #[test]
+    fn test_simple_perceptron_with_ref_requantisation() {
+        run_model_all_outputs("QSimplePerceptron", true);
     }
 }
