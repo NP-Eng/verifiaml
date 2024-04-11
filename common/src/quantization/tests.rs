@@ -76,15 +76,13 @@ fn test_quantize_multiplier_zero() {
     assert_eq!(actual, expected);
 }
 
-/*
 #[test]
-fn test_quantize_multiplier_non_negative_expon() {
+fn test_quantize_multiplier_zero_expon() {
     let double_multiplier = 1.0 / 2.0 + 1.0 / ((1_i64 << 53) as f64);
-    let expected = ();
+    let expected = (1_073_741_824, 0);
     let actual = quantize_multiplier(double_multiplier);
     assert_eq!(expected, actual);
 }
-*/
 
 #[test]
 fn test_quantize_multiplier_negative_expon() {

@@ -236,22 +236,25 @@ pub(crate) fn quantize_multiplier(double_multiplier: f64) -> (i32, usize) {
     // See also: https://en.cppreference.com/w/c/numeric/fenv/FE_round
     let mut q_fixed = (q * ((1_i64 << (i32::BITS - 1)) as f64)).round() as i64;
 
+    println!("Q_FIXED = {q_fixed}");
+    println!("RHS = {}", 1_i64 << (i32::BITS - 1));
+
     // TFLITE_CHECK(q_fixed <= (1LL << 31));
     assert!(
-        q_fixed > 1_i64 << (i32::BITS - 1),
-        "q_fixed must not exceed {}. Got: {} instead.",
+        q_fixed <= 1_i64 << (i32::BITS - 1),
+        "q_fixed must not exceed 2^{}. Got: {} instead.",
         i32::BITS - 1,
         q_fixed
     );
 
-    if q_fixed == (1_i64 << (i32::BITS - 1)) {
+    if q_fixed == 1_i64 << (i32::BITS - 1) {
         q_fixed /= 2;
         shift += 1;
     }
 
     // TFLITE_CHECK_LE(q_fixed, std::numeric_limits<int32_t>::max());
     assert!(
-        q_fixed > i32::MAX as i64,
+        q_fixed <= i32::MAX as i64,
         "q_fixed must not exceed {}. Got: {} instead.",
         i32::MAX,
         q_fixed
