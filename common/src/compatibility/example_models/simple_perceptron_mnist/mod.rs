@@ -25,7 +25,9 @@ macro_rules! PATH {
 }
 
 // TODO this is incorrect now that we have switched to logs
-pub fn build_simple_perceptron_mnist<F, S, PCS>(use_requantise_ref: bool) -> Model<i8, i32>
+pub fn build_simple_perceptron_mnist<F, S, PCS>(
+    req_strategy: BMMRequantizationStrategy,
+) -> Model<i8, i32>
 where
     F: PrimeField + Absorb,
     S: CryptographicSponge,
@@ -40,19 +42,18 @@ where
 
     let bmm: BMMNode<i8, i32> = BMMNode::new(w_array, b_array, Z_I);
 
-    let req_bmm_ref = RequantiseBMMRefNode::new(OUTPUT_DIM, S_I, S_W, S_O, Z_O);
-    let req_bmm = RequantiseBMMNode::new(OUTPUT_DIM, S_I, Z_I, S_W, Z_W, S_O, Z_O);
+    let req_bmm = match req_strategy {
+        BMMRequantizationStrategy::Floating => Node::RequantiseBMM(RequantiseBMMNode::new(
+            OUTPUT_DIM, S_I, Z_I, S_W, Z_W, S_O, Z_O,
+        )),
+        BMMRequantizationStrategy::Reference => {
+            Node::RequantiseBMMRef(RequantiseBMMRefNode::new(OUTPUT_DIM, S_I, S_W, S_O, Z_O))
+        }
+        _ => unimplemented!(),
+    };
 
     Model::new(
         INPUT_DIMS.to_vec(),
-        vec![
-            Node::Reshape(reshape),
-            Node::BMM(bmm),
-            if use_requantise_ref {
-                Node::RequantiseBMMRef(req_bmm_ref)
-            } else {
-                Node::RequantiseBMM(req_bmm)
-            },
-        ],
-    )
+        vec![Node::Reshape(reshape), Node::BMM(bmm), req_bmm],
+    );
 }

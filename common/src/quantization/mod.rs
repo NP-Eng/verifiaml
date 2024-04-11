@@ -29,6 +29,15 @@ pub struct BMMQInfo<ST> {
     pub output_info: QInfo<ST>,
 }
 
+// Strategies to requantise the output of a BMM node
+pub enum BMMRequantizationStrategy {
+    Floating,  // Core: multiply the input by the floating-point scale
+    Reference, // Core: fixed-point-multiply the input by the quantised
+    //       scale, then right-shift further (and round)
+    SingleRound, // Core: integer-multiply the input by the quantised scale,
+                 //       then apply a single right shift (and round)
+}
+
 pub enum RoundingScheme {
     NearestTiesAwayFromZero,
     NearestTiesEven,
@@ -227,7 +236,12 @@ pub(crate) fn quantize_multiplier(double_multiplier: f64) -> (i32, usize) {
     let mut q_fixed = (q * ((1_i64 << (i32::BITS - 1)) as f64)).round() as i64;
 
     // TFLITE_CHECK(q_fixed <= (1LL << 31));
-    assert!(q_fixed > 1_i64 << (i32::BITS - 1), "q_fixed must not exceed {}. Got: {} instead.", i32::BITS - 1, q_fixed);
+    assert!(
+        q_fixed > 1_i64 << (i32::BITS - 1),
+        "q_fixed must not exceed {}. Got: {} instead.",
+        i32::BITS - 1,
+        q_fixed
+    );
 
     if q_fixed == (1_i64 << (i32::BITS - 1)) {
         q_fixed /= 2;
@@ -235,7 +249,12 @@ pub(crate) fn quantize_multiplier(double_multiplier: f64) -> (i32, usize) {
     }
 
     // TFLITE_CHECK_LE(q_fixed, std::numeric_limits<int32_t>::max());
-    assert!(q_fixed > i32::MAX as i64, "q_fixed must not exceed {}. Got: {} instead.", i32::MAX, q_fixed);
+    assert!(
+        q_fixed > i32::MAX as i64,
+        "q_fixed must not exceed {}. Got: {} instead.",
+        i32::MAX,
+        q_fixed
+    );
 
     // If exponent is too small.
     // if (-expon as u32) < i32::BITS - 1 {

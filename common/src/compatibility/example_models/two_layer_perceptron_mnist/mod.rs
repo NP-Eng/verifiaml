@@ -25,7 +25,9 @@ macro_rules! PATH {
     };
 }
 
-pub fn build_two_layer_perceptron_mnist<F, S, PCS>(use_requantise_ref: bool) -> Model<i8, i32>
+pub fn build_two_layer_perceptron_mnist<F, S, PCS>(
+    req_strategy: BMMRequantizationStrategy,
+) -> Model<i8, i32>
 where
     F: PrimeField + Absorb,
     S: CryptographicSponge,
@@ -42,37 +44,39 @@ where
 
     let bmm_1: BMMNode<i8, i32> = BMMNode::new(w1_array, b1_array, Z_1_I);
 
-    let req_bmm_1: RequantiseBMMNode<i8> =
-        RequantiseBMMNode::new(INTER_DIM, S_1_I, Z_1_I, S_1_W, Z_1_W, S_1_O, Z_1_O);
-    let req_bmm_ref_1: RequantiseBMMRefNode<i8, i32> =
-        RequantiseBMMRefNode::new(INTER_DIM, S_1_I, S_1_W, S_1_O, Z_1_O);
+    let req_bmm_1 = match req_strategy {
+        BMMRequantizationStrategy::Floating => Node::RequantiseBMM(RequantiseBMMNode::new(
+            INTER_DIM, S_1_I, Z_1_I, S_1_W, Z_1_W, S_1_O, Z_1_O,
+        )),
+        BMMRequantizationStrategy::Reference => Node::RequantiseBMMRef(RequantiseBMMRefNode::new(
+            INTER_DIM, S_1_I, S_1_W, S_1_O, Z_1_O,
+        )),
+        _ => unimplemented!(),
+    };
 
     let relu: ReLUNode<i8> = ReLUNode::new(28, Z_1_O);
 
     let bmm_2: BMMNode<i8, i32> = BMMNode::new(w2_array, b2_array, Z_2_I);
 
-    let req_bmm_2: RequantiseBMMNode<i8> =
-        RequantiseBMMNode::new(OUTPUT_DIM, S_2_I, Z_2_I, S_2_W, Z_2_W, S_2_O, Z_2_O);
-    let req_bmm_ref_2: RequantiseBMMRefNode<i8, i32> =
-        RequantiseBMMRefNode::new(OUTPUT_DIM, S_2_I, S_2_W, S_2_O, Z_2_O);
+    let req_bmm_2 = match req_strategy {
+        BMMRequantizationStrategy::Floating => Node::RequantiseBMM(RequantiseBMMNode::new(
+            OUTPUT_DIM, S_2_I, Z_2_I, S_2_W, Z_2_W, S_2_O, Z_2_O,
+        )),
+        BMMRequantizationStrategy::Reference => Node::RequantiseBMMRef(RequantiseBMMRefNode::new(
+            OUTPUT_DIM, S_2_I, S_2_W, S_2_O, Z_2_O,
+        )),
+        _ => unimplemented!(),
+    };
 
     Model::new(
         INPUT_DIMS.to_vec(),
         vec![
             Node::Reshape(reshape),
             Node::BMM(bmm_1),
-            if use_requantise_ref {
-                Node::RequantiseBMMRef(req_bmm_ref_1)
-            } else {
-                Node::RequantiseBMM(req_bmm_1)
-            },
+            req_bmm_1,
             Node::ReLU(relu),
             Node::BMM(bmm_2),
-            if use_requantise_ref {
-                Node::RequantiseBMMRef(req_bmm_ref_2)
-            } else {
-                Node::RequantiseBMM(req_bmm_2)
-            },
+            req_bmm_2,
         ],
     )
 }
