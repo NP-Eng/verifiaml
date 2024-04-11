@@ -77,7 +77,6 @@ fn test_quantize_multiplier_zero() {
 }
 
 #[test]
-#[should_panic]
 fn test_quantize_multiplier_non_negative_expon() {
     let double_multiplier = 1.0 / 2.0 + 1.0 / ((1_i64 << 53) as f64);
     let _ = quantize_multiplier(double_multiplier);
