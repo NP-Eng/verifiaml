@@ -5,20 +5,28 @@ use crate::model::qarray::InnerType;
 #[cfg(test)]
 pub mod tests;
 
-pub struct QInfo<ST, FT> {
-    pub scale: FT,
+// TODO if we decide to make the model generic on the quantisation process
+// types (which is probably correct now that the qtypes are generics), these
+// will go away
+// Type for quantisation scales
+pub(crate) type QScaleType = f32;
+// Larger precision type to compute the requantisation scale in some schemes
+pub(crate) type QScaleComputationType = f64;
+
+pub struct QInfo<ST> {
+    pub scale: QScaleType,
     pub zero_point: ST,
 }
 
 // TODO: this will probably change to inference-ready requantisation info
 // Even what is being done now could be optimised by precomputing outside the
 // evaluate function
-pub struct BMMQInfo<ST, FT> {
-    pub input_info: QInfo<ST, FT>,
-    pub weight_info: QInfo<ST, FT>,
+pub struct BMMQInfo<ST> {
+    pub input_info: QInfo<ST>,
+    pub weight_info: QInfo<ST>,
     // Bias requantisation information is not used (and is indeed directly
     // computable from the two above)
-    pub output_info: QInfo<ST, FT>,
+    pub output_info: QInfo<ST>,
 }
 
 pub enum RoundingScheme {
@@ -26,46 +34,25 @@ pub enum RoundingScheme {
     NearestTiesEven,
 }
 
-pub trait RoundInt<OT> {
-    fn round(self) -> OT;
-    fn round_ties_even(self) -> OT;
-}
-
-impl RoundInt<i32> for f64 {
-    fn round(self) -> i32 {
-        self.round() as i32
-    }
-
-    fn round_ties_even(self) -> i32 {
-        self.round_ties_even() as i32
-    }
-}
-
-pub fn requantise_fc<ST, LT, FT>(
+pub fn requantise_fc<ST: InnerType, LT: InnerType>(
     output: &[LT],
-    q_info: &BMMQInfo<ST, FT>,
+    q_info: &BMMQInfo<ST>,
     scheme: RoundingScheme,
 ) -> Vec<ST>
 where
     ST: InnerType + TryFrom<LT>,
     LT: InnerType + From<ST>,
-    FT: InnerType + From<LT>,
-    FT::Double: From<LT> + RoundInt<LT>,
 {
     match scheme {
-        RoundingScheme::NearestTiesAwayFromZero => {
-            requantise_fc_ntafz::<ST, LT, FT>(output, q_info)
-        }
-        RoundingScheme::NearestTiesEven => requantise_fc_nte::<ST, LT, FT>(output, q_info),
+        RoundingScheme::NearestTiesAwayFromZero => requantise_fc_ntafz::<ST, LT>(output, q_info),
+        RoundingScheme::NearestTiesEven => requantise_fc_nte::<ST, LT>(output, q_info),
     }
 }
 
-fn requantise_fc_ntafz<ST, LT, FT>(output: &[LT], q_info: &BMMQInfo<ST, FT>) -> Vec<ST>
+fn requantise_fc_ntafz<ST, LT>(output: &[LT], q_info: &BMMQInfo<ST>) -> Vec<ST>
 where
     ST: InnerType + TryFrom<LT>,
     LT: InnerType + From<ST>,
-    FT: InnerType + From<LT>,
-    FT::Double: From<LT> + RoundInt<LT>,
 {
     // 1. Computing scale
     // TODO In actual schemes, this will be decomposed as (int, shift)
@@ -75,18 +62,19 @@ where
         q_info.output_info.scale,
     );
     let (s_i, s_w, s_o) = (
-        <FT::Double as From<FT>>::from(s_i),
-        <FT::Double as From<FT>>::from(s_w),
-        <FT::Double as From<FT>>::from(s_o),
+        s_i as QScaleComputationType,
+        s_w as QScaleComputationType,
+        s_o as QScaleComputationType,
     );
-    let s = s_i * s_w / s_o;
+    let s = (s_i * s_w / s_o) as QScaleType;
 
     // 2. Requantise
     // TODO add rayon for parallelisation?
     output
         .iter()
         .map(|x| {
-            let x = (FT::Double::from(*x) * s).round();
+            let x = LT::to_qscaletype(x) * s;
+            let mut x = LT::from_qscaletype(x.round());
             x += LT::from(q_info.output_info.zero_point);
             ST::try_from(partial_ord_clamp(x, LT::from(ST::MIN), LT::from(ST::MAX)))
                 .map_err(|_| "Unable to convert Large Type to Small Type")
@@ -110,12 +98,10 @@ fn partial_ord_clamp<T: PartialOrd>(x: T, min: T, max: T) -> T {
     }
 }
 
-fn requantise_fc_nte<ST, LT, FT>(output: &[LT], q_info: &BMMQInfo<ST, FT>) -> Vec<ST>
+fn requantise_fc_nte<ST: InnerType, LT: InnerType>(output: &[LT], q_info: &BMMQInfo<ST>) -> Vec<ST>
 where
     ST: InnerType + TryFrom<LT>,
     LT: InnerType + From<ST>,
-    FT: InnerType + From<LT>,
-    FT::Double: From<LT> + RoundInt<LT>,
 {
     // 1. Computing scale
     // TODO In actual schemes, this will be decomposed as (int, shift)
@@ -125,18 +111,19 @@ where
         q_info.output_info.scale,
     );
     let (s_i, s_w, s_o) = (
-        <FT::Double as From<FT>>::from(s_i),
-        <FT::Double as From<FT>>::from(s_w),
-        <FT::Double as From<FT>>::from(s_o),
+        s_i as QScaleComputationType,
+        s_w as QScaleComputationType,
+        s_o as QScaleComputationType,
     );
-    let s = s_i * s_w / s_o;
+    let s = (s_i * s_w / s_o) as QScaleType;
 
     // 2. Requantise
     // TODO add rayon for parallelisation?
     output
         .iter()
         .map(|x| {
-            let x = (FT::Double::from(*x) * s).round_ties_even();
+            let x = LT::to_qscaletype(x) * s;
+            let mut x = LT::from_qscaletype(x.round_ties_even()); // TODO which type to pick here? Should we check for overflows?
             x += LT::from(q_info.output_info.zero_point);
             ST::try_from(partial_ord_clamp(x, LT::from(ST::MIN), LT::from(ST::MAX)))
                 .map_err(|_| "Unable to convert Large Type to Small Type")
@@ -308,11 +295,11 @@ fn frexp(x: f64) -> (f64, isize) {
 }
 
 // This function is used to quantise model model inputs and its types are fixed
-pub fn quantise_f32_u8_nne(values: &[f32], scale: f32, zero: u8) -> Vec<u8> {
+pub fn quantise_f32_u8_nne(values: &[f32], scale: QScaleType, zero: u8) -> Vec<u8> {
     values
         .iter()
         .map(|x| {
-            ((((*x as f32) / scale) + (zero as f32)).round_ties_even() as i32)
+            ((((*x as QScaleType) / scale) + (zero as f32)).round_ties_even() as i32)
                 .clamp(u8::MIN as i32, u8::MAX as i32) as u8
         })
         .collect()

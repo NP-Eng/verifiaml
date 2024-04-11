@@ -13,6 +13,8 @@ use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
 use serde_json;
 
+use crate::quantization::QScaleType;
+
 #[cfg(test)]
 mod tests;
 
@@ -49,6 +51,12 @@ pub trait InnerType:
         + Sub<Output = Self::Double>
         + Copy;
 
+    // TODO if we decide to make the model generic on the quantisation process
+    // types, this will change
+    fn from_qscaletype(x: QScaleType) -> Self;
+
+    fn to_qscaletype(&self) -> QScaleType;
+
     fn pow2(e: usize) -> Self {
         let mut pow = Self::ONE;
 
@@ -75,6 +83,14 @@ impl InnerType for i8 {
 
     type Double = i16;
 
+    fn from_qscaletype(x: QScaleType) -> Self {
+        x as Self
+    }
+
+    fn to_qscaletype(&self) -> QScaleType {
+        *self as QScaleType
+    }
+
     fn inner_try_from(x: Self::Double) -> Result<Self, ()> {
         Self::try_from(x).map_err(|_| ())
     }
@@ -93,6 +109,14 @@ impl InnerType for i32 {
     const BITS: usize = 8 * mem::size_of::<Self>();
 
     type Double = i64;
+
+    fn from_qscaletype(x: QScaleType) -> Self {
+        x as Self
+    }
+
+    fn to_qscaletype(&self) -> QScaleType {
+        *self as QScaleType
+    }
 
     fn inner_try_from(x: Self::Double) -> Result<Self, ()> {
         Self::try_from(x).map_err(|_| ())
@@ -113,6 +137,14 @@ impl InnerType for i64 {
 
     type Double = i128;
 
+    fn from_qscaletype(x: QScaleType) -> Self {
+        x as Self
+    }
+
+    fn to_qscaletype(&self) -> QScaleType {
+        *self as QScaleType
+    }
+
     fn inner_try_from(x: Self::Double) -> Result<Self, ()> {
         Self::try_from(x).map_err(|_| ())
     }
@@ -132,6 +164,14 @@ impl InnerType for u8 {
 
     type Double = u16;
 
+    fn from_qscaletype(x: QScaleType) -> Self {
+        x as Self
+    }
+
+    fn to_qscaletype(&self) -> QScaleType {
+        *self as QScaleType
+    }
+
     fn inner_try_from(x: Self::Double) -> Result<Self, ()> {
         Self::try_from(x).map_err(|_| ())
     }
@@ -150,6 +190,14 @@ impl InnerType for f32 {
     const BITS: usize = 8 * mem::size_of::<Self>();
 
     type Double = f64;
+
+    fn from_qscaletype(x: QScaleType) -> Self {
+        x as Self
+    }
+
+    fn to_qscaletype(&self) -> QScaleType {
+        *self as QScaleType
+    }
 
     fn inner_try_from(_x: Self::Double) -> Result<Self, ()> {
         Err(())
