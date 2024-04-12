@@ -56,7 +56,7 @@ where
 {
     match node {
         Node::BMM(fc) => fc,
-        Node::RequantiseBMM(r) => r,
+        Node::RequantiseBMMFloat(r) => r,
         Node::ReLU(r) => r,
         Node::Reshape(r) => r,
         // TODO add Node::RequantiseBMMRef(r) => r, once the latter implements NodeOpsVerify

@@ -158,12 +158,15 @@ where
     let effective_multiplier = LT::Double::from(effective_multiplier);
     let output_zero_point = LT::from(output_zero_point);
     // let pow2_effective_shift = LT::pow2(effective_shift); // TODO: may overflow for some exponents
-    let xt_pow2_bits_minus_one = LT::pow2_double(LT::BITS - 1); // LT::Double::from(LT::pow2(LT::BITS - 1));
+
+    // TODO: Add associated constant MAX_PLUS_ONE to InnerType.
+    let xt_pow2_bits_minus_one = LT::pow2_double(LT::BITS - 1);
 
     // NOTE: Notice that they are independent of the input. Perhaps it is meaningful to turn:
     // xt_pow2_bits_minus_one, non_neg_nudge, and neg_nudge
     // into associated constants of type LT in order to avoid their recomputation per call?
-    // TODO: pow2 using << for efficiency?
+
+    // TODO: After splitting InnerType, rewrite pow2 to use << instead of *.
 
     // Mask consists of effective_shift ones
     let mask = LT::pow2(effective_shift) - LT::ONE;

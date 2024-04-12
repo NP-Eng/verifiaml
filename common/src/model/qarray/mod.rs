@@ -42,6 +42,8 @@ pub trait InnerType:
     const MIN: Self;
     const MAX: Self;
     const BITS: usize;
+    // const MAX_PLUS_ONE: Self::Double;  // xt_pow2_bits_minus_one
+    // const NON_NEG_NUDGE: Self;
 
     type Double: From<Self>
         + Mul<Output = Self::Double>
@@ -58,6 +60,7 @@ pub trait InnerType:
     fn to_qscaletype(&self) -> QScaleType;
 
     fn pow2(e: usize) -> Self {
+        // Self::ONE << e
         let mut pow = Self::ONE;
 
         for _ in 0..e {
@@ -91,7 +94,9 @@ impl InnerType for i8 {
     const TWO: Self = 2;
     const MIN: Self = Self::MIN;
     const MAX: Self = Self::MAX;
+    // const MAX_PLUS_ONE: Self::Double = <Self::Double as From<Self>>::from(Self::MAX) + <Self::Double as From<Self>>::from(Self::ONE);
     const BITS: usize = 8 * mem::size_of::<Self>();
+    // const NON_NEG_NUDGE: Self = Self::pow2((Self::BITS - 2) as usize);
 
     type Double = i16;
 
@@ -122,7 +127,9 @@ impl InnerType for i32 {
     const TWO: Self = 2;
     const MIN: Self = Self::MIN;
     const MAX: Self = Self::MAX;
+    // const MAX_PLUS_ONE: Self::Double = Self::Double::from(Self::MAX) + Self::Double::from(Self::ONE);
     const BITS: usize = 8 * mem::size_of::<Self>();
+    // const NON_NEG_NUDGE: Self = Self::pow2((Self::BITS - 2) as usize);
 
     type Double = i64;
 
@@ -153,7 +160,9 @@ impl InnerType for i64 {
     const TWO: Self = 2;
     const MIN: Self = Self::MIN;
     const MAX: Self = Self::MAX;
+    // const MAX_PLUS_ONE: Self::Double = Self::Double::from(Self::MAX) + Self::Double::from(Self::ONE);
     const BITS: usize = 8 * mem::size_of::<Self>();
+    // const NON_NEG_NUDGE: Self = Self::pow2((Self::BITS - 2) as usize);
 
     type Double = i128;
 
@@ -184,7 +193,9 @@ impl InnerType for u8 {
     const TWO: Self = 2;
     const MIN: Self = Self::MIN;
     const MAX: Self = Self::MAX;
+    // const MAX_PLUS_ONE: Self::Double = Self::Double::from(Self::MAX) + Self::Double::from(Self::ONE);
     const BITS: usize = 8 * mem::size_of::<Self>();
+    // const NON_NEG_NUDGE: Self = Self::pow2((Self::BITS - 2) as usize);
 
     type Double = u16;
 
@@ -215,7 +226,9 @@ impl InnerType for f32 {
     const TWO: Self = 2.0;
     const MIN: Self = Self::MIN;
     const MAX: Self = Self::MAX;
+    // const MAX_PLUS_ONE: Self::Double = Self::Double::from(Self::MAX) + Self::Double::from(Self::ONE);
     const BITS: usize = 8 * mem::size_of::<Self>();
+    // const NON_NEG_NUDGE: Self = Self::pow2((Self::BITS - 2) as usize);   // TODO: Remove after splitting
 
     type Double = f64;
 
@@ -236,7 +249,7 @@ impl InnerType for f32 {
     }
 
     fn inner_shr(self, _rhs: usize) -> Self {
-        panic!("Method inner_shr should never used for f32.");
+        panic!("Method inner_shr should never be used for f32.");
     }
 }
 

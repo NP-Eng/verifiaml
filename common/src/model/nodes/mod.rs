@@ -12,8 +12,8 @@ use crate::{
 
 use self::{
     bmm::{BMMNodeCommitment, BMMNodeCommitmentState, BMMNodeProof},
-    requantise_bmm::{
-        RequantiseBMMNode, RequantiseBMMNodeCommitment, RequantiseBMMNodeCommitmentState,
+    requantise_bmm_float::{
+        RequantiseBMMFloatNode, RequantiseBMMNodeCommitment, RequantiseBMMNodeCommitmentState,
         RequantiseBMMNodeProof,
     },
     requantise_bmm_ref::{
@@ -27,7 +27,7 @@ use super::qarray::{InnerType, QTypeArray};
 
 pub(crate) mod bmm;
 pub(crate) mod relu;
-pub(crate) mod requantise_bmm;
+pub(crate) mod requantise_bmm_float;
 pub(crate) mod requantise_bmm_ref;
 pub(crate) mod requantise_bmm_simplified;
 pub(crate) mod reshape;
@@ -93,7 +93,7 @@ pub trait NodeOpsPadded<I, O>: NodeOpsNative<I, O> {
 
 pub enum Node<ST, LT> {
     BMM(BMMNode<ST, LT>),
-    RequantiseBMM(RequantiseBMMNode<ST>),
+    RequantiseBMMFloat(RequantiseBMMFloatNode<ST>),
     RequantiseBMMRef(RequantiseBMMRefNode<ST, LT>),
     ReLU(ReLUNode<ST>),
     Reshape(ReshapeNode),
@@ -150,7 +150,7 @@ where
     pub fn type_name(&self) -> &'static str {
         match self {
             Node::BMM(_) => "BMM",
-            Node::RequantiseBMM(_r) => "RequantiseBMM",
+            Node::RequantiseBMMFloat(_r) => "RequantiseBMM",
             Node::RequantiseBMMRef(_r) => "RequantiseBMMRef",
             Node::ReLU(_) => "ReLU",
             Node::Reshape(_) => "Reshape",
@@ -166,7 +166,7 @@ where
     pub fn evaluate(&self, input: &QTypeArray<I, O>) -> QTypeArray<I, O> {
         match (self, input) {
             (Node::BMM(fc), QTypeArray::S(input)) => QTypeArray::L(fc.evaluate(input)),
-            (Node::RequantiseBMM(r), QTypeArray::L(input)) => QTypeArray::S(r.evaluate(input)),
+            (Node::RequantiseBMMFloat(r), QTypeArray::L(input)) => QTypeArray::S(r.evaluate(input)),
             (Node::RequantiseBMMRef(r), QTypeArray::L(input)) => QTypeArray::S(r.evaluate(input)),
             (Node::ReLU(r), QTypeArray::S(input)) => QTypeArray::S(r.evaluate(input)),
             (Node::Reshape(r), QTypeArray::S(input)) => QTypeArray::S(r.evaluate(input)),
@@ -188,7 +188,7 @@ where
     pub fn padded_evaluate(&self, input: &QTypeArray<I, O>) -> QTypeArray<I, O> {
         match (self, input) {
             (Node::BMM(fc), QTypeArray::S(input)) => QTypeArray::L(fc.padded_evaluate(input)),
-            (Node::RequantiseBMM(r), QTypeArray::L(input)) => {
+            (Node::RequantiseBMMFloat(r), QTypeArray::L(input)) => {
                 QTypeArray::S(r.padded_evaluate(input))
             }
             (Node::RequantiseBMMRef(r), QTypeArray::L(input)) => {

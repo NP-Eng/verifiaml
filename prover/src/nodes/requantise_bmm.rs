@@ -5,13 +5,13 @@ use ark_std::rand::RngCore;
 
 use hcs_common::{
     InnerType, LabeledPoly, NodeCommitment, NodeCommitmentState, NodeProof, Poly,
-    RequantiseBMMNode, RequantiseBMMNodeCommitment, RequantiseBMMNodeCommitmentState,
+    RequantiseBMMFloatNode, RequantiseBMMNodeCommitment, RequantiseBMMNodeCommitmentState,
     RequantiseBMMNodeProof,
 };
 
 use crate::NodeOpsProve;
 
-impl<F, S, PCS, ST, LT> NodeOpsProve<F, S, PCS, LT, ST> for RequantiseBMMNode<ST>
+impl<F, S, PCS, ST, LT> NodeOpsProve<F, S, PCS, LT, ST> for RequantiseBMMFloatNode<ST>
 where
     F: PrimeField + Absorb,
     S: CryptographicSponge,

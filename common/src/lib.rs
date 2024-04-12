@@ -13,8 +13,8 @@ trait Proof {}
 pub use model::nodes::{
     bmm::{BMMNode, BMMNodeCommitment, BMMNodeCommitmentState, BMMNodeProof},
     relu::ReLUNode,
-    requantise_bmm::{
-        RequantiseBMMNode, RequantiseBMMNodeCommitment, RequantiseBMMNodeCommitmentState,
+    requantise_bmm_float::{
+        RequantiseBMMFloatNode, RequantiseBMMNodeCommitment, RequantiseBMMNodeCommitmentState,
         RequantiseBMMNodeProof,
     },
     reshape::ReshapeNode,
