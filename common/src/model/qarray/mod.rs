@@ -81,6 +81,8 @@ pub trait InnerType:
     fn inner_try_from(x: Self::Double) -> Result<Self, ()>;
 
     fn inner_bit_and(self, rhs: Self) -> Self;
+
+    fn inner_shr(self, rhs: usize) -> Self;
 }
 
 impl InnerType for i8 {
@@ -107,6 +109,10 @@ impl InnerType for i8 {
 
     fn inner_bit_and(self, rhs: Self) -> Self {
         self & rhs
+    }
+
+    fn inner_shr(self, rhs: usize) -> Self {
+        self >> rhs
     }
 }
 
@@ -135,6 +141,10 @@ impl InnerType for i32 {
     fn inner_bit_and(self, rhs: Self) -> Self {
         self & rhs
     }
+
+    fn inner_shr(self, rhs: usize) -> Self {
+        self >> rhs
+    }
 }
 
 impl InnerType for i64 {
@@ -161,6 +171,10 @@ impl InnerType for i64 {
 
     fn inner_bit_and(self, rhs: Self) -> Self {
         self & rhs
+    }
+
+    fn inner_shr(self, rhs: usize) -> Self {
+        self >> rhs
     }
 }
 
@@ -189,6 +203,10 @@ impl InnerType for u8 {
     fn inner_bit_and(self, rhs: Self) -> Self {
         self & rhs
     }
+
+    fn inner_shr(self, rhs: usize) -> Self {
+        self >> rhs
+    }
 }
 
 impl InnerType for f32 {
@@ -215,6 +233,10 @@ impl InnerType for f32 {
 
     fn inner_bit_and(self, _rhs: Self) -> Self {
         panic!("Bitwise operations are not supported for f32");
+    }
+
+    fn inner_shr(self, _rhs: usize) -> Self {
+        panic!("Method inner_shr should never used for f32.");
     }
 }
 

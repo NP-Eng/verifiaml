@@ -157,8 +157,13 @@ where
     // Computing auxiliary constants used for every input
     let effective_multiplier = LT::Double::from(effective_multiplier);
     let output_zero_point = LT::from(output_zero_point);
-    let pow2_effective_shift = LT::pow2(effective_shift); // NOTE: may overflow for some exponents
+    // let pow2_effective_shift = LT::pow2(effective_shift); // TODO: may overflow for some exponents
     let xt_pow2_bits_minus_one = LT::pow2_double(LT::BITS - 1); // LT::Double::from(LT::pow2(LT::BITS - 1));
+
+    // NOTE: Notice that they are independent of the input. Perhaps it is meaningful to turn:
+    // xt_pow2_bits_minus_one, non_neg_nudge, and neg_nudge
+    // into associated constants of type LT in order to avoid their recomputation per call?
+    // TODO: pow2 using << for efficiency?
 
     // Mask consists of effective_shift ones
     let mask = LT::pow2(effective_shift) - LT::ONE;
@@ -166,7 +171,7 @@ where
 
     // Constants used during nudging
     let non_neg_nudge = LT::pow2(LT::BITS - 2);
-    let neg_nudge = LT::ONE - LT::pow2(LT::BITS - 2);
+    let neg_nudge = LT::ONE - non_neg_nudge; // LT::pow2(LT::BITS - 2);   // keep this here
 
     // Requantize
     // TODO add rayon for parallelization?
@@ -190,7 +195,7 @@ where
             let remainder = x_high.inner_bit_and(mask);
             let threshold = mask_div2 + is_negative;
 
-            let out = x_high / pow2_effective_shift
+            let out = x_high.inner_shr(effective_shift)
                 + if remainder > threshold {
                     LT::ONE
                 } else {
