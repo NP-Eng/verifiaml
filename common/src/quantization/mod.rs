@@ -157,8 +157,8 @@ where
     // Computing auxiliary constants used for every input
     let effective_multiplier = LT::Double::from(effective_multiplier);
     let output_zero_point = LT::from(output_zero_point);
-    let pow2_effective_shift = LT::pow2(effective_shift);
-    let xt_pow2_bits_minus_one = LT::Double::from(LT::pow2(LT::BITS - 1));
+    let pow2_effective_shift = LT::pow2(effective_shift); // NOTE: may overflow for some exponents
+    let xt_pow2_bits_minus_one = LT::pow2_double(LT::BITS - 1); // LT::Double::from(LT::pow2(LT::BITS - 1));
 
     // Mask consists of effective_shift ones
     let mask = LT::pow2(effective_shift) - LT::ONE;
@@ -236,9 +236,6 @@ pub(crate) fn quantize_multiplier(double_multiplier: f64) -> (i32, usize) {
     // See also: https://en.cppreference.com/w/c/numeric/fenv/FE_round
     let mut q_fixed = (q * ((1_i64 << (i32::BITS - 1)) as f64)).round() as i64;
 
-    println!("Q_FIXED = {q_fixed}");
-    println!("RHS = {}", 1_i64 << (i32::BITS - 1));
-
     // TFLITE_CHECK(q_fixed <= (1LL << 31));
     assert!(
         q_fixed <= 1_i64 << (i32::BITS - 1),
@@ -263,7 +260,6 @@ pub(crate) fn quantize_multiplier(double_multiplier: f64) -> (i32, usize) {
     // If exponent is too small.
     // if (-expon as u32) < i32::BITS - 1 {
     if expon < -((i32::BITS - 1) as isize) {
-        // expon < -31
         shift = 0;
         q_fixed = 0;
     }
@@ -293,7 +289,6 @@ fn frexp(x: f64) -> (f64, isize) {
     assert!(expon > 0 && expon < ((F64_EXPONENT_BIAS as i32) << 1));
 
     // unbias exponent
-    // expon -= (F64_EXPONENT_BIAS as i32) + 1;
     expon = expon - (F64_EXPONENT_BIAS as i32) + 1;
 
     let mantissa = x_bits & F64_FRACTION_MASK;

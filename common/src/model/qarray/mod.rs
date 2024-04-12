@@ -61,7 +61,17 @@ pub trait InnerType:
         let mut pow = Self::ONE;
 
         for _ in 0..e {
-            pow *= Self::TWO;
+            pow = pow * Self::TWO;
+        }
+
+        pow
+    }
+
+    fn pow2_double(e: usize) -> Self::Double {
+        let mut pow = Self::Double::from(Self::ONE);
+
+        for _ in 0..e {
+            pow = pow * Self::Double::from(Self::TWO);
         }
 
         pow
