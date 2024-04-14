@@ -32,7 +32,7 @@ mod tests {
         "/../exploring_tf_lite/q_model_runner.py"
     ));
 
-    const NB_OUTPUTS: usize = 1000;
+    const NB_OUTPUTS: usize = 10_000;
 
     // TODO: We allow incorrect outputs because the quantisation from tf lite
     // is inexact. We should fix this in the future. Currently, the outputs are
