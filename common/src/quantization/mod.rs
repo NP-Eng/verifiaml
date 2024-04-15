@@ -157,7 +157,6 @@ where
     // Computing auxiliary constants used for every input
     let effective_multiplier = LT::Double::from(effective_multiplier);
     let output_zero_point = LT::from(output_zero_point);
-    // let pow2_effective_shift = LT::pow2(effective_shift); // TODO: may overflow for some exponents
 
     // TODO: Add associated constant MAX_PLUS_ONE to InnerType.
     let xt_pow2_bits_minus_one = LT::pow2_double(LT::BITS - 1);
@@ -169,8 +168,8 @@ where
     // TODO: After splitting InnerType, rewrite pow2 to use << instead of *.
 
     // Mask consists of effective_shift ones
-    let mask = LT::pow2(effective_shift) - LT::ONE;
-    let mask_div2 = mask / LT::TWO;
+    let mask = LT::pow2(effective_shift) - LT::ONE; // TODO: may overflow for some exponents
+    let mask_div2 = mask / LT::TWO; // TODO: mask.inner_shr(1);
 
     // Constants used during nudging
     let non_neg_nudge = LT::pow2(LT::BITS - 2);
@@ -229,11 +228,11 @@ pub fn requantise_simplified<ST, LT>(
 where
     ST: InnerType + TryFrom<LT>,
     LT: InnerType + From<ST>,
+    LT::Double: InnerType,
 {
     // Computing auxiliary constants used for every input
     let effective_multiplier = LT::Double::from(effective_multiplier);
     let output_zero_point = LT::from(output_zero_point);
-    // let pow2_effective_shift = LT::pow2(effective_shift); // TODO: may overflow for some exponents
 
     // TODO: Add associated constant MAX_PLUS_ONE to InnerType.
     let xt_pow2_bits_minus_one = LT::pow2_double(LT::BITS - 1);
@@ -244,10 +243,6 @@ where
 
     // TODO: After splitting InnerType, rewrite pow2 to use << instead of *.
 
-    // Mask consists of effective_shift ones
-    let mask = LT::pow2(effective_shift) - LT::ONE;
-    let mask_div2 = mask / LT::TWO;
-
     // Constants used during nudging
     let non_neg_nudge = LT::pow2(LT::BITS - 2);
     let neg_nudge = LT::ONE - non_neg_nudge; // LT::pow2(LT::BITS - 2);   // keep this here
@@ -257,31 +252,22 @@ where
     output
         .iter()
         .map(|x| {
-            let (is_negative, nudge) = if *x >= LT::ZERO {
-                (LT::ZERO, non_neg_nudge)
+            let nudge = if *x >= LT::ZERO {
+                non_neg_nudge
             } else {
-                (LT::ONE, neg_nudge)
+                neg_nudge
             };
 
             let x = LT::Double::from(*x) * effective_multiplier;
 
+            let right_shift = effective_shift + 31 as usize;
+
+            let x = x.inner_shr(right_shift); // x >> right_shift;
+
             let x_high =
                 LT::inner_try_from((LT::Double::from(nudge) + x) / xt_pow2_bits_minus_one).unwrap();
 
-            // assert(right_shift <= 31);
-
-            // TODO: change inner_bit_and by & after the "InnerType split"
-            let remainder = x_high.inner_bit_and(mask);
-            let threshold = mask_div2 + is_negative;
-
-            let out = x_high.inner_shr(effective_shift)
-                + if remainder > threshold {
-                    LT::ONE
-                } else {
-                    LT::ZERO
-                };
-
-            let shifted_out = out + output_zero_point;
+            let shifted_out = x_high + output_zero_point;
 
             ST::try_from(partial_ord_clamp(
                 shifted_out,
@@ -342,7 +328,6 @@ pub(crate) fn quantize_multiplier(double_multiplier: f64) -> (i32, usize) {
     );
 
     // If exponent is too small.
-    // if (-expon as u32) < i32::BITS - 1 {
     if expon < -((i32::BITS - 1) as isize) {
         shift = 0;
         q_fixed = 0;

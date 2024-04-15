@@ -42,6 +42,7 @@ impl<ST, LT> NodeOpsNative<LT, ST> for RequantiseBMMSimplifiedNode<ST, LT>
 where
     ST: InnerType + TryFrom<LT>,
     LT: InnerType + From<ST>,
+    LT::Double: InnerType,
 {
     fn shape(&self) -> Vec<usize> {
         vec![self.size]
@@ -79,6 +80,7 @@ impl<ST, LT> NodeOpsPadded<LT, ST> for RequantiseBMMSimplifiedNode<ST, LT>
 where
     ST: InnerType + TryFrom<LT>,
     LT: InnerType + From<ST>,
+    LT::Double: InnerType,
 {
     fn padded_shape_log(&self) -> Vec<usize> {
         vec![self.padded_size_log]
