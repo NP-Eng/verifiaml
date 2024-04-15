@@ -191,7 +191,7 @@ where
             let x_high =
                 LT::inner_try_from((LT::Double::from(nudge) + x) / xt_pow2_bits_minus_one).unwrap();
 
-            // assert(right_shift <= 31);
+            // assert(effective_shift <= 31);
 
             // TODO: change inner_bit_and by & after the "InnerType split"
             let remainder = x_high.inner_bit_and(mask);
@@ -245,7 +245,7 @@ where
 
     // Constants used during nudging
     let non_neg_nudge = LT::pow2(LT::BITS - 2);
-    let neg_nudge = LT::ONE - non_neg_nudge; // LT::pow2(LT::BITS - 2);   // keep this here
+    let neg_nudge = LT::ONE - non_neg_nudge; // keep this here
 
     // Requantize
     // TODO add rayon for parallelization?
@@ -259,6 +259,8 @@ where
             };
 
             let x = LT::Double::from(*x) * effective_multiplier;
+
+            // assert(effective_shift <= 31);
 
             let right_shift = effective_shift + 31 as usize;
 

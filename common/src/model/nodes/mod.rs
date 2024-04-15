@@ -20,6 +20,10 @@ use self::{
         RequantiseBMMRefNode, RequantiseBMMRefNodeCommitment, RequantiseBMMRefNodeCommitmentState,
         RequantiseBMMRefNodeProof,
     },
+    requantise_bmm_simplified::{
+        RequantiseBMMSimplifiedNode, RequantiseBMMSimplifiedNodeCommitment,
+        RequantiseBMMSimplifiedNodeCommitmentState, RequantiseBMMSimplifiedNodeProof,
+    },
     reshape::ReshapeNode,
 };
 
@@ -95,6 +99,7 @@ pub enum Node<ST, LT> {
     BMM(BMMNode<ST, LT>),
     RequantiseBMMFloat(RequantiseBMMFloatNode<ST>),
     RequantiseBMMRef(RequantiseBMMRefNode<ST, LT>),
+    RequantiseBMMSimplified(RequantiseBMMSimplifiedNode<ST, LT>),
     ReLU(ReLUNode<ST>),
     Reshape(ReshapeNode),
 }
@@ -108,6 +113,7 @@ where
     BMM(BMMNodeProof<F, S, PCS>),
     RequantiseBMM(RequantiseBMMNodeProof),
     RequantiseBMRef(RequantiseBMMRefNodeProof),
+    RequantiseBMMSimplified(RequantiseBMMSimplifiedNodeProof),
     ReLU(()),
     Reshape(()),
 }
@@ -121,6 +127,7 @@ where
     BMM(BMMNodeCommitment<F, S, PCS>),
     RequantiseBMM(RequantiseBMMNodeCommitment),
     RequantiseBMMRef(RequantiseBMMRefNodeCommitment),
+    RequantiseBMMSimplified(RequantiseBMMSimplifiedNodeCommitment),
     ReLU(()),
     Reshape(()),
 }
@@ -134,6 +141,7 @@ where
     BMM(BMMNodeCommitmentState<F, S, PCS>),
     RequantiseBMM(RequantiseBMMNodeCommitmentState),
     RequantiseBMMRef(RequantiseBMMRefNodeCommitmentState),
+    RequantiseBMMSimplified(RequantiseBMMSimplifiedNodeCommitmentState),
     ReLU(()),
     Reshape(()),
 }
@@ -152,6 +160,7 @@ where
             Node::BMM(_) => "BMM",
             Node::RequantiseBMMFloat(_r) => "RequantiseBMM",
             Node::RequantiseBMMRef(_r) => "RequantiseBMMRef",
+            Node::RequantiseBMMSimplified(_r) => "RequantiseBMMSimplified",
             Node::ReLU(_) => "ReLU",
             Node::Reshape(_) => "Reshape",
         }
@@ -168,6 +177,9 @@ where
             (Node::BMM(fc), QTypeArray::S(input)) => QTypeArray::L(fc.evaluate(input)),
             (Node::RequantiseBMMFloat(r), QTypeArray::L(input)) => QTypeArray::S(r.evaluate(input)),
             (Node::RequantiseBMMRef(r), QTypeArray::L(input)) => QTypeArray::S(r.evaluate(input)),
+            (Node::RequantiseBMMSimplified(r), QTypeArray::L(input)) => {
+                QTypeArray::S(r.evaluate(input))
+            }
             (Node::ReLU(r), QTypeArray::S(input)) => QTypeArray::S(r.evaluate(input)),
             (Node::Reshape(r), QTypeArray::S(input)) => QTypeArray::S(r.evaluate(input)),
             _ => panic!(
@@ -192,6 +204,9 @@ where
                 QTypeArray::S(r.padded_evaluate(input))
             }
             (Node::RequantiseBMMRef(r), QTypeArray::L(input)) => {
+                QTypeArray::S(r.padded_evaluate(input))
+            }
+            (Node::RequantiseBMMSimplified(r), QTypeArray::L(input)) => {
                 QTypeArray::S(r.padded_evaluate(input))
             }
             (Node::ReLU(r), QTypeArray::S(input)) => QTypeArray::S(r.padded_evaluate(input)),

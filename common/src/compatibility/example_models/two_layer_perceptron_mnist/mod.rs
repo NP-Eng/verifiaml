@@ -52,6 +52,9 @@ where
         BMMRequantizationStrategy::Reference => Node::RequantiseBMMRef(RequantiseBMMRefNode::new(
             INTER_DIM, S_1_I, S_1_W, S_1_O, Z_1_O,
         )),
+        BMMRequantizationStrategy::Simplified => Node::RequantiseBMMSimplified(
+            RequantiseBMMSimplifiedNode::new(INTER_DIM, S_1_I, S_1_W, S_1_O, Z_1_O),
+        ),
         _ => unimplemented!(),
     };
 
