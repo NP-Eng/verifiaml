@@ -228,7 +228,6 @@ pub fn requantise_simplified<ST, LT>(
 where
     ST: InnerType + TryFrom<LT>,
     LT: InnerType + From<ST>,
-    LT::Double: InnerType,
 {
     // Computing auxiliary constants used for every input
     let effective_multiplier = LT::Double::from(effective_multiplier);
@@ -264,7 +263,7 @@ where
 
             let right_shift = effective_shift + 31 as usize;
 
-            let x = x.inner_shr(right_shift); // x >> right_shift;
+            let x = LT::inner_shr_double(x, right_shift); // x >> right_shift;
 
             let x_high =
                 LT::inner_try_from((LT::Double::from(nudge) + x) / xt_pow2_bits_minus_one).unwrap();

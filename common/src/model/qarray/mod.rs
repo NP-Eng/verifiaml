@@ -85,7 +85,9 @@ pub trait InnerType:
 
     fn inner_bit_and(self, rhs: Self) -> Self;
 
-    fn inner_shr(self, rhs: usize) -> Self;
+    fn inner_shr(self, shift: usize) -> Self;
+
+    fn inner_shr_double(x: Self::Double, shift: usize) -> Self::Double;
 }
 
 impl InnerType for i8 {
@@ -116,8 +118,12 @@ impl InnerType for i8 {
         self & rhs
     }
 
-    fn inner_shr(self, rhs: usize) -> Self {
-        self >> rhs
+    fn inner_shr(self, shift: usize) -> Self {
+        self >> shift
+    }
+
+    fn inner_shr_double(x: Self::Double, shift: usize) -> Self::Double {
+        x >> shift
     }
 }
 
@@ -149,8 +155,12 @@ impl InnerType for i32 {
         self & rhs
     }
 
-    fn inner_shr(self, rhs: usize) -> Self {
-        self >> rhs
+    fn inner_shr(self, shift: usize) -> Self {
+        self >> shift
+    }
+
+    fn inner_shr_double(x: Self::Double, shift: usize) -> Self::Double {
+        x >> shift
     }
 }
 
@@ -182,8 +192,12 @@ impl InnerType for i64 {
         self & rhs
     }
 
-    fn inner_shr(self, rhs: usize) -> Self {
-        self >> rhs
+    fn inner_shr(self, shift: usize) -> Self {
+        self >> shift
+    }
+
+    fn inner_shr_double(x: Self::Double, shift: usize) -> Self::Double {
+        x >> shift
     }
 }
 
@@ -215,8 +229,12 @@ impl InnerType for u8 {
         self & rhs
     }
 
-    fn inner_shr(self, rhs: usize) -> Self {
-        self >> rhs
+    fn inner_shr(self, shift: usize) -> Self {
+        self >> shift
+    }
+
+    fn inner_shr_double(x: Self::Double, shift: usize) -> Self::Double {
+        x >> shift
     }
 }
 
@@ -248,8 +266,12 @@ impl InnerType for f32 {
         panic!("Bitwise operations are not supported for f32");
     }
 
-    fn inner_shr(self, _rhs: usize) -> Self {
+    fn inner_shr(self, _shift: usize) -> Self {
         panic!("Method inner_shr should never be used for f32.");
+    }
+
+    fn inner_shr_double(_x: Self::Double, _shift: usize) -> Self::Double {
+        panic!("Method inner_shr_double should never be used for f32.");
     }
 }
 
