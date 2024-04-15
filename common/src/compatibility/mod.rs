@@ -194,11 +194,14 @@ mod tests {
 
     #[test]
     fn test_two_layer_perceptron_with_simplified_requantisation() {
-        run_model_all_outputs("QTwoLayerPerceptron", BMMRequantizationStrategy::Simplified);
+        run_model_all_outputs(
+            "QTwoLayerPerceptron",
+            BMMRequantizationStrategy::SingleRound,
+        );
     }
 
     #[test]
     fn test_simple_perceptron_with_simplified_requantisation() {
-        run_model_all_outputs("QSimplePerceptron", BMMRequantizationStrategy::Simplified);
+        run_model_all_outputs("QSimplePerceptron", BMMRequantizationStrategy::SingleRound);
     }
 }

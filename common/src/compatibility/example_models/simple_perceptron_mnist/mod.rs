@@ -1,7 +1,10 @@
 use crate::{
-    model::nodes::requantise_bmm_ref::RequantiseBMMRefNode,
-    quantization::BMMRequantizationStrategy, BMMNode, Model, Node, Poly, QArray,
-    RequantiseBMMFloatNode, ReshapeNode,
+    model::nodes::{
+        requantise_bmm_ref::RequantiseBMMRefNode,
+        requantise_bmm_simplified::RequantiseBMMSimplifiedNode,
+    },
+    quantization::BMMRequantizationStrategy,
+    BMMNode, Model, Node, Poly, QArray, RequantiseBMMFloatNode, ReshapeNode,
 };
 
 use ark_crypto_primitives::sponge::{Absorb, CryptographicSponge};
@@ -50,7 +53,7 @@ where
         BMMRequantizationStrategy::Reference => {
             Node::RequantiseBMMRef(RequantiseBMMRefNode::new(OUTPUT_DIM, S_I, S_W, S_O, Z_O))
         }
-        BMMRequantizationStrategy::Simplified => Node::RequantiseBMMSimplified(
+        BMMRequantizationStrategy::SingleRound => Node::RequantiseBMMSimplified(
             RequantiseBMMSimplifiedNode::new(OUTPUT_DIM, S_I, S_W, S_O, Z_O),
         ),
         _ => unimplemented!(),
