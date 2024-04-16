@@ -17,13 +17,13 @@ where
     Python::with_gil(|py| f(py))
 }
 
-pub fn get_model(py: Python, model_name: &str) -> Py<PyAny> {
+pub fn get_model(py: Python, model_name: &str, args: Option<Vec<(&str, &str)>>) -> Py<PyAny> {
     let func: Py<PyAny> = PyModule::from_code_bound(py, PERCEPTRON_PATH, "", "")
         .unwrap()
         .getattr("get_model")
         .unwrap()
         .into();
-    func.call1(py, (model_name,)).unwrap()
+    func.call1(py, (model_name, args)).unwrap()
 }
 
 pub fn get_model_input<'py, T>(

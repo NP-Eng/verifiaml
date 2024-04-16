@@ -1,15 +1,18 @@
 from abc import abstractmethod
+from collections import OrderedDict
+import json
+from math import prod
 import os
 import tensorflow as tf
 import numpy as np
-from typing import Tuple
+from typing import Any, Dict, List, Tuple, Union
 
 class QModelWrapper:
     """
     A wrapper for quantized models that provides a consistent interface for accessing the model's input, output, and intermediate layers.
     """
 
-    def __init__(self, filename: str, model: tf.keras.Model = None, dataset: Tuple = None) -> None:
+    def __init__(self, filename: str, model: tf.keras.Model = None, dataset: Tuple = None, overwrite_cache: bool = False) -> None:
         if filename is None or (model is None or dataset is None):
             raise ValueError("Either a filename or a model and dataset must be provided.")
         
@@ -19,8 +22,8 @@ class QModelWrapper:
         self.dataset = (rescale(x_train), y_train), (rescale(x_test), y_test)
         (x_train, y_train), (x_test, y_test) = self.dataset
 
-        # Train and quantize the model if it doesn't exist
-        if not os.path.exists(filename):
+        # Train and quantize the model if it doesn't exist or if the cached file should be overwritten
+        if not os.path.exists(filename) or overwrite_cache:
             with open(filename, 'wb') as f:
                 f.write(
                     QModelWrapper.__quantize(
@@ -97,7 +100,26 @@ class QModelWrapper:
         return self.quantized_model.get_tensor(
             self.quantized_model.get_output_details()[0]['index']
         )
+    #f'../common/src/compatibility/example_models/fully_connected_layer/parameters/{key}.json'
+    def save_params_as_qarray(self, path: str) -> None:
+        for key, value in self.get_model_parameters().items():
+            with open(path + f'/{key}.json', 'w') as f:
+                json.dump(QModelWrapper.as_qarray(value), f)
+
+    @staticmethod
+    def as_qarray(param: np.ndarray) -> Dict[str, Any]:
+        flattened_param = QModelWrapper.multi_flatten(param.tolist())
+        qarray_shape = list(reversed(param.shape))
+        cumulative_dims = [prod(qarray_shape[i+1:]) for i in range(len(qarray_shape))]
+
+        return OrderedDict(["f", flattened_param], ["s", qarray_shape], ["c", cumulative_dims])
     
+    @staticmethod
+    def multi_flatten(x: Any) -> List[Union[int, float]]:
+        if isinstance(x, list):
+            return [y for z in x for y in QModelWrapper.multi_flatten(z)]
+        return [x]
+
     @abstractmethod
-    def get_model_parameters(self) -> Tuple:
+    def get_model_parameters(self) -> Dict[str, Any]:
         pass

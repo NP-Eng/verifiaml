@@ -53,7 +53,7 @@ fn test_simple_perceptron_mnist_single_input() {
     assert_eq!(
         run_python(|py| get_model_input::<Vec<Vec<f32>>>(
             py,
-            &get_model(py, "QSimplePerceptron"),
+            &get_model(py, "QSimplePerceptron", None),
             None
         )),
         expected_input
@@ -67,7 +67,7 @@ fn test_two_layer_perceptron_mnist_single_input() {
     assert_eq!(
         run_python(|py| get_model_input::<Vec<Vec<f32>>>(
             py,
-            &get_model(py, "QTwoLayerPerceptron"),
+            &get_model(py, "QTwoLayerPerceptron", None),
             None
         )),
         expected_input
@@ -79,7 +79,7 @@ fn test_simple_perceptron_mnist_single_output() {
     let expected_output =
         QArray::read("examples/simple_perceptron_mnist/data/output_test_150.json");
     assert_eq!(
-        run_python(|py| get_model_output(py, &get_model(py, "QSimplePerceptron"), None)),
+        run_python(|py| get_model_output(py, &get_model(py, "QSimplePerceptron", None), None)),
         expected_output
     );
 }
@@ -89,7 +89,7 @@ fn test_two_layer_perceptron_mnist_single_output() {
     let expected_output =
         QArray::read("examples/two_layer_perceptron_mnist/data/output_test_150.json");
     assert_eq!(
-        run_python(|py| get_model_output(py, &get_model(py, "QTwoLayerPerceptron"), None)),
+        run_python(|py| get_model_output(py, &get_model(py, "QTwoLayerPerceptron", None), None)),
         expected_output
     );
 }
@@ -100,7 +100,7 @@ fn test_two_layer_perceptron_mnist_all_outputs() {
         build_two_layer_perceptron_mnist::<Fr, PoseidonSponge<Fr>, Ligero<Fr>>();
 
     let correct_samples: usize = run_python(|py| {
-        let tf_lite_model = get_model(py, "QTwoLayerPerceptron");
+        let tf_lite_model = get_model(py, "QTwoLayerPerceptron", None);
         (0..NB_OUTPUTS)
             .into_iter()
             .map(|i| {
@@ -139,7 +139,7 @@ fn test_simple_perceptron_mnist_all_outputs() {
         build_simple_perceptron_mnist::<Fr, PoseidonSponge<Fr>, Ligero<Fr>>();
 
     let correct_samples: usize = run_python(|py| {
-        let tf_lite_model = get_model(py, "QSimplePerceptron");
+        let tf_lite_model = get_model(py, "QSimplePerceptron", None);
         (0..NB_OUTPUTS)
             .into_iter()
             .map(|i| {

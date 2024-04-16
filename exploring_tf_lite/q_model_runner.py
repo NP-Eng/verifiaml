@@ -1,4 +1,4 @@
-from typing import Any, Tuple
+from typing import Any, Dict, List, Tuple
 
 import sys
 sys.path.append('../exploring_tf_lite')
@@ -14,16 +14,10 @@ AVAILABLE_MODELS = {
     "QFullyConnectedLayer": (QFullyConnectedLayer, int)
 }
 
-def get_model(model_name: str) -> QModelWrapper:
+def get_model(model_name: str, args: List[Tuple[str, str]] = None) -> QModelWrapper:
     """
     Returns a quantized model wrapper together with the type of the input data.
     """
     model, _ = AVAILABLE_MODELS.get(model_name, (None, None))
     assert model is not None, f"Model {model_name} is not available."
-    return model()
-    
-def get_model_parameters(model_name: str) -> Tuple:
-    """
-    Returns the model parameters as a tuple.
-    """
-    return get_model(model_name).get_model_parameters()
+    return model(dict(args)) if args is not None else model()
