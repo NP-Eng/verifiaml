@@ -51,7 +51,11 @@ fn unpadded_inference(
 fn test_simple_perceptron_mnist_single_input() {
     let expected_input = QArray::read("examples/simple_perceptron_mnist/data/input_test_150.json");
     assert_eq!(
-        run_python(|py| get_model_input(py, &get_model(py, "QSimplePerceptron"), None)),
+        run_python(|py| get_model_input::<Vec<Vec<f32>>>(
+            py,
+            &get_model(py, "QSimplePerceptron"),
+            None
+        )),
         expected_input
     );
 }
@@ -61,7 +65,11 @@ fn test_two_layer_perceptron_mnist_single_input() {
     let expected_input =
         QArray::read("examples/two_layer_perceptron_mnist/data/input_test_150.json");
     assert_eq!(
-        run_python(|py| get_model_input(py, &get_model(py, "QTwoLayerPerceptron"), None)),
+        run_python(|py| get_model_input::<Vec<Vec<f32>>>(
+            py,
+            &get_model(py, "QTwoLayerPerceptron"),
+            None
+        )),
         expected_input
     );
 }
@@ -96,7 +104,7 @@ fn test_two_layer_perceptron_mnist_all_outputs() {
         (0..NB_OUTPUTS)
             .into_iter()
             .map(|i| {
-                let raw_input = get_model_input(py, &tf_lite_model, Some(i));
+                let raw_input = get_model_input::<Vec<Vec<f32>>>(py, &tf_lite_model, Some(i));
                 let expected_output = get_model_output(py, &tf_lite_model, Some(i));
 
                 let output = unpadded_inference(
@@ -135,7 +143,7 @@ fn test_simple_perceptron_mnist_all_outputs() {
         (0..NB_OUTPUTS)
             .into_iter()
             .map(|i| {
-                let raw_input = get_model_input(py, &tf_lite_model, Some(i));
+                let raw_input = get_model_input::<Vec<Vec<f32>>>(py, &tf_lite_model, Some(i));
                 let expected_output = get_model_output(py, &tf_lite_model, Some(i));
 
                 let output = unpadded_inference(

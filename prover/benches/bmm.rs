@@ -8,8 +8,8 @@ use hcs_common::{
         build_fully_connected_layer_mnist,
         parameters::{S_INPUT, Z_INPUT},
     },
-    get_model, get_model_output, quantise_f32_u8_nne, run_python, test_sponge, Ligero,
-    NodeCommitment, NodeCommitmentState, QArray,
+    python::*,
+    quantise_f32_u8_nne, test_sponge, Ligero, NodeCommitment, NodeCommitmentState, QArray,
 };
 use hcs_prover::ProveModel;
 use hcs_verifier::VerifyModel;
@@ -25,6 +25,7 @@ fn quantise_input(raw_input: &QArray<f32>) -> QArray<i8> {
 
 fn tf_inference(c: &mut Criterion) {
     let mut group = c.benchmark_group("tf_inference");
+    group.sample_size(1000);
 
     run_python(|py| {
         let model = get_model(py, "QFullyConnectedLayer");
@@ -36,8 +37,10 @@ fn tf_inference(c: &mut Criterion) {
 
 fn verifiaml_inference(c: &mut Criterion) {
     let mut group = c.benchmark_group("verifiaml_inference");
+    group.sample_size(1000);
     let fc_model = build_fully_connected_layer_mnist::<Fr, PoseidonSponge<Fr>, Ligero<Fr>>();
-    let raw_input = QArray::read("benches/data/input_test_150.json");
+    let raw_input =
+        run_python(|py| get_model_input::<Vec<f32>>(py, &get_model(py, "QFullyConnectedLayer"), None));
 
     // Quantisation happens in the tf inference benchmark, so we benchmark it here
     // too in order to make the comparison as fair as possible
@@ -50,8 +53,11 @@ fn verifiaml_inference(c: &mut Criterion) {
 
 fn verifiaml_proof(c: &mut Criterion) {
     let mut group = c.benchmark_group("verifiaml_proof");
+    group.sample_size(15);
+
+    let raw_input =
+        run_python(|py| get_model_input::<Vec<f32>>(py, &get_model(py, "QFullyConnectedLayer"), None));
     let fc_model = build_fully_connected_layer_mnist::<Fr, PoseidonSponge<Fr>, Ligero<Fr>>();
-    let raw_input = QArray::read("benches/data/input_test_150.json");
 
     let mut sponge: PoseidonSponge<Fr> = test_sponge();
     let mut rng = test_rng();
@@ -83,7 +89,9 @@ fn verifiaml_proof(c: &mut Criterion) {
 fn verifiaml_verification(c: &mut Criterion) {
     let mut group = c.benchmark_group("verifiaml_verification");
     let fc_model = build_fully_connected_layer_mnist::<Fr, PoseidonSponge<Fr>, Ligero<Fr>>();
-    let raw_input = QArray::read("benches/data/input_test_150.json");
+
+    let raw_input =
+        run_python(|py| get_model_input::<Vec<f32>>(py, &get_model(py, "QFullyConnectedLayer"), None));
 
     let mut sponge: PoseidonSponge<Fr> = test_sponge();
     let mut rng = test_rng();
@@ -112,11 +120,5 @@ fn verifiaml_verification(c: &mut Criterion) {
     });
 }
 
-criterion_group!(
-    benches,
-    tf_inference,
-    verifiaml_inference,
-    verifiaml_proof,
-    verifiaml_verification
-);
+criterion_group!(benches, tf_inference, verifiaml_verification,);
 criterion_main!(benches);

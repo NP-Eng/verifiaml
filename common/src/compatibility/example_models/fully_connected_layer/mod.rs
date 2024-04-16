@@ -7,7 +7,7 @@ use ark_poly_commit::PolynomialCommitment;
 pub mod parameters;
 use parameters::*;
 
-pub const INPUT_DIM: usize = 784;
+pub const INPUT_DIM: usize = 28 * 28 * 1;
 pub const OUTPUT_DIM: usize = 10;
 
 // This is the cleaner way to format a fixed string with various data due to
