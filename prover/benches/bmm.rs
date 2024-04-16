@@ -39,8 +39,9 @@ fn verifiaml_inference(c: &mut Criterion) {
     let mut group = c.benchmark_group("verifiaml_inference");
     group.sample_size(1000);
     let fc_model = build_fully_connected_layer_mnist::<Fr, PoseidonSponge<Fr>, Ligero<Fr>>();
-    let raw_input =
-        run_python(|py| get_model_input::<Vec<f32>>(py, &get_model(py, "QFullyConnectedLayer"), None));
+    let raw_input = run_python(|py| {
+        get_model_input::<Vec<f32>>(py, &get_model(py, "QFullyConnectedLayer"), None)
+    });
 
     // Quantisation happens in the tf inference benchmark, so we benchmark it here
     // too in order to make the comparison as fair as possible
@@ -55,8 +56,9 @@ fn verifiaml_proof(c: &mut Criterion) {
     let mut group = c.benchmark_group("verifiaml_proof");
     group.sample_size(15);
 
-    let raw_input =
-        run_python(|py| get_model_input::<Vec<f32>>(py, &get_model(py, "QFullyConnectedLayer"), None));
+    let raw_input = run_python(|py| {
+        get_model_input::<Vec<f32>>(py, &get_model(py, "QFullyConnectedLayer"), None)
+    });
     let fc_model = build_fully_connected_layer_mnist::<Fr, PoseidonSponge<Fr>, Ligero<Fr>>();
 
     let mut sponge: PoseidonSponge<Fr> = test_sponge();
@@ -90,8 +92,9 @@ fn verifiaml_verification(c: &mut Criterion) {
     let mut group = c.benchmark_group("verifiaml_verification");
     let fc_model = build_fully_connected_layer_mnist::<Fr, PoseidonSponge<Fr>, Ligero<Fr>>();
 
-    let raw_input =
-        run_python(|py| get_model_input::<Vec<f32>>(py, &get_model(py, "QFullyConnectedLayer"), None));
+    let raw_input = run_python(|py| {
+        get_model_input::<Vec<f32>>(py, &get_model(py, "QFullyConnectedLayer"), None)
+    });
 
     let mut sponge: PoseidonSponge<Fr> = test_sponge();
     let mut rng = test_rng();
@@ -120,5 +123,11 @@ fn verifiaml_verification(c: &mut Criterion) {
     });
 }
 
-criterion_group!(benches, tf_inference, verifiaml_verification,);
+criterion_group!(
+    benches,
+    tf_inference,
+    verifiaml_inference,
+    verifiaml_proof,
+    verifiaml_verification
+);
 criterion_main!(benches);
