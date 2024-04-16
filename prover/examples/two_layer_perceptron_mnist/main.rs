@@ -1,7 +1,7 @@
 use hcs_common::{
     test_sponge,
     two_layer_perceptron_mnist::{build_two_layer_perceptron_mnist, parameters::*, OUTPUT_DIM},
-    Ligero,
+    BMMRequantizationStrategy, Ligero,
 };
 
 use ark_bn254::Fr;
@@ -18,8 +18,9 @@ macro_rules! PATH {
 }
 
 fn main() {
-    let two_layer_perceptron =
-        build_two_layer_perceptron_mnist::<Fr, PoseidonSponge<Fr>, Ligero<Fr>>();
+    let two_layer_perceptron = build_two_layer_perceptron_mnist::<Fr, PoseidonSponge<Fr>, Ligero<Fr>>(
+        BMMRequantizationStrategy::Floating,
+    );
 
     // Right now this can't be QInfo because the latter is always a pair
     // (f32, i8), which indeed matches in-model quantisation, but not
