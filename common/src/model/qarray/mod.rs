@@ -51,7 +51,8 @@ pub trait InnerType:
         + // TODO to be readded after the "InnerType split" + TryInto<Self>;
         Add<Output = Self::Double>
         + Sub<Output = Self::Double>
-        + Copy;
+        + Copy
+        + Debug;
 
     // TODO if we decide to make the model generic on the quantisation process
     // types, this will change

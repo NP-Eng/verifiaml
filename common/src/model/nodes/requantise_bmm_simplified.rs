@@ -16,7 +16,7 @@ pub struct RequantiseBMMSimplifiedNode<ST, LT> {
     // log2 of the number of units
     pub padded_size_log: usize,
 
-    // Represents a non-negative right shift
+    // Represents a non-negative effective right shift
     effective_shift: usize,
 
     //
@@ -126,13 +126,13 @@ impl RequantiseBMMSimplifiedNode<i8, i32> {
         let (s_i, s_w, s_o) = (s_i as f64, s_w as f64, s_o as f64);
         let double_multiplier = s_i * s_w / s_o;
 
-        // compute effective shift and effective multiplier
-        let (effective_multiplier, effective_shift) = quantize_multiplier(double_multiplier);
+        // compute full shift and effective multiplier
+        let (effective_multiplier, full_shift) = quantize_multiplier(double_multiplier);
 
         Self {
             size,
             padded_size_log,
-            effective_shift,
+            effective_shift: full_shift + (i32::BITS - 1) as usize,
             effective_multiplier,
             output_zero_point: z_o,
         }

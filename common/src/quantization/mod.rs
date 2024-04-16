@@ -147,7 +147,7 @@ pub fn requantise_ref<ST, LT>(
     // TODO Think whether we can afford to pass ownership here and change the iter() below by into_iter()
     output: &[LT],
     effective_multiplier: LT,
-    effective_shift: usize,
+    full_shift: usize,
     output_zero_point: ST,
 ) -> Vec<ST>
 where
@@ -167,8 +167,8 @@ where
 
     // TODO: After splitting InnerType, rewrite pow2 to use << instead of *.
 
-    // Mask consists of effective_shift ones
-    let mask = LT::pow2(effective_shift) - LT::ONE; // TODO: may overflow for some exponents
+    // Mask consists of full_shift ones
+    let mask = LT::pow2(full_shift) - LT::ONE; // TODO: may overflow for some exponents
     let mask_div2 = mask / LT::TWO; // TODO: mask.inner_shr(1);
 
     // Constants used during nudging
@@ -186,18 +186,19 @@ where
                 (LT::ONE, neg_nudge)
             };
 
-            let x = LT::Double::from(*x) * effective_multiplier;
+            let product = LT::Double::from(*x) * effective_multiplier;
 
-            let x_high =
-                LT::inner_try_from((LT::Double::from(nudge) + x) / xt_pow2_bits_minus_one).unwrap();
+            let product_high =
+                LT::inner_try_from((LT::Double::from(nudge) + product) / xt_pow2_bits_minus_one)
+                    .unwrap();
 
-            // assert(effective_shift <= 31);
+            // assert(full_shift <= 31);
 
             // TODO: change inner_bit_and by & after the "InnerType split"
-            let remainder = x_high.inner_bit_and(mask);
+            let remainder = product_high.inner_bit_and(mask);
             let threshold = mask_div2 + is_negative;
 
-            let out = x_high.inner_shr(effective_shift)
+            let out = product_high.inner_shr(full_shift)
                 + if remainder > threshold {
                     LT::ONE
                 } else {
@@ -234,7 +235,7 @@ where
     let output_zero_point = LT::from(output_zero_point);
 
     // TODO: Add associated constant MAX_PLUS_ONE to InnerType.
-    let xt_pow2_bits_minus_one = LT::pow2_double(LT::BITS - 1);
+    // let xt_pow2_bits_minus_one = LT::pow2_double(LT::BITS - 1);
 
     // NOTE: Notice that they are independent of the input. Perhaps it is meaningful to turn:
     // xt_pow2_bits_minus_one, non_neg_nudge, and neg_nudge
@@ -257,18 +258,24 @@ where
                 neg_nudge
             };
 
-            let x = LT::Double::from(*x) * effective_multiplier;
+            let product = LT::Double::from(*x) * effective_multiplier;
 
-            // assert(effective_shift <= 31);
+            // println!("PRODUCT (BEFORE) = {:?}", product);
 
-            let right_shift = effective_shift + 31 as usize;
+            // let product = LT::inner_shr_double(product, effective_shift); // product / LT::pow2_double(effective_shift);
 
-            let x = LT::inner_shr_double(x, right_shift); // x >> right_shift;
+            // println!("PRODUCT (AFTER)  = {:?}", product);
 
-            let x_high =
-                LT::inner_try_from((LT::Double::from(nudge) + x) / xt_pow2_bits_minus_one).unwrap();
+            let product_high = LT::inner_try_from(LT::inner_shr_double(
+                LT::Double::from(nudge) + product,
+                effective_shift,
+            ))
+            .unwrap();
+            // LT::inner_try_from((LT::Double::from(nudge) + product) / xt_pow2_bits_minus_one).unwrap();
 
-            let shifted_out = x_high + output_zero_point;
+            // println!("PRODUCT_HIGH: {product_high:?}\n");
+
+            let shifted_out = product_high + output_zero_point;
 
             ST::try_from(partial_ord_clamp(
                 shifted_out,

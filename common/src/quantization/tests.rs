@@ -101,3 +101,29 @@ fn test_ref_noop() {
     // panics because 1.0 = 0.5 * 2^1 and the exponent is positive.
     let _ = quantize_multiplier(double_mul);
 }
+
+#[test]
+fn test_ref_specific() {
+    let double_mul = 0.0003099559683924777;
+    let (effective_mul, full_shift) = quantize_multiplier(double_mul);
+    let output_zero_point = 0;
+    let output = vec![0, 1, 2, 3, 4, 5, 6, i32::MAX];
+
+    let expected = vec![0, 0, 0, 0, 0, 0, 0, 665625];
+    let actual = requantise_ref(&output, effective_mul, full_shift, output_zero_point);
+    assert_eq!(expected, actual);
+}
+
+#[test]
+fn test_simplified_specific() {
+    let double_mul = 0.0003099559683924777;
+    let (effective_mul, full_shift) = quantize_multiplier(double_mul);
+    let output_zero_point = 0;
+    let output = vec![0, 1, 2, 3, 4, 5, 6, i32::MAX];
+
+    let effective_shift = full_shift + (i32::BITS - 1) as usize;
+
+    let expected = vec![0, 0, 0, 0, 0, 0, 0, 665625];
+    let actual = requantise_simplified(&output, effective_mul, effective_shift, output_zero_point);
+    assert_eq!(expected, actual);
+}
