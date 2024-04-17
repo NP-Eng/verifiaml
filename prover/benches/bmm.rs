@@ -7,14 +7,15 @@ use ark_poly_commit::PolynomialCommitment;
 use ark_std::{rand::Rng, test_rng};
 use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion};
 use hcs_common::{
-    compatibility::example_models::fully_connected_layer::parameters::{S_INPUT, Z_INPUT},
-    python::*,
-    quantise_f32_u8_nne, test_sponge, BMMNode, InferenceProof, Ligero, Model, Node, NodeCommitment,
-    NodeCommitmentState, Poly, QArray, RequantiseBMMNode,
+    python::*, quantise_f32_u8_nne, test_sponge, BMMNode, InferenceProof, Ligero, Model, Node,
+    NodeCommitment, NodeCommitmentState, Poly, QArray, RequantiseBMMNode,
 };
 use hcs_prover::ProveModel;
 use hcs_verifier::VerifyModel;
 use pyo3::Python;
+
+pub const S_INPUT: f32 = 0.003921568859368563;
+pub const Z_INPUT: u8 = 0;
 
 const S_I: f32 = 0.003921568859368563;
 const Z_I: i8 = -128;
