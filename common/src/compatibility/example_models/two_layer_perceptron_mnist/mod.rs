@@ -58,7 +58,6 @@ where
         BMMRequantizationStrategy::SingleRound => Node::RequantiseBMMSimplified(
             RequantiseBMMSimplifiedNode::new(INTER_DIM, S_1_I, S_1_W, S_1_O, Z_1_O),
         ),
-        _ => unimplemented!(),
     };
 
     let relu: ReLUNode<i8> = ReLUNode::new(28, Z_1_O);
@@ -72,7 +71,9 @@ where
         BMMRequantizationStrategy::Reference => Node::RequantiseBMMRef(RequantiseBMMRefNode::new(
             OUTPUT_DIM, S_2_I, S_2_W, S_2_O, Z_2_O,
         )),
-        _ => unimplemented!(),
+        BMMRequantizationStrategy::SingleRound => Node::RequantiseBMMSimplified(
+            RequantiseBMMSimplifiedNode::new(OUTPUT_DIM, S_2_I, S_2_W, S_2_O, Z_2_O),
+        ),
     };
 
     Model::new(
