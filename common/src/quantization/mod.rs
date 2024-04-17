@@ -297,6 +297,9 @@ pub(crate) fn quantize_multiplier(double_multiplier: f64) -> (i32, usize) {
 
     let (q, expon) = frexp(double_multiplier);
 
+    // TODO remove
+    println!("double_multiplier: {double_multiplier}, q: {q}, expon: {expon}");
+
     assert!(
         expon <= 0,
         "expon should be non-positive. Got: {} instead.",
@@ -340,6 +343,9 @@ pub(crate) fn quantize_multiplier(double_multiplier: f64) -> (i32, usize) {
         shift = 0;
         q_fixed = 0;
     }
+
+    // TODO remove
+    println!("x: {double_multiplier}, q_fixed: {q_fixed}, shift: {shift}");
 
     (q_fixed as i32, shift)
 }

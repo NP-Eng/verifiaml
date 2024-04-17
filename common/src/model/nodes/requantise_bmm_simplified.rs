@@ -17,7 +17,7 @@ pub struct RequantiseBMMSimplifiedNode<ST, LT> {
     pub padded_size_log: usize,
 
     // Represents a non-negative effective right shift
-    effective_shift: usize,
+    full_shift: usize,
 
     //
     effective_multiplier: LT,
@@ -66,7 +66,7 @@ where
         let output: QArray<ST> = requantise_simplified::<ST, LT>(
             input.values(),
             self.effective_multiplier,
-            self.effective_shift,
+            self.full_shift,
             self.output_zero_point,
         )
         .into();
@@ -110,7 +110,7 @@ where
         let output: QArray<ST> = requantise_simplified::<ST, LT>(
             input.values(),
             self.effective_multiplier,
-            self.effective_shift,
+            self.full_shift,
             self.output_zero_point,
         )
         .into();
@@ -127,12 +127,12 @@ impl RequantiseBMMSimplifiedNode<i8, i32> {
         let double_multiplier = s_i * s_w / s_o;
 
         // compute full shift and effective multiplier
-        let (effective_multiplier, full_shift) = quantize_multiplier(double_multiplier);
+        let (effective_multiplier, effective_shift) = quantize_multiplier(double_multiplier);
 
         Self {
             size,
             padded_size_log,
-            effective_shift: full_shift + (i32::BITS - 1) as usize,
+            full_shift: effective_shift + (i32::BITS - 1) as usize,
             effective_multiplier,
             output_zero_point: z_o,
         }

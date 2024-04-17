@@ -173,27 +173,27 @@ mod tests {
     }
 
     #[test]
-    fn test_two_layer_perceptron_without_ref_requantisation() {
+    fn test_two_layer_perceptron_req_float() {
         run_model_all_outputs("QTwoLayerPerceptron", BMMRequantizationStrategy::Floating);
     }
 
     #[test]
-    fn test_simple_perceptron_without_ref_requantisation() {
+    fn test_simple_perceptron__req_float() {
         run_model_all_outputs("QSimplePerceptron", BMMRequantizationStrategy::Floating);
     }
 
     #[test]
-    fn test_two_layer_perceptron_with_ref_requantisation() {
+    fn test_two_layer_perceptron_req_ref() {
         run_model_all_outputs("QTwoLayerPerceptron", BMMRequantizationStrategy::Reference);
     }
 
     #[test]
-    fn test_simple_perceptron_with_ref_requantisation() {
+    fn test_simple_perceptron_req_ref() {
         run_model_all_outputs("QSimplePerceptron", BMMRequantizationStrategy::Reference);
     }
 
     #[test]
-    fn test_two_layer_perceptron_with_simplified_requantisation() {
+    fn test_two_layer_perceptron_req_single() {
         run_model_all_outputs(
             "QTwoLayerPerceptron",
             BMMRequantizationStrategy::SingleRound,
@@ -201,7 +201,7 @@ mod tests {
     }
 
     #[test]
-    fn test_simple_perceptron_with_simplified_requantisation() {
+    fn test_simple_perceptron_req_single() {
         run_model_all_outputs("QSimplePerceptron", BMMRequantizationStrategy::SingleRound);
     }
 }
