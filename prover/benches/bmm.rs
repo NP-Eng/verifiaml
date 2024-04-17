@@ -1,18 +1,55 @@
 #![cfg(feature = "python")]
+
 use ark_bn254::Fr;
-use ark_crypto_primitives::sponge::poseidon::PoseidonSponge;
-use ark_std::test_rng;
+use ark_crypto_primitives::sponge::{poseidon::PoseidonSponge, Absorb, CryptographicSponge};
+use ark_ff::PrimeField;
+use ark_poly_commit::PolynomialCommitment;
+use ark_std::{rand::Rng, test_rng};
 use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion};
 use hcs_common::{
-    compatibility::example_models::fully_connected_layer::{
-        build_fully_connected_layer_mnist,
-        parameters::{S_INPUT, Z_INPUT},
-    },
+    compatibility::example_models::fully_connected_layer::parameters::{S_INPUT, Z_INPUT},
     python::*,
-    quantise_f32_u8_nne, test_sponge, Ligero, NodeCommitment, NodeCommitmentState, QArray,
+    quantise_f32_u8_nne, test_sponge, BMMNode, InferenceProof, Ligero, Model, Node, NodeCommitment,
+    NodeCommitmentState, Poly, QArray, RequantiseBMMNode,
 };
 use hcs_prover::ProveModel;
 use hcs_verifier::VerifyModel;
+use pyo3::Python;
+
+const S_I: f32 = 0.003921568859368563;
+const Z_I: i8 = -128;
+const S_W: f32 = 0.012436429969966412;
+const Z_W: i8 = 0;
+const S_O: f32 = 0.1573459506034851;
+const Z_O: i8 = 47;
+
+macro_rules! PATH {
+    () => {
+        concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/benches/parameters/fully_connected_layer/{}"
+        )
+    };
+}
+
+fn build_fully_connected_layer_mnist<F, S, PCS>(resize_factor: usize) -> Model<i8, i32>
+where
+    F: PrimeField + Absorb,
+    S: CryptographicSponge,
+    PCS: PolynomialCommitment<F, Poly<F>, S>,
+{
+    let w_array: QArray<i8> = QArray::read(&format!(PATH!(), "weights.json"));
+    let b_array: QArray<i32> = QArray::read(&format!(PATH!(), "bias.json"));
+
+    let bmm: BMMNode<i8, i32> = BMMNode::new(w_array, b_array, Z_I);
+
+    let req_bmm: RequantiseBMMNode<i8> = RequantiseBMMNode::new(10, S_I, Z_I, S_W, Z_W, S_O, Z_O);
+
+    Model::new(
+        vec![resize_factor as usize * 28 * 28],
+        vec![Node::BMM(bmm), Node::RequantiseBMM(req_bmm)],
+    )
+}
 
 fn quantise_input(raw_input: &QArray<f32>) -> QArray<i8> {
     let quantised_input: QArray<u8> = QArray::new(
@@ -23,111 +60,173 @@ fn quantise_input(raw_input: &QArray<f32>) -> QArray<i8> {
     (quantised_input.cast::<i32>() - 128).cast::<i8>()
 }
 
-fn tf_inference(c: &mut Criterion) {
-    let mut group = c.benchmark_group("tf_inference");
+fn bench_fully_connected_layer(c: &mut Criterion) {
+    for resize_factor in 1..=5 {
+        let resize_factor_str = resize_factor.to_string();
+        let args: Vec<(&str, &str)> = vec![("resize_factor", &resize_factor_str), ("overwrite_cache", "True")];
+        bench_tf_inference(c, resize_factor, args.clone());
+
+        let fc_model =
+            build_fully_connected_layer_mnist::<Fr, PoseidonSponge<Fr>, Ligero<Fr>>(resize_factor);
+        let raw_input = Python::with_gil(|py| {
+            get_model_input::<Vec<f32>>(
+                py,
+                &get_model(py, "QFullyConnectedLayer", Some(args[..1].to_vec())), 
+                None,
+            )
+        });
+
+        bench_verifiaml_inference(c, &fc_model, &raw_input, resize_factor);
+
+        let mut sponge: PoseidonSponge<Fr> = test_sponge();
+        let mut rng = test_rng();
+        let (ck, vk) = fc_model
+            .setup_keys::<Fr, PoseidonSponge<Fr>, Ligero<Fr>, _>(&mut rng)
+            .unwrap();
+
+        let (node_coms, proof) = bench_verifiaml_proof(
+            c,
+            &fc_model,
+            &raw_input,
+            &ck,
+            rng,
+            &mut sponge,
+            resize_factor,
+        );
+
+        bench_verifiaml_verification::<Ligero<Fr>, PoseidonSponge<Fr>>(
+            c,
+            &fc_model,
+            &vk,
+            &node_coms,
+            &proof,
+            &mut sponge,
+            resize_factor,
+        );
+    }
+}
+
+fn bench_tf_inference(c: &mut Criterion, resize_factor: usize, args: Vec<(&str, &str)>) {
+    let mut group = c.benchmark_group("TensorFlow");
     group.sample_size(1000);
 
-    run_python(|py| {
-        let model = get_model(py, "QFullyConnectedLayer");
-        group.bench_function(BenchmarkId::new("fully connected layer", "mnist"), |b| {
-            b.iter(|| get_model_output(py, &model, None))
-        });
+    Python::with_gil(|py| {
+        let model = get_model(py, "QFullyConnectedLayer", Some(args.clone()));
+        save_model_parameters_as_qarray(py, &model, &format!(PATH!(), ""));
+        group.bench_function(
+            BenchmarkId::new(
+                "inference",
+                format!("{} params", resize_factor * 28 * 28 * 10),
+            ),
+            |b| b.iter(|| get_model_output(py, &model, None)),
+        );
     });
 }
 
-fn verifiaml_inference(c: &mut Criterion) {
-    let mut group = c.benchmark_group("verifiaml_inference");
+fn bench_verifiaml_inference(
+    c: &mut Criterion,
+    model: &Model<i8, i32>,
+    raw_input: &QArray<f32>,
+    resize_factor: usize,
+) {
+    let mut group = c.benchmark_group("verifiaml");
     group.sample_size(1000);
-    let fc_model = build_fully_connected_layer_mnist::<Fr, PoseidonSponge<Fr>, Ligero<Fr>>();
-    let raw_input = run_python(|py| {
-        get_model_input::<Vec<f32>>(py, &get_model(py, "QFullyConnectedLayer"), None)
-    });
 
     // Quantisation happens in the tf inference benchmark, so we benchmark it here
     // too in order to make the comparison as fair as possible
-    group.bench_function(BenchmarkId::new("fully connected layer", "mnist"), |b| {
-        b.iter(|| {
-            fc_model.evaluate(quantise_input(&raw_input));
-        })
-    });
+    group.bench_function(
+        BenchmarkId::new(
+            "inference",
+            format!("{} params", resize_factor * 28 * 28 * 10),
+        ),
+        |b| b.iter(|| model.evaluate(quantise_input(&raw_input))),
+    );
 }
 
-fn verifiaml_proof(c: &mut Criterion) {
-    let mut group = c.benchmark_group("verifiaml_proof");
-    group.sample_size(15);
-
-    let raw_input = run_python(|py| {
-        get_model_input::<Vec<f32>>(py, &get_model(py, "QFullyConnectedLayer"), None)
-    });
-    let fc_model = build_fully_connected_layer_mnist::<Fr, PoseidonSponge<Fr>, Ligero<Fr>>();
-
-    let mut sponge: PoseidonSponge<Fr> = test_sponge();
-    let mut rng = test_rng();
-    let (ck, _) = fc_model
-        .setup_keys::<Fr, PoseidonSponge<Fr>, Ligero<Fr>, _>(&mut rng)
-        .unwrap();
-
-    let (node_coms, node_com_states): (
-        Vec<NodeCommitment<Fr, PoseidonSponge<Fr>, Ligero<Fr>>>,
-        Vec<NodeCommitmentState<Fr, PoseidonSponge<Fr>, Ligero<Fr>>>,
-    ) = fc_model.commit(&ck, None).into_iter().unzip();
-
-    group.bench_function(BenchmarkId::new("fully connected layer", "mnist"), |b| {
-        b.iter(|| {
-            // Quantisation happens in the tf inference benchmark, so we benchmark it here
-            // too in order to make the comparison as fair as possible
-            fc_model.prove_inference(
-                &ck,
-                Some(&mut rng),
-                &mut sponge,
-                &node_coms,
-                &node_com_states,
-                quantise_input(&raw_input),
-            );
-        })
-    });
-}
-
-fn verifiaml_verification(c: &mut Criterion) {
-    let mut group = c.benchmark_group("verifiaml_verification");
-    let fc_model = build_fully_connected_layer_mnist::<Fr, PoseidonSponge<Fr>, Ligero<Fr>>();
-
-    let raw_input = run_python(|py| {
-        get_model_input::<Vec<f32>>(py, &get_model(py, "QFullyConnectedLayer"), None)
-    });
-
-    let mut sponge: PoseidonSponge<Fr> = test_sponge();
-    let mut rng = test_rng();
-    let (ck, vk) = fc_model
-        .setup_keys::<Fr, PoseidonSponge<Fr>, Ligero<Fr>, _>(&mut rng)
-        .unwrap();
+fn bench_verifiaml_proof<PCS, S>(
+    c: &mut Criterion,
+    model: &Model<i8, i32>,
+    raw_input: &QArray<f32>,
+    ck: &PCS::CommitterKey,
+    mut rng: impl Rng,
+    sponge: &mut S,
+    resize_factor: usize,
+) -> (
+    Vec<NodeCommitment<Fr, S, PCS>>,
+    InferenceProof<Fr, S, PCS, i8, i32>,
+)
+where
+    S: CryptographicSponge,
+    PCS: PolynomialCommitment<Fr, Poly<Fr>, S>,
+{
+    let mut group = c.benchmark_group("verifiaml");
+    group.sample_size(1000);
 
     let (node_coms, node_com_states): (
-        Vec<NodeCommitment<Fr, PoseidonSponge<Fr>, Ligero<Fr>>>,
-        Vec<NodeCommitmentState<Fr, PoseidonSponge<Fr>, Ligero<Fr>>>,
-    ) = fc_model.commit(&ck, None).into_iter().unzip();
+        Vec<NodeCommitment<Fr, S, PCS>>,
+        Vec<NodeCommitmentState<Fr, S, PCS>>,
+    ) = model.commit(ck, None).into_iter().unzip();
 
-    let proof = fc_model.prove_inference(
-        &ck,
+    group.bench_function(
+        BenchmarkId::new(
+            "proof",
+            format!("{} params", resize_factor * 28 * 28 * 10),
+        ),
+        |b| {
+            b.iter(|| {
+                // Quantisation happens in the tf inference benchmark, so we benchmark it here
+                // too in order to make the comparison as fair as possible
+                model.prove_inference(
+                    ck,
+                    Some(&mut rng),
+                    sponge,
+                    &node_coms,
+                    &node_com_states,
+                    quantise_input(&raw_input),
+                );
+            })
+        },
+    );
+
+    let proof = model.prove_inference(
+        ck,
         Some(&mut rng),
-        &mut sponge,
+        sponge,
         &node_coms,
         &node_com_states,
         quantise_input(&raw_input),
     );
 
-    group.bench_function(BenchmarkId::new("fully connected layer", "mnist"), |b| {
-        b.iter(|| {
-            fc_model.verify_inference(&vk, &mut sponge, &node_coms, &proof);
-        })
-    });
+    (node_coms, proof)
 }
 
-criterion_group!(
-    benches,
-    tf_inference,
-    verifiaml_inference,
-    verifiaml_proof,
-    verifiaml_verification
-);
+fn bench_verifiaml_verification<PCS, S>(
+    c: &mut Criterion,
+    model: &Model<i8, i32>,
+    vk: &PCS::VerifierKey,
+    node_coms: &Vec<NodeCommitment<Fr, S, PCS>>,
+    proof: &InferenceProof<Fr, S, PCS, i8, i32>,
+    sponge: &mut S,
+    resize_factor: usize,
+) where
+    S: CryptographicSponge,
+    PCS: PolynomialCommitment<Fr, Poly<Fr>, S>,
+{
+    let mut group = c.benchmark_group("verifiaml");
+    group.sample_size(1000);
+
+    group.bench_function(
+        BenchmarkId::new(
+            "verification",
+            format!("{} params", resize_factor * 28 * 28 * 10),
+        ),
+        |b| {
+            b.iter(|| {
+                model.verify_inference(vk, sponge, node_coms, proof);
+            })
+        },
+    );
+}
+
+criterion_group!(benches, bench_fully_connected_layer);
 criterion_main!(benches);

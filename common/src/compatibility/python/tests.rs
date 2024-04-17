@@ -51,7 +51,7 @@ fn unpadded_inference(
 fn test_simple_perceptron_mnist_single_input() {
     let expected_input = QArray::read("examples/simple_perceptron_mnist/data/input_test_150.json");
     assert_eq!(
-        run_python(|py| get_model_input::<Vec<Vec<f32>>>(
+        Python::with_gil(|py| get_model_input::<Vec<Vec<f32>>>(
             py,
             &get_model(py, "QSimplePerceptron", None),
             None
@@ -65,7 +65,7 @@ fn test_two_layer_perceptron_mnist_single_input() {
     let expected_input =
         QArray::read("examples/two_layer_perceptron_mnist/data/input_test_150.json");
     assert_eq!(
-        run_python(|py| get_model_input::<Vec<Vec<f32>>>(
+        Python::with_gil(|py| get_model_input::<Vec<Vec<f32>>>(
             py,
             &get_model(py, "QTwoLayerPerceptron", None),
             None
@@ -79,7 +79,11 @@ fn test_simple_perceptron_mnist_single_output() {
     let expected_output =
         QArray::read("examples/simple_perceptron_mnist/data/output_test_150.json");
     assert_eq!(
-        run_python(|py| get_model_output(py, &get_model(py, "QSimplePerceptron", None), None)),
+        Python::with_gil(|py| get_model_output(
+            py,
+            &get_model(py, "QSimplePerceptron", None),
+            None
+        )),
         expected_output
     );
 }
@@ -89,7 +93,11 @@ fn test_two_layer_perceptron_mnist_single_output() {
     let expected_output =
         QArray::read("examples/two_layer_perceptron_mnist/data/output_test_150.json");
     assert_eq!(
-        run_python(|py| get_model_output(py, &get_model(py, "QTwoLayerPerceptron", None), None)),
+        Python::with_gil(|py| get_model_output(
+            py,
+            &get_model(py, "QTwoLayerPerceptron", None),
+            None
+        )),
         expected_output
     );
 }
@@ -99,7 +107,7 @@ fn test_two_layer_perceptron_mnist_all_outputs() {
     let two_layer_perceptron_mnist =
         build_two_layer_perceptron_mnist::<Fr, PoseidonSponge<Fr>, Ligero<Fr>>();
 
-    let correct_samples: usize = run_python(|py| {
+    let correct_samples: usize = Python::with_gil(|py| {
         let tf_lite_model = get_model(py, "QTwoLayerPerceptron", None);
         (0..NB_OUTPUTS)
             .into_iter()
@@ -138,7 +146,7 @@ fn test_simple_perceptron_mnist_all_outputs() {
     let simple_perceptron_mnist =
         build_simple_perceptron_mnist::<Fr, PoseidonSponge<Fr>, Ligero<Fr>>();
 
-    let correct_samples: usize = run_python(|py| {
+    let correct_samples: usize = Python::with_gil(|py| {
         let tf_lite_model = get_model(py, "QSimplePerceptron", None);
         (0..NB_OUTPUTS)
             .into_iter()

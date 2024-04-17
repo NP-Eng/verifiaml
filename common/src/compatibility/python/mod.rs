@@ -10,13 +10,6 @@ const PERCEPTRON_PATH: &str = include_str!(concat!(
     "/../exploring_tf_lite/q_model_runner.py"
 ));
 
-pub fn run_python<F, K>(f: F) -> K
-where
-    F: FnOnce(Python) -> K,
-{
-    Python::with_gil(|py| f(py))
-}
-
 pub fn get_model(py: Python, model_name: &str, args: Option<Vec<(&str, &str)>>) -> Py<PyAny> {
     let func: Py<PyAny> = PyModule::from_code_bound(py, PERCEPTRON_PATH, "", "")
         .unwrap()
@@ -24,6 +17,10 @@ pub fn get_model(py: Python, model_name: &str, args: Option<Vec<(&str, &str)>>) 
         .unwrap()
         .into();
     func.call1(py, (model_name, args)).unwrap()
+}
+
+pub fn save_model_parameters_as_qarray(py: Python, model: &Py<PyAny>, path: &str) {
+    model.call_method1(py, "save_params_as_qarray", (path,)).unwrap();
 }
 
 pub fn get_model_input<'py, T>(
