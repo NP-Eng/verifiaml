@@ -56,7 +56,6 @@ where
         BMMRequantizationStrategy::SingleRound => Node::RequantiseBMMSimplified(
             RequantiseBMMSimplifiedNode::new(OUTPUT_DIM, S_I, S_W, S_O, Z_O),
         ),
-        _ => unimplemented!(),
     };
 
     Model::new(

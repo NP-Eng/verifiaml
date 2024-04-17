@@ -249,11 +249,6 @@ where
     let non_neg_nudge = LT::pow2_double(full_shift - 1);
     let neg_nudge = non_neg_nudge - LT::Double::from(LT::ONE); // keep this here
 
-    let two_pow_shift = LT::pow2_double(full_shift);
-
-    // TODO remove
-    println!("non_neg_nudge: {non_neg_nudge:?}, neg_nudge: {neg_nudge:?}, two_pow_shift: {two_pow_shift:?}");
-
     // Requantize
     // TODO add rayon for parallelization?
     output
@@ -264,20 +259,6 @@ where
             } else {
                 neg_nudge
             };
-
-            println!("LT::Double::from(*x): {:?}", LT::Double::from(*x));
-            println!(
-                "LT::Double::from(*x) * effective_multiplier: {:?}",
-                LT::Double::from(*x) * effective_multiplier
-            );
-            println!(
-                "LT::Double::from(*x) * effective_multiplier + nudge: {:?}",
-                LT::Double::from(*x) * effective_multiplier + nudge
-            );
-            println!(
-                "LT::Double::from(*x) * effective_multiplier + nudge) / two_pow_shift: {:?}",
-                (LT::Double::from(*x) * effective_multiplier + nudge) / two_pow_shift
-            );
 
             let core = LT::inner_try_from(LT::inner_shr_double(
                 LT::Double::from(*x) * effective_multiplier + nudge,
@@ -306,9 +287,6 @@ pub(crate) fn quantize_multiplier(double_multiplier: f64) -> (i32, usize) {
     }
 
     let (q, expon) = frexp(double_multiplier);
-
-    // TODO remove
-    println!("double_multiplier: {double_multiplier}, q: {q}, expon: {expon}");
 
     assert!(
         expon <= 0,
@@ -353,9 +331,6 @@ pub(crate) fn quantize_multiplier(double_multiplier: f64) -> (i32, usize) {
         shift = 0;
         q_fixed = 0;
     }
-
-    // TODO remove
-    println!("x: {double_multiplier}, q_fixed: {q_fixed}, shift: {shift}");
 
     (q_fixed as i32, shift)
 }
