@@ -70,8 +70,9 @@ fn bench_fully_connected_layer(c: &mut Criterion) {
         ];
         bench_tf_inference(c, resize_factor, args.clone());
 
-        let fc_model =
-            build_fully_connected_layer_mnist::<Fr, PoseidonSponge<Fr>, Ligero<Fr>>(resize_factor);
+        let fc_model = build_fully_connected_layer_mnist::<Fr, PoseidonSponge<Fr>, Ligero<Fr>>(
+            resize_factor * resize_factor,
+        );
         let raw_input = Python::with_gil(|py| {
             get_model_input::<Vec<f32>>(
                 py,
@@ -112,7 +113,7 @@ fn bench_fully_connected_layer(c: &mut Criterion) {
 
 fn bench_tf_inference(c: &mut Criterion, resize_factor: usize, args: Vec<(&str, &str)>) {
     let mut group = c.benchmark_group("TensorFlow");
-    group.sample_size(10);
+    group.sample_size(1000);
 
     Python::with_gil(|py| {
         let model = get_model(py, "QFullyConnectedLayer", Some(args.clone()));
@@ -120,7 +121,7 @@ fn bench_tf_inference(c: &mut Criterion, resize_factor: usize, args: Vec<(&str, 
         group.bench_function(
             BenchmarkId::new(
                 "inference",
-                format!("{} params", resize_factor * 28 * 28 * 10),
+                format!("{} params", resize_factor * resize_factor * 28 * 28 * 10),
             ),
             |b| b.iter(|| get_model_output(py, &model, None)),
         );
@@ -134,14 +135,14 @@ fn bench_verifiaml_inference(
     resize_factor: usize,
 ) {
     let mut group = c.benchmark_group("verifiaml");
-    group.sample_size(10);
+    group.sample_size(1000);
 
     // Quantisation happens in the tf inference benchmark, so we benchmark it here
     // too in order to make the comparison as fair as possible
     group.bench_function(
         BenchmarkId::new(
             "inference",
-            format!("{} params", resize_factor * 28 * 28 * 10),
+            format!("{} params", resize_factor * resize_factor * 28 * 28 * 10),
         ),
         |b| b.iter(|| model.evaluate(quantise_input(&raw_input))),
     );
@@ -164,7 +165,7 @@ where
     PCS: PolynomialCommitment<Fr, Poly<Fr>, S>,
 {
     let mut group = c.benchmark_group("verifiaml");
-    group.sample_size(10);
+    group.sample_size(1000);
 
     let (node_coms, node_com_states): (
         Vec<NodeCommitment<Fr, S, PCS>>,
@@ -172,7 +173,10 @@ where
     ) = model.commit(ck, None).into_iter().unzip();
 
     group.bench_function(
-        BenchmarkId::new("proof", format!("{} params", resize_factor * 28 * 28 * 10)),
+        BenchmarkId::new(
+            "proof",
+            format!("{} params", resize_factor * resize_factor * 28 * 28 * 10),
+        ),
         |b| {
             b.iter(|| {
                 // Quantisation happens in the tf inference benchmark, so we benchmark it here
@@ -214,12 +218,12 @@ fn bench_verifiaml_verification<PCS, S>(
     PCS: PolynomialCommitment<Fr, Poly<Fr>, S>,
 {
     let mut group = c.benchmark_group("verifiaml");
-    group.sample_size(10);
+    group.sample_size(1000);
 
     group.bench_function(
         BenchmarkId::new(
             "verification",
-            format!("{} params", resize_factor * 28 * 28 * 10),
+            format!("{} params", resize_factor * resize_factor * 28 * 28 * 10),
         ),
         |b| {
             b.iter(|| {
