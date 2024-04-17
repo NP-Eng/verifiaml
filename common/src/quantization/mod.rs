@@ -218,8 +218,8 @@ where
         .collect()
 }
 
-// Implementation of a simplified version of TF Lite's reference requantization.
-pub fn requantize_simplified<ST, LT>(
+// Implementation of single-rounding requantisation with quantised parameters
+pub fn requantize_single_round<ST, LT>(
     // TODO Think whether we can afford to pass ownership here and change the iter() below by into_iter()
     output: &[LT],
     effective_multiplier: LT,

@@ -61,6 +61,6 @@ where
         Node::Reshape(r) => r,
         // TODO add Node::RequantizeBMMRef(r) => r, once the latter implements NodeOpsVerify
         Node::RequantizeBMMRef(_) => unimplemented!(),
-        Node::RequantizeBMMSimplified(_) => unimplemented!(),
+        Node::RequantizeBMMSingle(_) => unimplemented!(),
     }
 }

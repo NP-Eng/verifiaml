@@ -7,8 +7,7 @@ use parameters::*;
 
 use crate::{
     model::nodes::{
-        requantize_bmm_ref::RequantizeBMMRefNode,
-        requantize_bmm_simplified::RequantizeBMMSimplifiedNode,
+        requantize_bmm_ref::RequantizeBMMRefNode, requantize_bmm_single::RequantizeBMMSingleNode,
     },
     quantization::BMMRequantizationStrategy,
     BMMNode, Model, Node, Poly, QArray, ReLUNode, RequantizeBMMFloatNode, ReshapeNode,
@@ -55,8 +54,8 @@ where
         BMMRequantizationStrategy::Reference => Node::RequantizeBMMRef(RequantizeBMMRefNode::new(
             INTER_DIM, S_1_I, S_1_W, S_1_O, Z_1_O,
         )),
-        BMMRequantizationStrategy::SingleRound => Node::RequantizeBMMSimplified(
-            RequantizeBMMSimplifiedNode::new(INTER_DIM, S_1_I, S_1_W, S_1_O, Z_1_O),
+        BMMRequantizationStrategy::SingleRound => Node::RequantizeBMMSingle(
+            RequantizeBMMSingleNode::new(INTER_DIM, S_1_I, S_1_W, S_1_O, Z_1_O),
         ),
     };
 
@@ -71,8 +70,8 @@ where
         BMMRequantizationStrategy::Reference => Node::RequantizeBMMRef(RequantizeBMMRefNode::new(
             OUTPUT_DIM, S_2_I, S_2_W, S_2_O, Z_2_O,
         )),
-        BMMRequantizationStrategy::SingleRound => Node::RequantizeBMMSimplified(
-            RequantizeBMMSimplifiedNode::new(OUTPUT_DIM, S_2_I, S_2_W, S_2_O, Z_2_O),
+        BMMRequantizationStrategy::SingleRound => Node::RequantizeBMMSingle(
+            RequantizeBMMSingleNode::new(OUTPUT_DIM, S_2_I, S_2_W, S_2_O, Z_2_O),
         ),
     };
 

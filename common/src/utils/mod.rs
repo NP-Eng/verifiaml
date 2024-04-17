@@ -10,7 +10,7 @@ macro_rules! node_op {
             Node::BMM(node) => node.$method(),
             Node::RequantizeBMMFloat(node) => node.$method(),
             Node::RequantizeBMMRef(node) => node.$method(),
-            Node::RequantizeBMMSimplified(node) => node.$method(),
+            Node::RequantizeBMMSingle(node) => node.$method(),
             Node::ReLU(node) => node.$method(),
             Node::Reshape(node) => $trait::<I, _>::$method(node),
         }

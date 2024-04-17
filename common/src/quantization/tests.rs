@@ -116,7 +116,7 @@ fn test_ref_specific() {
 }
 
 #[test]
-fn test_simplified_specific() {
+fn test_single_specific() {
     let double_mul = 0.0003099559683924777;
     let (effective_mul, effective_shift) = quantize_multiplier(double_mul);
     let output_zero_point = 0;
@@ -125,7 +125,7 @@ fn test_simplified_specific() {
     let full_shift = effective_shift + (i32::BITS - 1) as usize;
 
     let expected = vec![0, 0, 0, 0, 0, 0, 0, 665625];
-    let actual = requantize_simplified(&output, effective_mul, full_shift, output_zero_point);
+    let actual = requantize_single_round(&output, effective_mul, full_shift, output_zero_point);
     assert_eq!(expected, actual);
 }
 
@@ -161,7 +161,7 @@ fn compare_three_requantizations() {
         effective_shift,
         bmm_req_info.output_info.zero_point,
     );
-    let req_single = requantize_simplified::<i8, i32>(
+    let req_single = requantize_single_round::<i8, i32>(
         x,
         effective_mul,
         full_shift,
@@ -198,7 +198,7 @@ fn compare_req_float_and_single() {
     let full_shift = effective_shift + (i32::BITS - 1) as usize;
 
     let req_float = requantize_fc_ntafz::<i8, i32>(x, &bmm_req_info);
-    let req_single = requantize_simplified::<i8, i32>(
+    let req_single = requantize_single_round::<i8, i32>(
         x,
         effective_mul,
         full_shift,

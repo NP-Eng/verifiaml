@@ -1,7 +1,7 @@
 use ark_std::log2;
 
 use crate::model::qarray::{InnerType, QArray};
-use crate::quantization::{quantize_multiplier, requantize_simplified};
+use crate::quantization::{quantize_multiplier, requantize_single_round};
 use crate::{Commitment, CommitmentState};
 
 use super::{NodeOpsNative, NodeOpsPadded};
@@ -9,7 +9,7 @@ use super::{NodeOpsNative, NodeOpsPadded};
 // TODO convention: input, bias and output are rows, the op is vec-by-mat (in that order)
 
 /// Apply requantization after a BMM argument
-pub struct RequantizeBMMSimplifiedNode<ST, LT> {
+pub struct RequantizeBMMSingleNode<ST, LT> {
     // Number of units
     size: usize,
 
@@ -26,19 +26,19 @@ pub struct RequantizeBMMSimplifiedNode<ST, LT> {
     output_zero_point: ST,
 }
 
-pub struct RequantizeBMMSimplifiedNodeCommitment();
+pub struct RequantizeBMMSingleNodeCommitment();
 
-impl Commitment for RequantizeBMMSimplifiedNodeCommitment {}
+impl Commitment for RequantizeBMMSingleNodeCommitment {}
 
-pub struct RequantizeBMMSimplifiedNodeCommitmentState();
+pub struct RequantizeBMMSingleNodeCommitmentState();
 
-impl CommitmentState for RequantizeBMMSimplifiedNodeCommitmentState {}
+impl CommitmentState for RequantizeBMMSingleNodeCommitmentState {}
 
-pub struct RequantizeBMMSimplifiedNodeProof {
+pub struct RequantizeBMMSingleNodeProof {
     // this will be the sumcheck proof
 }
 
-impl<ST, LT> NodeOpsNative<LT, ST> for RequantizeBMMSimplifiedNode<ST, LT>
+impl<ST, LT> NodeOpsNative<LT, ST> for RequantizeBMMSingleNode<ST, LT>
 where
     ST: InnerType + TryFrom<LT>,
     LT: InnerType + From<ST>,
@@ -53,17 +53,17 @@ where
         assert_eq!(
             input.num_dims(),
             1,
-            "Incorrect shape: RequantizeBMMSimplified node expects a 1-dimensional input array"
+            "Incorrect shape: RequantizeBMMSingle node expects a 1-dimensional input array"
         );
         assert_eq!(
             self.size,
             input.len(),
-            "Length mismatch: RequantizeBMMSimplified node expects input with {} elements, got {} elements instead",
+            "Length mismatch: RequantizeBMMSingle node expects input with {} elements, got {} elements instead",
             self.size,
             input.len()
         );
 
-        let output: QArray<ST> = requantize_simplified::<ST, LT>(
+        let output: QArray<ST> = requantize_single_round::<ST, LT>(
             input.values(),
             self.effective_multiplier,
             self.full_shift,
@@ -75,7 +75,7 @@ where
     }
 }
 
-impl<ST, LT> NodeOpsPadded<LT, ST> for RequantizeBMMSimplifiedNode<ST, LT>
+impl<ST, LT> NodeOpsPadded<LT, ST> for RequantizeBMMSingleNode<ST, LT>
 where
     ST: InnerType + TryFrom<LT>,
     LT: InnerType + From<ST>,
@@ -96,7 +96,7 @@ where
         assert_eq!(
             input.num_dims(),
             1,
-            "Incorrect shape: RequantizeBMMSimplified node expects a 1-dimensional input array"
+            "Incorrect shape: RequantizeBMMSingle node expects a 1-dimensional input array"
         );
 
         assert_eq!(
@@ -107,7 +107,7 @@ where
             input.len()
         );
 
-        let output: QArray<ST> = requantize_simplified::<ST, LT>(
+        let output: QArray<ST> = requantize_single_round::<ST, LT>(
             input.values(),
             self.effective_multiplier,
             self.full_shift,
@@ -118,7 +118,7 @@ where
     }
 }
 
-impl RequantizeBMMSimplifiedNode<i8, i32> {
+impl RequantizeBMMSingleNode<i8, i32> {
     pub fn new(size: usize, s_i: f32, s_w: f32, s_o: f32, z_o: i8) -> Self {
         let padded_size_log = log2(size.next_power_of_two()) as usize;
 

@@ -1,7 +1,6 @@
 use crate::{
     model::nodes::{
-        requantize_bmm_ref::RequantizeBMMRefNode,
-        requantize_bmm_simplified::RequantizeBMMSimplifiedNode,
+        requantize_bmm_ref::RequantizeBMMRefNode, requantize_bmm_single::RequantizeBMMSingleNode,
     },
     quantization::BMMRequantizationStrategy,
     BMMNode, Model, Node, Poly, QArray, RequantizeBMMFloatNode, ReshapeNode,
@@ -53,9 +52,9 @@ where
         BMMRequantizationStrategy::Reference => {
             Node::RequantizeBMMRef(RequantizeBMMRefNode::new(OUTPUT_DIM, S_I, S_W, S_O, Z_O))
         }
-        BMMRequantizationStrategy::SingleRound => Node::RequantizeBMMSimplified(
-            RequantizeBMMSimplifiedNode::new(OUTPUT_DIM, S_I, S_W, S_O, Z_O),
-        ),
+        BMMRequantizationStrategy::SingleRound => {
+            Node::RequantizeBMMSingle(RequantizeBMMSingleNode::new(OUTPUT_DIM, S_I, S_W, S_O, Z_O))
+        }
     };
 
     Model::new(

@@ -20,9 +20,9 @@ use self::{
         RequantizeBMMRefNode, RequantizeBMMRefNodeCommitment, RequantizeBMMRefNodeCommitmentState,
         RequantizeBMMRefNodeProof,
     },
-    requantize_bmm_simplified::{
-        RequantizeBMMSimplifiedNode, RequantizeBMMSimplifiedNodeCommitment,
-        RequantizeBMMSimplifiedNodeCommitmentState, RequantizeBMMSimplifiedNodeProof,
+    requantize_bmm_single::{
+        RequantizeBMMSingleNode, RequantizeBMMSingleNodeCommitment,
+        RequantizeBMMSingleNodeCommitmentState, RequantizeBMMSingleNodeProof,
     },
     reshape::ReshapeNode,
 };
@@ -33,7 +33,7 @@ pub(crate) mod bmm;
 pub(crate) mod relu;
 pub(crate) mod requantize_bmm_float;
 pub(crate) mod requantize_bmm_ref;
-pub(crate) mod requantize_bmm_simplified;
+pub(crate) mod requantize_bmm_single;
 pub(crate) mod reshape;
 
 // mod parser;
@@ -99,7 +99,7 @@ pub enum Node<ST, LT> {
     BMM(BMMNode<ST, LT>),
     RequantizeBMMFloat(RequantizeBMMFloatNode<ST>),
     RequantizeBMMRef(RequantizeBMMRefNode<ST, LT>),
-    RequantizeBMMSimplified(RequantizeBMMSimplifiedNode<ST, LT>),
+    RequantizeBMMSingle(RequantizeBMMSingleNode<ST, LT>),
     ReLU(ReLUNode<ST>),
     Reshape(ReshapeNode),
 }
@@ -113,7 +113,7 @@ where
     BMM(BMMNodeProof<F, S, PCS>),
     RequantizeBMM(RequantizeBMMNodeProof),
     RequantizeBMRef(RequantizeBMMRefNodeProof),
-    RequantizeBMMSimplified(RequantizeBMMSimplifiedNodeProof),
+    RequantizeBMMSingle(RequantizeBMMSingleNodeProof),
     ReLU(()),
     Reshape(()),
 }
@@ -127,7 +127,7 @@ where
     BMM(BMMNodeCommitment<F, S, PCS>),
     RequantizeBMM(RequantizeBMMNodeCommitment),
     RequantizeBMMRef(RequantizeBMMRefNodeCommitment),
-    RequantizeBMMSimplified(RequantizeBMMSimplifiedNodeCommitment),
+    RequantizeBMMSingle(RequantizeBMMSingleNodeCommitment),
     ReLU(()),
     Reshape(()),
 }
@@ -141,7 +141,7 @@ where
     BMM(BMMNodeCommitmentState<F, S, PCS>),
     RequantizeBMM(RequantizeBMMNodeCommitmentState),
     RequantizeBMMRef(RequantizeBMMRefNodeCommitmentState),
-    RequantizeBMMSimplified(RequantizeBMMSimplifiedNodeCommitmentState),
+    RequantizeBMMSingle(RequantizeBMMSingleNodeCommitmentState),
     ReLU(()),
     Reshape(()),
 }
@@ -160,7 +160,7 @@ where
             Node::BMM(_) => "BMM",
             Node::RequantizeBMMFloat(_r) => "RequantizeBMM",
             Node::RequantizeBMMRef(_r) => "RequantizeBMMRef",
-            Node::RequantizeBMMSimplified(_r) => "RequantizeBMMSimplified",
+            Node::RequantizeBMMSingle(_r) => "RequantizeBMMSingle",
             Node::ReLU(_) => "ReLU",
             Node::Reshape(_) => "Reshape",
         }
@@ -177,7 +177,7 @@ where
             (Node::BMM(fc), QTypeArray::S(input)) => QTypeArray::L(fc.evaluate(input)),
             (Node::RequantizeBMMFloat(r), QTypeArray::L(input)) => QTypeArray::S(r.evaluate(input)),
             (Node::RequantizeBMMRef(r), QTypeArray::L(input)) => QTypeArray::S(r.evaluate(input)),
-            (Node::RequantizeBMMSimplified(r), QTypeArray::L(input)) => {
+            (Node::RequantizeBMMSingle(r), QTypeArray::L(input)) => {
                 QTypeArray::S(r.evaluate(input))
             }
             (Node::ReLU(r), QTypeArray::S(input)) => QTypeArray::S(r.evaluate(input)),
@@ -206,7 +206,7 @@ where
             (Node::RequantizeBMMRef(r), QTypeArray::L(input)) => {
                 QTypeArray::S(r.padded_evaluate(input))
             }
-            (Node::RequantizeBMMSimplified(r), QTypeArray::L(input)) => {
+            (Node::RequantizeBMMSingle(r), QTypeArray::L(input)) => {
                 QTypeArray::S(r.padded_evaluate(input))
             }
             (Node::ReLU(r), QTypeArray::S(input)) => QTypeArray::S(r.padded_evaluate(input)),
