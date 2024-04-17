@@ -223,7 +223,7 @@ pub fn requantise_simplified<ST, LT>(
     // TODO Think whether we can afford to pass ownership here and change the iter() below by into_iter()
     output: &[LT],
     effective_multiplier: LT,
-    effective_shift: usize,
+    full_shift: usize,
     output_zero_point: ST,
 ) -> Vec<ST>
 where
@@ -231,6 +231,7 @@ where
     LT: InnerType + From<ST>,
 {
     // Computing auxiliary constants used for every input
+    // TODO minor optimisation possible
     let effective_multiplier = LT::Double::from(effective_multiplier);
     let output_zero_point = LT::from(output_zero_point);
 
@@ -244,8 +245,14 @@ where
     // TODO: After splitting InnerType, rewrite pow2 to use << instead of *.
 
     // Constants used during nudging
-    let non_neg_nudge = LT::pow2(LT::BITS - 2);
-    let neg_nudge = LT::ONE - non_neg_nudge; // keep this here
+    // TODO possible optimisation
+    let non_neg_nudge = LT::pow2_double(full_shift - 1);
+    let neg_nudge = non_neg_nudge - LT::Double::from(LT::ONE); // keep this here
+
+    let two_pow_shift = LT::pow2_double(full_shift);
+
+    // TODO remove
+    println!("non_neg_nudge: {non_neg_nudge:?}, neg_nudge: {neg_nudge:?}, two_pow_shift: {two_pow_shift:?}");
 
     // Requantize
     // TODO add rayon for parallelization?
@@ -258,27 +265,30 @@ where
                 neg_nudge
             };
 
-            let product = LT::Double::from(*x) * effective_multiplier;
+            println!("LT::Double::from(*x): {:?}", LT::Double::from(*x));
+            println!(
+                "LT::Double::from(*x) * effective_multiplier: {:?}",
+                LT::Double::from(*x) * effective_multiplier
+            );
+            println!(
+                "LT::Double::from(*x) * effective_multiplier + nudge: {:?}",
+                LT::Double::from(*x) * effective_multiplier + nudge
+            );
+            println!(
+                "LT::Double::from(*x) * effective_multiplier + nudge) / two_pow_shift: {:?}",
+                (LT::Double::from(*x) * effective_multiplier + nudge) / two_pow_shift
+            );
 
-            // println!("PRODUCT (BEFORE) = {:?}", product);
-
-            // let product = LT::inner_shr_double(product, effective_shift); // product / LT::pow2_double(effective_shift);
-
-            // println!("PRODUCT (AFTER)  = {:?}", product);
-
-            let product_high = LT::inner_try_from(LT::inner_shr_double(
-                LT::Double::from(nudge) + product,
-                effective_shift,
+            let core = LT::inner_try_from(LT::inner_shr_double(
+                LT::Double::from(*x) * effective_multiplier + nudge,
+                full_shift,
             ))
             .unwrap();
-            // LT::inner_try_from((LT::Double::from(nudge) + product) / xt_pow2_bits_minus_one).unwrap();
 
-            // println!("PRODUCT_HIGH: {product_high:?}\n");
-
-            let shifted_out = product_high + output_zero_point;
+            let shifted = core + output_zero_point;
 
             ST::try_from(partial_ord_clamp(
-                shifted_out,
+                shifted,
                 LT::from(ST::MIN),
                 LT::from(ST::MAX),
             ))
