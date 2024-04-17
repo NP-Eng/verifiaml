@@ -115,7 +115,7 @@ mod tests {
         });
 
         println!(
-            "{} with requantisation strategy {:?}, discrepancies: {} out of {}",
+            "{} with requantization strategy {:?}, discrepancies: {} out of {}",
             model_name,
             req_strategy,
             NB_OUTPUTS - correct_samples,

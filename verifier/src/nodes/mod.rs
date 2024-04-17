@@ -1,4 +1,4 @@
 mod bmm;
 mod relu;
-mod requantise_bmm;
+mod requantize_bmm_float;
 mod reshape;

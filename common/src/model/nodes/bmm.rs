@@ -166,7 +166,7 @@ where
 
     // This function naively computes entries which are known to be zero. It is
     // meant to exactly mirror the proof-system multiplication proved by the
-    // sumcheck argument. Requantisation and shifting are also applied to these
+    // sumcheck argument. Requantization and shifting are also applied to these
     // trivial entries, as the proof system does.
     fn padded_evaluate(&self, input: &QArray<ST>) -> QArray<LT> {
         let padded_dims = (1 << self.padded_dims_log.0, 1 << self.padded_dims_log.1);

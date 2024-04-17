@@ -1,11 +1,11 @@
 use ark_crypto_primitives::sponge::{Absorb, CryptographicSponge};
 use ark_ff::PrimeField;
 use ark_poly_commit::{LabeledCommitment, PolynomialCommitment};
-use hcs_common::{NodeCommitment, NodeProof, Poly, RequantiseBMMFloatNode};
+use hcs_common::{NodeCommitment, NodeProof, Poly, RequantizeBMMFloatNode};
 
 use crate::NodeOpsVerify;
 
-impl<F, S, PCS, ST> NodeOpsVerify<F, S, PCS> for RequantiseBMMFloatNode<ST>
+impl<F, S, PCS, ST> NodeOpsVerify<F, S, PCS> for RequantizeBMMFloatNode<ST>
 where
     F: PrimeField + Absorb,
     S: CryptographicSponge,

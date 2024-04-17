@@ -1,10 +1,10 @@
 use crate::{
     model::nodes::{
-        requantise_bmm_ref::RequantiseBMMRefNode,
-        requantise_bmm_simplified::RequantiseBMMSimplifiedNode,
+        requantize_bmm_ref::RequantizeBMMRefNode,
+        requantize_bmm_simplified::RequantizeBMMSimplifiedNode,
     },
     quantization::BMMRequantizationStrategy,
-    BMMNode, Model, Node, Poly, QArray, RequantiseBMMFloatNode, ReshapeNode,
+    BMMNode, Model, Node, Poly, QArray, RequantizeBMMFloatNode, ReshapeNode,
 };
 
 use ark_crypto_primitives::sponge::{Absorb, CryptographicSponge};
@@ -47,14 +47,14 @@ where
     let bmm: BMMNode<i8, i32> = BMMNode::new(w_array, b_array, Z_I);
 
     let req_bmm = match req_strategy {
-        BMMRequantizationStrategy::Floating => Node::RequantiseBMMFloat(
-            RequantiseBMMFloatNode::new(OUTPUT_DIM, S_I, Z_I, S_W, Z_W, S_O, Z_O),
+        BMMRequantizationStrategy::Floating => Node::RequantizeBMMFloat(
+            RequantizeBMMFloatNode::new(OUTPUT_DIM, S_I, Z_I, S_W, Z_W, S_O, Z_O),
         ),
         BMMRequantizationStrategy::Reference => {
-            Node::RequantiseBMMRef(RequantiseBMMRefNode::new(OUTPUT_DIM, S_I, S_W, S_O, Z_O))
+            Node::RequantizeBMMRef(RequantizeBMMRefNode::new(OUTPUT_DIM, S_I, S_W, S_O, Z_O))
         }
-        BMMRequantizationStrategy::SingleRound => Node::RequantiseBMMSimplified(
-            RequantiseBMMSimplifiedNode::new(OUTPUT_DIM, S_I, S_W, S_O, Z_O),
+        BMMRequantizationStrategy::SingleRound => Node::RequantizeBMMSimplified(
+            RequantizeBMMSimplifiedNode::new(OUTPUT_DIM, S_I, S_W, S_O, Z_O),
         ),
     };
 

@@ -1,45 +1,38 @@
 use ark_std::log2;
 
 use crate::model::qarray::{InnerType, QArray};
-use crate::quantization::{quantize_multiplier, requantise_ref};
+use crate::quantization::{requantize_fc, BMMQInfo, QInfo, QScaleType, RoundingScheme};
 use crate::{Commitment, CommitmentState};
 
 use super::{NodeOpsNative, NodeOpsPadded};
 
 // TODO convention: input, bias and output are rows, the op is vec-by-mat (in that order)
 
-/// Apply requantisation after a BMM argument
-pub struct RequantiseBMMRefNode<ST, LT> {
+/// Apply requantization after a BMM argument
+pub struct RequantizeBMMFloatNode<ST> {
     // Number of units
     size: usize,
 
     // log2 of the number of units
     pub padded_size_log: usize,
 
-    // Represents a non-negative right shift reduced by the implicit
-    // fixed-point-arithmetic shift in DoublingHighRoundMultiply
-    effective_shift: usize,
-
-    //
-    effective_multiplier: LT,
-
-    //
-    output_zero_point: ST,
+    /// Quantisation info associated to the input BMM result
+    pub q_info: BMMQInfo<ST>,
 }
 
-pub struct RequantiseBMMRefNodeCommitment();
+pub struct RequantizeBMMNodeCommitment();
 
-impl Commitment for RequantiseBMMRefNodeCommitment {}
+impl Commitment for RequantizeBMMNodeCommitment {}
 
-pub struct RequantiseBMMRefNodeCommitmentState();
+pub struct RequantizeBMMNodeCommitmentState();
 
-impl CommitmentState for RequantiseBMMRefNodeCommitmentState {}
+impl CommitmentState for RequantizeBMMNodeCommitmentState {}
 
-pub struct RequantiseBMMRefNodeProof {
+pub struct RequantizeBMMNodeProof {
     // this will be the sumcheck proof
 }
 
-impl<ST, LT> NodeOpsNative<LT, ST> for RequantiseBMMRefNode<ST, LT>
+impl<ST, LT> NodeOpsNative<LT, ST> for RequantizeBMMFloatNode<ST>
 where
     ST: InnerType + TryFrom<LT>,
     LT: InnerType + From<ST>,
@@ -54,21 +47,20 @@ where
         assert_eq!(
             input.num_dims(),
             1,
-            "Incorrect shape: RequantiseBMMRef node expects a 1-dimensional input array"
+            "Incorrect shape: RequantizeBMM node expects a 1-dimensional input array"
         );
         assert_eq!(
             self.size,
             input.len(),
-            "Length mismatch: RequantiseBMMRef node expects input with {} elements, got {} elements instead",
+            "Length mismatch: RequantizeBMM node expects input with {} elements, got {} elements instead",
             self.size,
             input.len()
         );
 
-        let output: QArray<ST> = requantise_ref::<ST, LT>(
+        let output: QArray<ST> = requantize_fc(
             input.values(),
-            self.effective_multiplier,
-            self.effective_shift,
-            self.output_zero_point,
+            &self.q_info,
+            RoundingScheme::NearestTiesEven,
         )
         .into();
 
@@ -76,7 +68,7 @@ where
     }
 }
 
-impl<ST, LT> NodeOpsPadded<LT, ST> for RequantiseBMMRefNode<ST, LT>
+impl<ST, LT> NodeOpsPadded<LT, ST> for RequantizeBMMFloatNode<ST>
 where
     ST: InnerType + TryFrom<LT>,
     LT: InnerType + From<ST>,
@@ -97,7 +89,7 @@ where
         assert_eq!(
             input.num_dims(),
             1,
-            "Incorrect shape: RequantiseBMMRef node expects a 1-dimensional input array"
+            "Incorrect shape: RequantizeBMM node expects a 1-dimensional input array"
         );
 
         assert_eq!(
@@ -108,34 +100,48 @@ where
             input.len()
         );
 
-        let output: QArray<ST> = requantise_ref::<ST, LT>(
+        let output: QArray<ST> = requantize_fc::<ST, LT>(
             input.values(),
-            self.effective_multiplier,
-            self.effective_shift,
-            self.output_zero_point,
+            &self.q_info,
+            RoundingScheme::NearestTiesEven,
         )
         .into();
         output
     }
 }
 
-impl RequantiseBMMRefNode<i8, i32> {
-    pub fn new(size: usize, s_i: f32, s_w: f32, s_o: f32, z_o: i8) -> Self {
+impl<ST> RequantizeBMMFloatNode<ST> {
+    pub fn new(
+        size: usize,
+        s_i: QScaleType,
+        z_i: ST,
+        s_w: QScaleType,
+        z_w: ST,
+        s_o: QScaleType,
+        z_o: ST,
+    ) -> Self {
         let padded_size_log = log2(size.next_power_of_two()) as usize;
 
-        // cast scales to a type with higher precision
-        let (s_i, s_w, s_o) = (s_i as f64, s_w as f64, s_o as f64);
-        let double_multiplier = s_i * s_w / s_o;
-
-        // compute full shift and effective multiplier
-        let (effective_multiplier, effective_shift) = quantize_multiplier(double_multiplier);
+        // TODO not all of these are needed
+        let q_info = BMMQInfo {
+            input_info: QInfo {
+                scale: s_i,
+                zero_point: z_i,
+            },
+            weight_info: QInfo {
+                scale: s_w,
+                zero_point: z_w,
+            },
+            output_info: QInfo {
+                scale: s_o,
+                zero_point: z_o,
+            },
+        };
 
         Self {
             size,
             padded_size_log,
-            effective_shift,
-            effective_multiplier,
-            output_zero_point: z_o,
+            q_info,
         }
     }
 }

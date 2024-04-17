@@ -7,11 +7,11 @@ use parameters::*;
 
 use crate::{
     model::nodes::{
-        requantise_bmm_ref::RequantiseBMMRefNode,
-        requantise_bmm_simplified::RequantiseBMMSimplifiedNode,
+        requantize_bmm_ref::RequantizeBMMRefNode,
+        requantize_bmm_simplified::RequantizeBMMSimplifiedNode,
     },
     quantization::BMMRequantizationStrategy,
-    BMMNode, Model, Node, Poly, QArray, ReLUNode, RequantiseBMMFloatNode, ReshapeNode,
+    BMMNode, Model, Node, Poly, QArray, ReLUNode, RequantizeBMMFloatNode, ReshapeNode,
 };
 
 pub const INPUT_DIMS: &[usize] = &[28, 28];
@@ -49,14 +49,14 @@ where
     let bmm_1: BMMNode<i8, i32> = BMMNode::new(w1_array, b1_array, Z_1_I);
 
     let req_bmm_1 = match req_strategy {
-        BMMRequantizationStrategy::Floating => Node::RequantiseBMMFloat(
-            RequantiseBMMFloatNode::new(INTER_DIM, S_1_I, Z_1_I, S_1_W, Z_1_W, S_1_O, Z_1_O),
+        BMMRequantizationStrategy::Floating => Node::RequantizeBMMFloat(
+            RequantizeBMMFloatNode::new(INTER_DIM, S_1_I, Z_1_I, S_1_W, Z_1_W, S_1_O, Z_1_O),
         ),
-        BMMRequantizationStrategy::Reference => Node::RequantiseBMMRef(RequantiseBMMRefNode::new(
+        BMMRequantizationStrategy::Reference => Node::RequantizeBMMRef(RequantizeBMMRefNode::new(
             INTER_DIM, S_1_I, S_1_W, S_1_O, Z_1_O,
         )),
-        BMMRequantizationStrategy::SingleRound => Node::RequantiseBMMSimplified(
-            RequantiseBMMSimplifiedNode::new(INTER_DIM, S_1_I, S_1_W, S_1_O, Z_1_O),
+        BMMRequantizationStrategy::SingleRound => Node::RequantizeBMMSimplified(
+            RequantizeBMMSimplifiedNode::new(INTER_DIM, S_1_I, S_1_W, S_1_O, Z_1_O),
         ),
     };
 
@@ -65,14 +65,14 @@ where
     let bmm_2: BMMNode<i8, i32> = BMMNode::new(w2_array, b2_array, Z_2_I);
 
     let req_bmm_2 = match req_strategy {
-        BMMRequantizationStrategy::Floating => Node::RequantiseBMMFloat(
-            RequantiseBMMFloatNode::new(OUTPUT_DIM, S_2_I, Z_2_I, S_2_W, Z_2_W, S_2_O, Z_2_O),
+        BMMRequantizationStrategy::Floating => Node::RequantizeBMMFloat(
+            RequantizeBMMFloatNode::new(OUTPUT_DIM, S_2_I, Z_2_I, S_2_W, Z_2_W, S_2_O, Z_2_O),
         ),
-        BMMRequantizationStrategy::Reference => Node::RequantiseBMMRef(RequantiseBMMRefNode::new(
+        BMMRequantizationStrategy::Reference => Node::RequantizeBMMRef(RequantizeBMMRefNode::new(
             OUTPUT_DIM, S_2_I, S_2_W, S_2_O, Z_2_O,
         )),
-        BMMRequantizationStrategy::SingleRound => Node::RequantiseBMMSimplified(
-            RequantiseBMMSimplifiedNode::new(OUTPUT_DIM, S_2_I, S_2_W, S_2_O, Z_2_O),
+        BMMRequantizationStrategy::SingleRound => Node::RequantizeBMMSimplified(
+            RequantizeBMMSimplifiedNode::new(OUTPUT_DIM, S_2_I, S_2_W, S_2_O, Z_2_O),
         ),
     };
 

@@ -56,11 +56,11 @@ where
 {
     match node {
         Node::BMM(fc) => fc,
-        Node::RequantiseBMMFloat(r) => r,
+        Node::RequantizeBMMFloat(r) => r,
         Node::ReLU(r) => r,
         Node::Reshape(r) => r,
-        // TODO add Node::RequantiseBMMRef(r) => r, once the latter implements NodeOpsVerify
-        Node::RequantiseBMMRef(_) => unimplemented!(),
-        Node::RequantiseBMMSimplified(_) => unimplemented!(),
+        // TODO add Node::RequantizeBMMRef(r) => r, once the latter implements NodeOpsVerify
+        Node::RequantizeBMMRef(_) => unimplemented!(),
+        Node::RequantizeBMMSimplified(_) => unimplemented!(),
     }
 }

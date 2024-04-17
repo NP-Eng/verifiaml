@@ -13,9 +13,9 @@ trait Proof {}
 pub use model::nodes::{
     bmm::{BMMNode, BMMNodeCommitment, BMMNodeCommitmentState, BMMNodeProof},
     relu::ReLUNode,
-    requantise_bmm_float::{
-        RequantiseBMMFloatNode, RequantiseBMMNodeCommitment, RequantiseBMMNodeCommitmentState,
-        RequantiseBMMNodeProof,
+    requantize_bmm_float::{
+        RequantizeBMMFloatNode, RequantizeBMMNodeCommitment, RequantizeBMMNodeCommitmentState,
+        RequantizeBMMNodeProof,
     },
     reshape::ReshapeNode,
     Node, NodeCommitment, NodeCommitmentState, NodeOpsPadded, NodeProof,
@@ -24,7 +24,7 @@ pub use model::qarray::{InnerType, QArray, QTypeArray};
 pub use model::{InferenceProof, Model};
 pub use model::{LabeledPoly, Poly};
 pub use quantization::{
-    quantise_f32_u8_nne, requantise_fc, BMMQInfo, BMMRequantizationStrategy, QInfo, RoundingScheme,
+    quantise_f32_u8_nne, requantize_fc, BMMQInfo, BMMRequantizationStrategy, QInfo, RoundingScheme,
 };
 
 #[cfg(feature = "test-types")]

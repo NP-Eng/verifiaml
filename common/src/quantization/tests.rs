@@ -1,6 +1,5 @@
-use crate::model::nodes::requantise_bmm_ref;
-
 use super::*;
+
 #[test]
 fn test_nnafz_noop() {
     let output = vec![0, 1, 2, 3, 4, 5, 6, 7];
@@ -19,7 +18,7 @@ fn test_nnafz_noop() {
         },
     };
     let expected = vec![0, 1, 2, 3, 4, 5, 6, 7];
-    let actual = requantise_fc(&output, &q_info, RoundingScheme::NearestTiesAwayFromZero);
+    let actual = requantize_fc(&output, &q_info, RoundingScheme::NearestTiesAwayFromZero);
     assert_eq!(expected, actual);
 }
 
@@ -42,7 +41,7 @@ fn test_nnafz_halves() {
         },
     };
     let expected = vec![-2, -1, -1, 0, 1, 1, 2];
-    let actual = requantise_fc(&output, &q_info, RoundingScheme::NearestTiesAwayFromZero);
+    let actual = requantize_fc(&output, &q_info, RoundingScheme::NearestTiesAwayFromZero);
     assert_eq!(expected, actual);
 }
 
@@ -112,7 +111,7 @@ fn test_ref_specific() {
     let output = vec![0, 1, 2, 3, 4, 5, 6, i32::MAX];
 
     let expected = vec![0, 0, 0, 0, 0, 0, 0, 665625];
-    let actual = requantise_ref(&output, effective_mul, effective_shift, output_zero_point);
+    let actual = requantize_ref(&output, effective_mul, effective_shift, output_zero_point);
     assert_eq!(expected, actual);
 }
 
@@ -126,12 +125,12 @@ fn test_simplified_specific() {
     let full_shift = effective_shift + (i32::BITS - 1) as usize;
 
     let expected = vec![0, 0, 0, 0, 0, 0, 0, 665625];
-    let actual = requantise_simplified(&output, effective_mul, full_shift, output_zero_point);
+    let actual = requantize_simplified(&output, effective_mul, full_shift, output_zero_point);
     assert_eq!(expected, actual);
 }
 
 #[test]
-fn compare_three_requantisations() {
+fn compare_three_requantizations() {
     let x = &[0, 1234, -1234, 12345, -12345, 123456, -123456];
 
     let bmm_req_info: BMMQInfo<i8> = BMMQInfo {
@@ -155,14 +154,14 @@ fn compare_three_requantisations() {
     let (effective_mul, effective_shift) = quantize_multiplier(double_mul);
     let full_shift = effective_shift + (i32::BITS - 1) as usize;
 
-    let req_float = requantise_fc_ntafz::<i8, i32>(x, &bmm_req_info);
-    let req_ref = requantise_ref::<i8, i32>(
+    let req_float = requantize_fc_ntafz::<i8, i32>(x, &bmm_req_info);
+    let req_ref = requantize_ref::<i8, i32>(
         x,
         effective_mul,
         effective_shift,
         bmm_req_info.output_info.zero_point,
     );
-    let req_single = requantise_simplified::<i8, i32>(
+    let req_single = requantize_simplified::<i8, i32>(
         x,
         effective_mul,
         full_shift,
@@ -198,8 +197,8 @@ fn compare_req_float_and_single() {
     let (effective_mul, effective_shift) = quantize_multiplier(double_mul);
     let full_shift = effective_shift + (i32::BITS - 1) as usize;
 
-    let req_float = requantise_fc_ntafz::<i8, i32>(x, &bmm_req_info);
-    let req_single = requantise_simplified::<i8, i32>(
+    let req_float = requantize_fc_ntafz::<i8, i32>(x, &bmm_req_info);
+    let req_single = requantize_simplified::<i8, i32>(
         x,
         effective_mul,
         full_shift,
@@ -210,7 +209,7 @@ fn compare_req_float_and_single() {
 
     // N.B.: The following fails in one pathological case, as expected: the
     // composition of two nudges inflates the final result by one too much
-    // let req_ref = requantise_ref::<i8, i32>(
+    // let req_ref = requantize_ref::<i8, i32>(
     //     x,
     //     effective_mul,
     //     effective_shift,

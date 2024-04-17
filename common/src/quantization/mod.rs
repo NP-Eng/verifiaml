@@ -10,7 +10,7 @@ pub mod tests;
 // will go away
 // Type for quantisation scales
 pub(crate) type QScaleType = f32;
-// Larger precision type to compute the requantisation scale in some schemes
+// Larger precision type to compute the requantization scale in some schemes
 pub(crate) type QScaleComputationType = f64;
 
 pub struct QInfo<ST> {
@@ -18,18 +18,18 @@ pub struct QInfo<ST> {
     pub zero_point: ST,
 }
 
-// TODO: this will probably change to inference-ready requantisation info
+// TODO: this will probably change to inference-ready requantization info
 // Even what is being done now could be optimised by precomputing outside the
 // evaluate function
 pub struct BMMQInfo<ST> {
     pub input_info: QInfo<ST>,
     pub weight_info: QInfo<ST>,
-    // Bias requantisation information is not used (and is indeed directly
+    // Bias requantization information is not used (and is indeed directly
     // computable from the two above)
     pub output_info: QInfo<ST>,
 }
 
-// Strategies to requantise the output of a BMM node
+// Strategies to requantize the output of a BMM node
 #[derive(Debug, Clone, Copy)]
 pub enum BMMRequantizationStrategy {
     Floating,  // Core: multiply the input by the floating-point scale
@@ -44,7 +44,7 @@ pub enum RoundingScheme {
     NearestTiesEven,
 }
 
-pub fn requantise_fc<ST: InnerType, LT: InnerType>(
+pub fn requantize_fc<ST: InnerType, LT: InnerType>(
     output: &[LT],
     q_info: &BMMQInfo<ST>,
     scheme: RoundingScheme,
@@ -54,12 +54,12 @@ where
     LT: InnerType + From<ST>,
 {
     match scheme {
-        RoundingScheme::NearestTiesAwayFromZero => requantise_fc_ntafz::<ST, LT>(output, q_info),
-        RoundingScheme::NearestTiesEven => requantise_fc_nte::<ST, LT>(output, q_info),
+        RoundingScheme::NearestTiesAwayFromZero => requantize_fc_ntafz::<ST, LT>(output, q_info),
+        RoundingScheme::NearestTiesEven => requantize_fc_nte::<ST, LT>(output, q_info),
     }
 }
 
-fn requantise_fc_ntafz<ST, LT>(output: &[LT], q_info: &BMMQInfo<ST>) -> Vec<ST>
+fn requantize_fc_ntafz<ST, LT>(output: &[LT], q_info: &BMMQInfo<ST>) -> Vec<ST>
 where
     ST: InnerType + TryFrom<LT>,
     LT: InnerType + From<ST>,
@@ -78,7 +78,7 @@ where
     );
     let s = (s_i * s_w / s_o) as QScaleType;
 
-    // 2. Requantise
+    // 2. Requantize
     // TODO add rayon for parallelisation?
     output
         .iter()
@@ -108,7 +108,7 @@ fn partial_ord_clamp<T: PartialOrd>(x: T, min: T, max: T) -> T {
     }
 }
 
-fn requantise_fc_nte<ST: InnerType, LT: InnerType>(output: &[LT], q_info: &BMMQInfo<ST>) -> Vec<ST>
+fn requantize_fc_nte<ST: InnerType, LT: InnerType>(output: &[LT], q_info: &BMMQInfo<ST>) -> Vec<ST>
 where
     ST: InnerType + TryFrom<LT>,
     LT: InnerType + From<ST>,
@@ -127,7 +127,7 @@ where
     );
     let s = (s_i * s_w / s_o) as QScaleType;
 
-    // 2. Requantise
+    // 2. Requantize
     // TODO add rayon for parallelisation?
     output
         .iter()
@@ -143,7 +143,7 @@ where
 }
 
 // Implementation of TF Lite's reference requantization.
-pub fn requantise_ref<ST, LT>(
+pub fn requantize_ref<ST, LT>(
     // TODO Think whether we can afford to pass ownership here and change the iter() below by into_iter()
     output: &[LT],
     effective_multiplier: LT,
@@ -219,7 +219,7 @@ where
 }
 
 // Implementation of a simplified version of TF Lite's reference requantization.
-pub fn requantise_simplified<ST, LT>(
+pub fn requantize_simplified<ST, LT>(
     // TODO Think whether we can afford to pass ownership here and change the iter() below by into_iter()
     output: &[LT],
     effective_multiplier: LT,
