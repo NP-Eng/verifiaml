@@ -147,7 +147,7 @@ pub fn requantize_ref<ST, LT>(
     // TODO Think whether we can afford to pass ownership here and change the iter() below by into_iter()
     output: &[LT],
     effective_multiplier: LT,
-    full_shift: usize,
+    effective_shift: usize,
     output_zero_point: ST,
 ) -> Vec<ST>
 where
@@ -159,7 +159,7 @@ where
     let output_zero_point = LT::from(output_zero_point);
 
     // TODO: Add associated constant MAX_PLUS_ONE to InnerType.
-    let xt_pow2_bits_minus_one = LT::pow2_double(LT::BITS - 1);
+    let pow2_bits_minus_one = LT::pow2_double(LT::BITS - 1);
 
     // NOTE: Notice that they are independent of the input. Perhaps it is meaningful to turn:
     // xt_pow2_bits_minus_one, non_neg_nudge, and neg_nudge
@@ -168,12 +168,12 @@ where
     // TODO: After splitting InnerType, rewrite pow2 to use << instead of *.
 
     // Mask consists of full_shift ones
-    let mask = LT::pow2(full_shift) - LT::ONE; // TODO: may overflow for some exponents
-    let mask_div2 = mask / LT::TWO; // TODO: mask.inner_shr(1);
+    let mask = LT::pow2(effective_shift) - LT::ONE; // TODO: may overflow for some exponents
+    let mask_div2 = mask.inner_shr(1);
 
     // Constants used during nudging
-    let non_neg_nudge = LT::pow2(LT::BITS - 2);
-    let neg_nudge = LT::ONE - non_neg_nudge; // LT::pow2(LT::BITS - 2);   // keep this here
+    let non_neg_nudge = LT::pow2_double(LT::BITS - 2);
+    let neg_nudge = LT::Double::from(LT::ONE) - non_neg_nudge;
 
     // Requantize
     // TODO add rayon for parallelization?
@@ -188,9 +188,7 @@ where
 
             let product = LT::Double::from(*x) * effective_multiplier;
 
-            let product_high =
-                LT::inner_try_from((LT::Double::from(nudge) + product) / xt_pow2_bits_minus_one)
-                    .unwrap();
+            let product_high = LT::inner_try_from((product + nudge) / pow2_bits_minus_one).unwrap();
 
             // assert(full_shift <= 31);
 
@@ -198,17 +196,17 @@ where
             let remainder = product_high.inner_bit_and(mask);
             let threshold = mask_div2 + is_negative;
 
-            let out = product_high.inner_shr(full_shift)
+            let core = product_high.inner_shr(effective_shift)
                 + if remainder > threshold {
                     LT::ONE
                 } else {
                     LT::ZERO
                 };
 
-            let shifted_out = out + output_zero_point;
+            let shifted = core + output_zero_point;
 
             ST::try_from(partial_ord_clamp(
-                shifted_out,
+                shifted,
                 LT::from(ST::MIN),
                 LT::from(ST::MAX),
             ))
