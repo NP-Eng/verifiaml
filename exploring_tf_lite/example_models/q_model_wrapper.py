@@ -100,8 +100,9 @@ class QModelWrapper:
         return self.quantized_model.get_tensor(
             self.quantized_model.get_output_details()[0]['index']
         )
-    #f'../common/src/compatibility/example_models/fully_connected_layer/parameters/{key}.json'
+    
     def save_params_as_qarray(self, path: str) -> None:
+        print(f"Saving quantized model parameters to {path}")
         for key, value in self.get_model_parameters().items():
             with open(path + f'/{key}.json', 'w') as f:
                 json.dump(QModelWrapper.as_qarray(value), f)
@@ -112,7 +113,7 @@ class QModelWrapper:
         qarray_shape = list(reversed(param.shape))
         cumulative_dims = [prod(qarray_shape[i+1:]) for i in range(len(qarray_shape))]
 
-        return OrderedDict(["f", flattened_param], ["s", qarray_shape], ["c", cumulative_dims])
+        return OrderedDict([("f", flattened_param), ("s", qarray_shape), ("c", cumulative_dims)])
     
     @staticmethod
     def multi_flatten(x: Any) -> List[Union[int, float]]:

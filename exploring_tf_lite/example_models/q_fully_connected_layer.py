@@ -6,10 +6,6 @@ from typing import Any, Dict, List
 
 class QFullyConnectedLayer(QModelWrapper):
 
-    MODEL = tf.keras.models.Sequential([
-        tf.keras.layers.Dense(10, name='dense_1')
-    ])
-
     FILENAME = '../exploring_tf_lite/models/fully_connected_layer.tflite'
 
     def __init__(self, args: Dict[str, str]) -> None:
@@ -18,7 +14,9 @@ class QFullyConnectedLayer(QModelWrapper):
 
         super().__init__(
             QFullyConnectedLayer.FILENAME,
-            model = QFullyConnectedLayer.MODEL,
+            model = tf.keras.models.Sequential([
+                tf.keras.layers.Dense(10, name='dense_1')
+            ]),
             dataset = QFullyConnectedLayer.__resize_and_reshape_mnist_data(resize_factor),
             overwrite_cache=overwrite_cache
         )
@@ -36,7 +34,7 @@ class QFullyConnectedLayer(QModelWrapper):
         }
     
     @staticmethod
-    def __resize_and_reshape_mnist_data(resize_factor) -> np.ndarray:
+    def __resize_and_reshape_mnist_data(resize_factor: int) -> np.ndarray:
         (x_train, y_train), (x_test, y_test) = tf.keras.datasets.mnist.load_data()
         resize_and_reshape_image = lambda image: QFullyConnectedLayer.__reshape(QFullyConnectedLayer.__resize(image, resize_factor))
         return (
