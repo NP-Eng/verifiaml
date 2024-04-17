@@ -63,7 +63,10 @@ fn quantise_input(raw_input: &QArray<f32>) -> QArray<i8> {
 fn bench_fully_connected_layer(c: &mut Criterion) {
     for resize_factor in 1..=5 {
         let resize_factor_str = resize_factor.to_string();
-        let args: Vec<(&str, &str)> = vec![("resize_factor", &resize_factor_str), ("overwrite_cache", "True")];
+        let args: Vec<(&str, &str)> = vec![
+            ("resize_factor", &resize_factor_str),
+            ("overwrite_cache", "True"),
+        ];
         bench_tf_inference(c, resize_factor, args.clone());
 
         let fc_model =
@@ -71,7 +74,7 @@ fn bench_fully_connected_layer(c: &mut Criterion) {
         let raw_input = Python::with_gil(|py| {
             get_model_input::<Vec<f32>>(
                 py,
-                &get_model(py, "QFullyConnectedLayer", Some(args[..1].to_vec())), 
+                &get_model(py, "QFullyConnectedLayer", Some(args[..1].to_vec())),
                 None,
             )
         });
@@ -108,7 +111,7 @@ fn bench_fully_connected_layer(c: &mut Criterion) {
 
 fn bench_tf_inference(c: &mut Criterion, resize_factor: usize, args: Vec<(&str, &str)>) {
     let mut group = c.benchmark_group("TensorFlow");
-    group.sample_size(1000);
+    group.sample_size(10);
 
     Python::with_gil(|py| {
         let model = get_model(py, "QFullyConnectedLayer", Some(args.clone()));
@@ -130,7 +133,7 @@ fn bench_verifiaml_inference(
     resize_factor: usize,
 ) {
     let mut group = c.benchmark_group("verifiaml");
-    group.sample_size(1000);
+    group.sample_size(10);
 
     // Quantisation happens in the tf inference benchmark, so we benchmark it here
     // too in order to make the comparison as fair as possible
@@ -160,7 +163,7 @@ where
     PCS: PolynomialCommitment<Fr, Poly<Fr>, S>,
 {
     let mut group = c.benchmark_group("verifiaml");
-    group.sample_size(1000);
+    group.sample_size(10);
 
     let (node_coms, node_com_states): (
         Vec<NodeCommitment<Fr, S, PCS>>,
@@ -168,10 +171,7 @@ where
     ) = model.commit(ck, None).into_iter().unzip();
 
     group.bench_function(
-        BenchmarkId::new(
-            "proof",
-            format!("{} params", resize_factor * 28 * 28 * 10),
-        ),
+        BenchmarkId::new("proof", format!("{} params", resize_factor * 28 * 28 * 10)),
         |b| {
             b.iter(|| {
                 // Quantisation happens in the tf inference benchmark, so we benchmark it here
@@ -213,7 +213,7 @@ fn bench_verifiaml_verification<PCS, S>(
     PCS: PolynomialCommitment<Fr, Poly<Fr>, S>,
 {
     let mut group = c.benchmark_group("verifiaml");
-    group.sample_size(1000);
+    group.sample_size(10);
 
     group.bench_function(
         BenchmarkId::new(

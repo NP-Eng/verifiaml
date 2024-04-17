@@ -20,7 +20,9 @@ pub fn get_model(py: Python, model_name: &str, args: Option<Vec<(&str, &str)>>) 
 }
 
 pub fn save_model_parameters_as_qarray(py: Python, model: &Py<PyAny>, path: &str) {
-    model.call_method1(py, "save_params_as_qarray", (path,)).unwrap();
+    model
+        .call_method1(py, "save_params_as_qarray", (path,))
+        .unwrap();
 }
 
 pub fn get_model_input<'py, T>(
