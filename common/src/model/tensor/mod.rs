@@ -1,4 +1,4 @@
-use std::ops::{AddAssign, DivAssign, MulAssign, SubAssign};
+use std::ops::{AddAssign, DivAssign, MulAssign, Shr, SubAssign};
 
 use ark_std::any::type_name;
 use ark_std::cmp::PartialOrd;
@@ -22,6 +22,8 @@ const TENSOR_NESTED_TAB: &str = "    ";
 
 pub trait Integral:
     Copy
+    + Serialize
+    + DeserializeOwned
     + Debug
     + PartialEq
     + PartialOrd
@@ -33,18 +35,19 @@ pub trait Integral:
     + SubAssign
     + MulAssign
     + DivAssign
-    + Serialize
-    + DeserializeOwned
+    + Shr<usize, Output = Self>
 {
-    type Double: From<Self> // We can't simply require Double: Integral, as
-        // that would create an infinite chain
+    // We can't simply require Double: Integral, as that would create an
+    // infinite chain
+    type Double: Copy
+        + Debug
+        + From<Self>
+        + TryInto<Self>
         + Mul<Output = Self::Double>
         + Div<Output = Self::Double>
-        + // TODO to be readded after the "InnerType split" + TryInto<Self>;
-        Add<Output = Self::Double>
+        + Add<Output = Self::Double>
         + Sub<Output = Self::Double>
-        + Copy
-        + Debug;
+        + Shr<usize, Output = Self::Double>;
 
     const ZERO: Self;
     const ONE: Self;
@@ -55,22 +58,10 @@ pub trait Integral:
     // const MAX_PLUS_ONE: Self::Double;  // xt_pow2_bits_minus_one
     // const NON_NEG_NUDGE: Self;
 
-    // TODO if we decide to make the model generic on the quantisation process
-    // types, this will change
+    // TODO this should be removed once  floating requantisation is made generic
     fn from_qscaletype(x: QScaleType) -> Self;
 
     fn to_qscaletype(&self) -> QScaleType;
-
-    fn pow2(e: usize) -> Self {
-        // Self::ONE << e
-        let mut pow = Self::ONE;
-
-        for _ in 0..e {
-            pow = pow * Self::TWO;
-        }
-
-        pow
-    }
 
     fn pow2_double(e: usize) -> Self::Double {
         let mut pow = Self::Double::from(Self::ONE);
@@ -86,15 +77,12 @@ pub trait Integral:
     fn inner_try_from(x: Self::Double) -> Result<Self, ()>;
 
     fn inner_bit_and(self, rhs: Self) -> Self;
-
-    fn inner_shr(self, shift: usize) -> Self;
-
-    fn inner_shr_double(x: Self::Double, shift: usize) -> Self::Double;
 }
 
 impl Integral for i8 {
     const ZERO: Self = 0;
     const ONE: Self = 1;
+
     const TWO: Self = 2;
     const MIN: Self = Self::MIN;
     const MAX: Self = Self::MAX;
@@ -118,14 +106,6 @@ impl Integral for i8 {
 
     fn inner_bit_and(self, rhs: Self) -> Self {
         self & rhs
-    }
-
-    fn inner_shr(self, shift: usize) -> Self {
-        self >> shift
-    }
-
-    fn inner_shr_double(x: Self::Double, shift: usize) -> Self::Double {
-        x >> shift
     }
 }
 
@@ -156,17 +136,9 @@ impl Integral for i32 {
     fn inner_bit_and(self, rhs: Self) -> Self {
         self & rhs
     }
-
-    fn inner_shr(self, shift: usize) -> Self {
-        self >> shift
-    }
-
-    fn inner_shr_double(x: Self::Double, shift: usize) -> Self::Double {
-        x >> shift
-    }
 }
 
-impl Integral for i64 {
+/* impl Integral for i64 {
     const ZERO: Self = 0;
     const ONE: Self = 1;
     const TWO: Self = 2;
@@ -201,7 +173,7 @@ impl Integral for i64 {
     fn inner_shr_double(x: Self::Double, shift: usize) -> Self::Double {
         x >> shift
     }
-}
+} */
 
 impl Integral for u8 {
     const ZERO: Self = 0;
@@ -230,51 +202,6 @@ impl Integral for u8 {
     fn inner_bit_and(self, rhs: Self) -> Self {
         self & rhs
     }
-
-    fn inner_shr(self, shift: usize) -> Self {
-        self >> shift
-    }
-
-    fn inner_shr_double(x: Self::Double, shift: usize) -> Self::Double {
-        x >> shift
-    }
-}
-
-impl Integral for f32 {
-    const ZERO: Self = 0.0;
-    const ONE: Self = 1.0;
-    const TWO: Self = 2.0;
-    const MIN: Self = Self::MIN;
-    const MAX: Self = Self::MAX;
-    // const MAX_PLUS_ONE: Self::Double = Self::Double::from(Self::MAX) + Self::Double::from(Self::ONE);
-    const BITS: usize = 8 * mem::size_of::<Self>();
-    // const NON_NEG_NUDGE: Self = Self::pow2((Self::BITS - 2) as usize);   // TODO: Remove after splitting
-
-    type Double = f64;
-
-    fn from_qscaletype(x: QScaleType) -> Self {
-        x as Self
-    }
-
-    fn to_qscaletype(&self) -> QScaleType {
-        *self as QScaleType
-    }
-
-    fn inner_try_from(_x: Self::Double) -> Result<Self, ()> {
-        Err(())
-    }
-
-    fn inner_bit_and(self, _rhs: Self) -> Self {
-        panic!("Bitwise operations are not supported for f32");
-    }
-
-    fn inner_shr(self, _shift: usize) -> Self {
-        panic!("Method inner_shr should never be used for f32.");
-    }
-
-    fn inner_shr_double(_x: Self::Double, _shift: usize) -> Self::Double {
-        panic!("Method inner_shr_double should never be used for f32.");
-    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq)]
@@ -293,7 +220,7 @@ pub enum QTypeArray<ST, LT> {
     L(Tensor<LT>),
 }
 
-// impl indexing into the Tensor
+// indexing syntax tensor[idx] for Tensor
 impl<T: Integral> Index<usize> for Tensor<T> {
     type Output = T;
 
@@ -302,7 +229,7 @@ impl<T: Integral> Index<usize> for Tensor<T> {
     }
 }
 
-impl<T: Integral> Tensor<T> {
+impl<T> Tensor<T> {
     pub fn check_dimensions(&self) -> bool {
         self.flattened.len() == self.shape.iter().product::<usize>()
     }
@@ -327,23 +254,6 @@ impl<T: Integral> Tensor<T> {
     // the reference codebase does
     pub fn move_values(self) -> Vec<T> {
         self.flattened
-    }
-
-    // TODO in the future, if necessary, we can remove the bound
-    // <T as TryInto<S>>::Error: Debug
-    // and replace unwrap() by unwrap_or(), possibly panicking or propagating
-    // the error
-    pub fn cast<S: Integral>(&self) -> Tensor<S>
-    where
-        T: TryInto<S>,
-        <T as TryInto<S>>::Error: Debug,
-    {
-        let flattened = self
-            .flattened
-            .iter()
-            .map(|x| TryInto::<S>::try_into(*x).unwrap())
-            .collect();
-        Tensor::new(flattened, self.shape.clone())
     }
 
     // Reshapes the Tensor in-place
@@ -417,12 +327,42 @@ impl<T: Integral> Tensor<T> {
             .map(|(i, d)| i * d)
             .sum()
     }
+}
 
-    #[allow(dead_code)]
-    pub(crate) fn get(&self, index: Vec<usize>) -> T {
-        self.flattened[self.flatten_index(index)]
+/********************** Serialization **********************/
+impl<T: Serialize + DeserializeOwned> Tensor<T> {
+    pub fn write(&self, path: &str) {
+        let mut writer = std::fs::File::create(path).unwrap();
+        serde_json::to_writer(&mut writer, self).unwrap();
     }
 
+    pub fn read(path: &str) -> Tensor<T> {
+        let reader = std::fs::File::open(path).unwrap();
+        serde_json::from_reader(reader).unwrap()
+    }
+
+    pub fn write_multiple(tensors: &[&Tensor<T>], paths: &[&str]) {
+        for (tensor, path) in tensors.iter().zip(paths.iter()) {
+            tensor.write(path);
+        }
+    }
+
+    pub fn read_multiple(paths: &[&str]) -> Vec<Tensor<T>> {
+        paths.iter().map(|path| Tensor::read(path)).collect()
+    }
+
+    pub fn write_list(tensors: &[&Tensor<T>], path: &str) {
+        let mut writer = std::fs::File::create(path).unwrap();
+        serde_json::to_writer(&mut writer, tensors).unwrap();
+    }
+
+    pub fn read_list(path: &str) -> Vec<Tensor<T>> {
+        let reader = std::fs::File::open(path).unwrap();
+        serde_json::from_reader(reader).unwrap()
+    }
+}
+
+impl<T: Copy> Tensor<T> {
     /// For each dimension of self.shape, either pad the Tensor with `value`
     /// (if the new size is larger than the original one) or truncate it (if
     /// the new size is smaller than or equal to the original one).
@@ -461,34 +401,22 @@ impl<T: Integral> Tensor<T> {
         Tensor::new(flattened, new_shape)
     }
 
-    pub fn write(&self, path: &str) {
-        let mut writer = std::fs::File::create(path).unwrap();
-        serde_json::to_writer(&mut writer, self).unwrap();
+    #[allow(dead_code)]
+    pub(crate) fn get(&self, index: Vec<usize>) -> T {
+        self.flattened[self.flatten_index(index)]
     }
 
-    pub fn read(path: &str) -> Tensor<T> {
-        let reader = std::fs::File::open(path).unwrap();
-        serde_json::from_reader(reader).unwrap()
-    }
-
-    pub fn write_multiple(tensors: &[&Tensor<T>], paths: &[&str]) {
-        for (tensor, path) in tensors.iter().zip(paths.iter()) {
-            tensor.write(path);
-        }
-    }
-
-    pub fn read_multiple(paths: &[&str]) -> Vec<Tensor<T>> {
-        paths.iter().map(|path| Tensor::read(path)).collect()
-    }
-
-    pub fn write_list(tensors: &[&Tensor<T>], path: &str) {
-        let mut writer = std::fs::File::create(path).unwrap();
-        serde_json::to_writer(&mut writer, tensors).unwrap();
-    }
-
-    pub fn read_list(path: &str) -> Vec<Tensor<T>> {
-        let reader = std::fs::File::open(path).unwrap();
-        serde_json::from_reader(reader).unwrap()
+    pub fn cast<S: Integral>(&self) -> Tensor<S>
+    where
+        T: TryInto<S>,
+        <T as TryInto<S>>::Error: Debug,
+    {
+        let flattened = self
+            .flattened
+            .iter()
+            .map(|x| TryInto::<S>::try_into(*x).unwrap())
+            .collect();
+        Tensor::new(flattened, self.shape.clone())
     }
 }
 
@@ -557,7 +485,6 @@ fn compact_resize_internal<T: Copy>(
 }
 
 /************************ Operators ************************/
-
 // Since numerical type control is essential, we implement only Tensor<T> + T
 // insead of the more general Tensor<T> + S for any S which can be added to T,
 // thus forcing the programmer to make intentional casts. The same applies to
@@ -616,15 +543,14 @@ where
 }
 
 /******************* Conversion from Vec *******************/
-
-impl<T: Integral> From<Vec<T>> for Tensor<T> {
+impl<T> From<Vec<T>> for Tensor<T> {
     fn from(values: Vec<T>) -> Self {
         let l = values.len();
         Tensor::new(values, vec![l])
     }
 }
 
-impl<T: Integral> From<Vec<Vec<T>>> for Tensor<T> {
+impl<T> From<Vec<Vec<T>>> for Tensor<T> {
     fn from(values: Vec<Vec<T>>) -> Self {
         assert!(
             values.iter().all(|x| x.len() == values[0].len()),
@@ -639,7 +565,6 @@ impl<T: Integral> From<Vec<Vec<T>>> for Tensor<T> {
 }
 
 /************************* Display *************************/
-
 impl<T: Integral> fmt::Display for Tensor<T> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(
@@ -710,7 +635,6 @@ fn print_flat_data<T: Integral>(
 }
 
 /*********************** Comparisons ***********************/
-
 // We follow the convention (e.g. in numpy) that `maximum` and `minimum`
 // compare an array to a single element (element-wise); whereas `max` and `min`
 // (not implemented) compare two equally sized arrays element-wise.
@@ -749,7 +673,6 @@ impl<T: Integral + PartialOrd> Tensor<T> {
 }
 
 /************************ QTypeArray ***********************/
-
 impl<ST, LT> QTypeArray<ST, LT> {
     #[inline]
     pub fn unwrap_small(self) -> Tensor<ST> {

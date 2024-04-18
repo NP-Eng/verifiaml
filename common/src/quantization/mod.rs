@@ -168,8 +168,8 @@ where
     // TODO: After splitting InnerType, rewrite pow2 to use << instead of *.
 
     // Mask consists of full_shift ones
-    let mask = LT::pow2(effective_shift) - LT::ONE; // TODO: may overflow for some exponents
-    let mask_div2 = mask.inner_shr(1);
+    let mask = (LT::ONE >> effective_shift) - LT::ONE; // TODO: may overflow for some exponents
+    let mask_div2 = mask >> 1;
 
     // Constants used during nudging
     let non_neg_nudge = LT::pow2_double(LT::BITS - 2);
@@ -196,7 +196,7 @@ where
             let remainder = product_high.inner_bit_and(mask);
             let threshold = mask_div2 + is_negative;
 
-            let core = product_high.inner_shr(effective_shift)
+            let core = (product_high >> effective_shift)
                 + if remainder > threshold {
                     LT::ONE
                 } else {
@@ -258,10 +258,9 @@ where
                 neg_nudge
             };
 
-            let core = LT::inner_try_from(LT::inner_shr_double(
-                LT::Double::from(*x) * effective_multiplier + nudge,
-                full_shift,
-            ))
+            let core = LT::inner_try_from(
+                (LT::Double::from(*x) * effective_multiplier + nudge) >> full_shift,
+            )
             .unwrap();
 
             let shifted = core + output_zero_point;
