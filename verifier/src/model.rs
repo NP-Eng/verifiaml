@@ -70,8 +70,8 @@ where
         // output nodes and instead working witht their plain values all along,
         // but that would require messy node-by-node handling
         let input_node_com = node_value_commitments.first().unwrap();
-        let input_node_qarray = inputs[0].ref_small();
-        let input_node_f: Vec<F> = input_node_qarray
+        let input_node_tensor = inputs[0].ref_small();
+        let input_node_f: Vec<F> = input_node_tensor
             .values()
             .iter()
             .map(|x| F::from(*x))
@@ -96,12 +96,12 @@ where
             sponge.squeeze_field_elements(log2(output_node_f.len()) as usize);
 
         // Verifying that the actual input was honestly padded with zeros
-        let padded_input_shape = input_node_qarray.shape().clone();
-        let honestly_padded_input = input_node_qarray
+        let padded_input_shape = input_node_tensor.shape().clone();
+        let honestly_padded_input = input_node_tensor
             .compact_resize(self.input_shape().clone(), ST::ZERO)
             .compact_resize(padded_input_shape, ST::ZERO);
 
-        if honestly_padded_input.values() != input_node_qarray.values() {
+        if honestly_padded_input.values() != input_node_tensor.values() {
             return false;
         }
 

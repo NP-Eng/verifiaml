@@ -18,7 +18,7 @@ use crate::quantization::QScaleType;
 #[cfg(test)]
 mod tests;
 
-const QARRAY_NESTED_TAB: &str = "    ";
+const TENSOR_NESTED_TAB: &str = "    ";
 
 pub trait InnerType:
     Copy
@@ -277,7 +277,7 @@ impl InnerType for f32 {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq)]
-pub struct QArray<T> {
+pub struct Tensor<T> {
     #[serde(rename = "f")]
     flattened: Vec<T>,
     #[serde(rename = "s")]
@@ -288,12 +288,12 @@ pub struct QArray<T> {
 
 #[derive(Clone)]
 pub enum QTypeArray<ST, LT> {
-    S(QArray<ST>),
-    L(QArray<LT>),
+    S(Tensor<ST>),
+    L(Tensor<LT>),
 }
 
-// impl indexing into the QArray
-impl<T: InnerType> Index<usize> for QArray<T> {
+// impl indexing into the Tensor
+impl<T: InnerType> Index<usize> for Tensor<T> {
     type Output = T;
 
     fn index(&self, index: usize) -> &Self::Output {
@@ -301,7 +301,7 @@ impl<T: InnerType> Index<usize> for QArray<T> {
     }
 }
 
-impl<T: InnerType> QArray<T> {
+impl<T: InnerType> Tensor<T> {
     pub fn check_dimensions(&self) -> bool {
         self.flattened.len() == self.shape.iter().product::<usize>()
     }
@@ -332,7 +332,7 @@ impl<T: InnerType> QArray<T> {
     // <T as TryInto<S>>::Error: Debug
     // and replace unwrap() by unwrap_or(), possibly panicking or propagating
     // the error
-    pub fn cast<S: InnerType>(&self) -> QArray<S>
+    pub fn cast<S: InnerType>(&self) -> Tensor<S>
     where
         T: TryInto<S>,
         <T as TryInto<S>>::Error: Debug,
@@ -342,10 +342,10 @@ impl<T: InnerType> QArray<T> {
             .iter()
             .map(|x| TryInto::<S>::try_into(*x).unwrap())
             .collect();
-        QArray::new(flattened, self.shape.clone())
+        Tensor::new(flattened, self.shape.clone())
     }
 
-    // Reshapes the QArray in-place
+    // Reshapes the Tensor in-place
     pub fn reshape(&mut self, new_shape: Vec<usize>) {
         assert_eq!(
             self.len(),
@@ -422,10 +422,10 @@ impl<T: InnerType> QArray<T> {
         self.flattened[self.flatten_index(index)]
     }
 
-    /// For each dimension of self.shape, either pad the QArray with `value`
+    /// For each dimension of self.shape, either pad the Tensor with `value`
     /// (if the new size is larger than the original one) or truncate it (if
     /// the new size is smaller than or equal to the original one).
-    pub fn compact_resize(&self, new_shape: Vec<usize>, value: T) -> QArray<T> {
+    pub fn compact_resize(&self, new_shape: Vec<usize>, value: T) -> Tensor<T> {
         let old_shape = &self.shape;
 
         assert_eq!(
@@ -436,7 +436,7 @@ impl<T: InnerType> QArray<T> {
             old_shape.len(),
         );
 
-        // compute cumulative dimensions of the qarray
+        // compute cumulative dimensions of the tensor
         let mut new_cumulative_dimensions = Vec::with_capacity(new_shape.len());
         let mut acc = 1;
 
@@ -457,7 +457,7 @@ impl<T: InnerType> QArray<T> {
             value,
         );
 
-        QArray::new(flattened, new_shape)
+        Tensor::new(flattened, new_shape)
     }
 
     pub fn write(&self, path: &str) {
@@ -465,27 +465,27 @@ impl<T: InnerType> QArray<T> {
         serde_json::to_writer(&mut writer, self).unwrap();
     }
 
-    pub fn read(path: &str) -> QArray<T> {
+    pub fn read(path: &str) -> Tensor<T> {
         let reader = std::fs::File::open(path).unwrap();
         serde_json::from_reader(reader).unwrap()
     }
 
-    pub fn write_multiple(qarrays: &[&QArray<T>], paths: &[&str]) {
-        for (qarray, path) in qarrays.iter().zip(paths.iter()) {
-            qarray.write(path);
+    pub fn write_multiple(tensors: &[&Tensor<T>], paths: &[&str]) {
+        for (tensor, path) in tensors.iter().zip(paths.iter()) {
+            tensor.write(path);
         }
     }
 
-    pub fn read_multiple(paths: &[&str]) -> Vec<QArray<T>> {
-        paths.iter().map(|path| QArray::read(path)).collect()
+    pub fn read_multiple(paths: &[&str]) -> Vec<Tensor<T>> {
+        paths.iter().map(|path| Tensor::read(path)).collect()
     }
 
-    pub fn write_list(qarrays: &[&QArray<T>], path: &str) {
+    pub fn write_list(tensors: &[&Tensor<T>], path: &str) {
         let mut writer = std::fs::File::create(path).unwrap();
-        serde_json::to_writer(&mut writer, qarrays).unwrap();
+        serde_json::to_writer(&mut writer, tensors).unwrap();
     }
 
-    pub fn read_list(path: &str) -> Vec<QArray<T>> {
+    pub fn read_list(path: &str) -> Vec<Tensor<T>> {
         let reader = std::fs::File::open(path).unwrap();
         serde_json::from_reader(reader).unwrap()
     }
@@ -557,73 +557,73 @@ fn compact_resize_internal<T: Copy>(
 
 /************************ Operators ************************/
 
-// Since numerical type control is essential, we implement only QArray<T> + T
-// insead of the more general QArray<T> + S for any S which can be added to T,
+// Since numerical type control is essential, we implement only Tensor<T> + T
+// insead of the more general Tensor<T> + S for any S which can be added to T,
 // thus forcing the programmer to make intentional casts. The same applies to
 // other operator implementations below.
-impl<T: InnerType> Add<T> for QArray<T>
+impl<T: InnerType> Add<T> for Tensor<T>
 where
     T: Add<Output = T>,
 {
-    type Output = QArray<T>;
+    type Output = Tensor<T>;
 
-    fn add(self, rhs: T) -> QArray<T> {
+    fn add(self, rhs: T) -> Tensor<T> {
         let flattened = self.flattened.into_iter().map(|x| x + rhs).collect();
-        QArray::new(flattened, self.shape)
+        Tensor::new(flattened, self.shape)
     }
 }
 
 // Addition in the other direction cannot be implemented in the same way, cf.
 // https://stackoverflow.com/questions/70220168/how-to-implement-mul-trait-for-a-custom-struct-type-to-work-in-both-ways
 // There is a workaround, but it is not necessary for now
-// impl<T: InnerType> ops::Add<QArray<T>> for T where T: ops::Add<Output = T>
+// impl<T: InnerType> ops::Add<Tensor<T>> for T where T: ops::Add<Output = T>
 
-impl<T: InnerType> Sub<T> for QArray<T>
+impl<T: InnerType> Sub<T> for Tensor<T>
 where
     T: Sub<Output = T>,
 {
-    type Output = QArray<T>;
+    type Output = Tensor<T>;
 
-    fn sub(self, rhs: T) -> QArray<T> {
+    fn sub(self, rhs: T) -> Tensor<T> {
         let flattened = self.flattened.into_iter().map(|x| x - rhs).collect();
-        QArray::new(flattened, self.shape)
+        Tensor::new(flattened, self.shape)
     }
 }
 
-impl<T: InnerType> Mul<T> for QArray<T>
+impl<T: InnerType> Mul<T> for Tensor<T>
 where
     T: Mul<Output = T>,
 {
-    type Output = QArray<T>;
+    type Output = Tensor<T>;
 
-    fn mul(self, rhs: T) -> QArray<T> {
+    fn mul(self, rhs: T) -> Tensor<T> {
         let flattened = self.flattened.into_iter().map(|x| x * rhs).collect();
-        QArray::new(flattened, self.shape)
+        Tensor::new(flattened, self.shape)
     }
 }
 
-impl<T: InnerType> Div<T> for QArray<T>
+impl<T: InnerType> Div<T> for Tensor<T>
 where
     T: Div<Output = T>,
 {
-    type Output = QArray<T>;
+    type Output = Tensor<T>;
 
-    fn div(self, rhs: T) -> QArray<T> {
+    fn div(self, rhs: T) -> Tensor<T> {
         let flattened = self.flattened.into_iter().map(|x| x / rhs).collect();
-        QArray::new(flattened, self.shape)
+        Tensor::new(flattened, self.shape)
     }
 }
 
 /******************* Conversion from Vec *******************/
 
-impl<T: InnerType> From<Vec<T>> for QArray<T> {
+impl<T: InnerType> From<Vec<T>> for Tensor<T> {
     fn from(values: Vec<T>) -> Self {
         let l = values.len();
-        QArray::new(values, vec![l])
+        Tensor::new(values, vec![l])
     }
 }
 
-impl<T: InnerType> From<Vec<Vec<T>>> for QArray<T> {
+impl<T: InnerType> From<Vec<Vec<T>>> for Tensor<T> {
     fn from(values: Vec<Vec<T>>) -> Self {
         assert!(
             values.iter().all(|x| x.len() == values[0].len()),
@@ -633,17 +633,17 @@ impl<T: InnerType> From<Vec<Vec<T>>> for QArray<T> {
         let shape = vec![values.len(), values[0].len()];
 
         let flattened = values.into_iter().flatten().collect();
-        QArray::new(flattened, shape)
+        Tensor::new(flattened, shape)
     }
 }
 
 /************************* Display *************************/
 
-impl<T: InnerType> fmt::Display for QArray<T> {
+impl<T: InnerType> fmt::Display for Tensor<T> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(
             f,
-            "QArray ({}). Shape: {:?}. Data:",
+            "Tensor ({}). Shape: {:?}. Data:",
             type_name::<T>(),
             self.shape
         )?;
@@ -680,13 +680,13 @@ fn print_flat_data<T: InnerType>(
         return writeln!(
             f,
             "{}{:?}",
-            QARRAY_NESTED_TAB.repeat(original_len - 1),
+            TENSOR_NESTED_TAB.repeat(original_len - 1),
             data
         );
     }
 
     if len != original_len {
-        writeln!(f, "{}[", QARRAY_NESTED_TAB.repeat(original_len - len))?;
+        writeln!(f, "{}[", TENSOR_NESTED_TAB.repeat(original_len - len))?;
     }
 
     let subarrays = data.chunks_exact(cumulative_dimensions[0]);
@@ -702,7 +702,7 @@ fn print_flat_data<T: InnerType>(
     }
 
     if len != original_len {
-        writeln!(f, "{}]", QARRAY_NESTED_TAB.repeat(original_len - len))?;
+        writeln!(f, "{}]", TENSOR_NESTED_TAB.repeat(original_len - len))?;
     }
 
     Ok(())
@@ -713,33 +713,33 @@ fn print_flat_data<T: InnerType>(
 // We follow the convention (e.g. in numpy) that `maximum` and `minimum`
 // compare an array to a single element (element-wise); whereas `max` and `min`
 // (not implemented) compare two equally sized arrays element-wise.
-impl<T: InnerType + PartialOrd> QArray<T> {
-    pub fn maximum(&self, x: T) -> QArray<T> {
+impl<T: InnerType + PartialOrd> Tensor<T> {
+    pub fn maximum(&self, x: T) -> Tensor<T> {
         let flattened_max: Vec<T> = self
             .flattened
             .iter()
             .map(|y| if *y >= x { *y } else { x })
             .collect();
 
-        // Construct the new QArray directly to avoid recomputation of
+        // Construct the new Tensor directly to avoid recomputation of
         // cumulative dimensions
-        QArray {
+        Tensor {
             flattened: flattened_max,
             shape: self.shape.clone(),
             cumulative_dimensions: self.cumulative_dimensions.clone(),
         }
     }
 
-    pub fn minimum(&self, x: T) -> QArray<T> {
+    pub fn minimum(&self, x: T) -> Tensor<T> {
         let flattened_min: Vec<T> = self
             .flattened
             .iter()
             .map(|y| if *y <= x { *y } else { x })
             .collect();
 
-        // Construct the new QArray directly to avoid recomputation of
+        // Construct the new Tensor directly to avoid recomputation of
         // cumulative dimensions
-        QArray {
+        Tensor {
             flattened: flattened_min,
             shape: self.shape.clone(),
             cumulative_dimensions: self.cumulative_dimensions.clone(),
@@ -751,7 +751,7 @@ impl<T: InnerType + PartialOrd> QArray<T> {
 
 impl<ST, LT> QTypeArray<ST, LT> {
     #[inline]
-    pub fn unwrap_small(self) -> QArray<ST> {
+    pub fn unwrap_small(self) -> Tensor<ST> {
         match self {
             QTypeArray::S(s) => s,
             _ => panic!("Expected S variant"),
@@ -759,7 +759,7 @@ impl<ST, LT> QTypeArray<ST, LT> {
     }
 
     #[inline]
-    pub fn unwrap_large(self) -> QArray<LT> {
+    pub fn unwrap_large(self) -> Tensor<LT> {
         match self {
             QTypeArray::L(l) => l,
             _ => panic!("Expected L variant"),
@@ -767,7 +767,7 @@ impl<ST, LT> QTypeArray<ST, LT> {
     }
 
     #[inline]
-    pub fn ref_small(&self) -> &QArray<ST> {
+    pub fn ref_small(&self) -> &Tensor<ST> {
         match self {
             QTypeArray::S(s) => s,
             _ => panic!("Expected S variant"),
@@ -775,7 +775,7 @@ impl<ST, LT> QTypeArray<ST, LT> {
     }
 
     #[inline]
-    pub fn ref_large(&self) -> &QArray<LT> {
+    pub fn ref_large(&self) -> &Tensor<LT> {
         match self {
             QTypeArray::L(l) => l,
             _ => panic!("Expected L variant"),

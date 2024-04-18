@@ -10,7 +10,7 @@ use crate::{
         requantize_bmm_ref::RequantizeBMMRefNode, requantize_bmm_single::RequantizeBMMSingleNode,
     },
     quantization::BMMRequantizationStrategy,
-    BMMNode, Model, Node, Poly, QArray, ReLUNode, RequantizeBMMFloatNode, ReshapeNode,
+    BMMNode, Model, Node, Poly, ReLUNode, RequantizeBMMFloatNode, ReshapeNode, Tensor,
 };
 
 pub const INPUT_DIMS: &[usize] = &[28, 28];
@@ -40,10 +40,10 @@ where
 
     let reshape: ReshapeNode = ReshapeNode::new(INPUT_DIMS.to_vec(), vec![flat_dim]);
 
-    let w1_array: QArray<i8> = QArray::read(&format!(PATH!(), "weights_1.json"));
-    let b1_array: QArray<i32> = QArray::read(&format!(PATH!(), "bias_1.json"));
-    let w2_array: QArray<i8> = QArray::read(&format!(PATH!(), "weights_2.json"));
-    let b2_array: QArray<i32> = QArray::read(&format!(PATH!(), "bias_2.json"));
+    let w1_array: Tensor<i8> = Tensor::read(&format!(PATH!(), "weights_1.json"));
+    let b1_array: Tensor<i32> = Tensor::read(&format!(PATH!(), "bias_1.json"));
+    let w2_array: Tensor<i8> = Tensor::read(&format!(PATH!(), "weights_2.json"));
+    let b2_array: Tensor<i32> = Tensor::read(&format!(PATH!(), "bias_2.json"));
 
     let bmm_1: BMMNode<i8, i32> = BMMNode::new(w1_array, b1_array, Z_1_I);
 

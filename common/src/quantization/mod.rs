@@ -1,6 +1,6 @@
 use ark_std::Zero;
 
-use crate::model::qarray::InnerType;
+use crate::model::tensor::InnerType;
 
 #[cfg(test)]
 pub mod tests;

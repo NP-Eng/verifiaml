@@ -1,4 +1,4 @@
-use hcs_common::{quantise_f32_u8_nne, Model, Poly, QArray};
+use hcs_common::{quantise_f32_u8_nne, Model, Poly, Tensor};
 
 use ark_crypto_primitives::sponge::{Absorb, CryptographicSponge};
 use ark_ff::PrimeField;
@@ -6,16 +6,16 @@ use ark_poly_commit::PolynomialCommitment;
 
 // Auxiliary function
 fn unpadded_inference<F, S, PCS>(
-    raw_input: QArray<f32>,
+    raw_input: Tensor<f32>,
     model: &Model<i8, i32>,
     qinfo: (f32, u8),
-) -> QArray<u8>
+) -> Tensor<u8>
 where
     F: PrimeField + Absorb,
     S: CryptographicSponge,
     PCS: PolynomialCommitment<F, Poly<F>, S>,
 {
-    let quantised_input: QArray<u8> = QArray::new(
+    let quantised_input: Tensor<u8> = Tensor::new(
         quantise_f32_u8_nne(raw_input.values(), qinfo.0, qinfo.1),
         raw_input.shape().clone(),
     );
@@ -31,16 +31,16 @@ where
 // If padded inference is left on the prover side, move this to the prover
 /* // Auxiliary function
 fn padded_inference<F, S, PCS>(
-    raw_input: QArray<f32>,
+    raw_input: Tensor<f32>,
     model: &Model<i8, i32>,
     qinfo: (f32, u8),
-) -> QArray<u8>
+) -> Tensor<u8>
 where
     F: PrimeField + Absorb,
     S: CryptographicSponge,
     PCS: PolynomialCommitment<F, Poly<F>, S>,
 {
-    let quantised_input: QArray<u8> = QArray::new(
+    let quantised_input: Tensor<u8> = Tensor::new(
         quantise_f32_u8_nne(raw_input.values(), qinfo.0, qinfo.1),
         raw_input.shape().clone(),
     );
@@ -63,8 +63,8 @@ pub fn run_unpadded<F, S, PCS>(
     S: CryptographicSponge,
     PCS: PolynomialCommitment<F, Poly<F>, S>,
 {
-    let raw_input: QArray<f32> = QArray::read(input_path);
-    let expected_output: QArray<u8> = QArray::read(expected_output_path);
+    let raw_input: Tensor<f32> = Tensor::read(input_path);
+    let expected_output: Tensor<u8> = Tensor::read(expected_output_path);
 
     let output_u8 = unpadded_inference::<F, S, PCS>(raw_input, model, qinfo);
 
@@ -85,8 +85,8 @@ pub fn run_unpadded<F, S, PCS>(
     S: CryptographicSponge,
     PCS: PolynomialCommitment<F, Poly<F>, S>,
 {
-    let raw_input: QArray<f32> = QArray::read(input_path);
-    let expected_output: QArray<u8> = QArray::read(expected_output_path);
+    let raw_input: Tensor<f32> = Tensor::read(input_path);
+    let expected_output: Tensor<u8> = Tensor::read(expected_output_path);
 
     let output_u8 = padded_inference::<F, S, PCS>(raw_input, model, qinfo);
 
@@ -105,8 +105,8 @@ pub fn multi_run_unpadded<F, S, PCS>(
     S: CryptographicSponge,
     PCS: PolynomialCommitment<F, Poly<F>, S>,
 {
-    let raw_inputs: Vec<QArray<f32>> = QArray::read_list(inputs_path);
-    let expected_outputs: Vec<QArray<u8>> = QArray::read_list(expected_outputs_path);
+    let raw_inputs: Vec<Tensor<f32>> = Tensor::read_list(inputs_path);
+    let expected_outputs: Vec<Tensor<u8>> = Tensor::read_list(expected_outputs_path);
 
     for (raw_input, expected_output) in raw_inputs.into_iter().zip(expected_outputs.into_iter()) {
         assert_eq!(
@@ -131,8 +131,8 @@ pub fn multi_run_padded<F, S, PCS>(
     S: CryptographicSponge,
     PCS: PolynomialCommitment<F, Poly<F>, S>,
 {
-    let raw_inputs: Vec<QArray<f32>> = QArray::read_list(inputs_path);
-    let expected_outputs: Vec<QArray<u8>> = QArray::read_list(expected_outputs_path);
+    let raw_inputs: Vec<Tensor<f32>> = Tensor::read_list(inputs_path);
+    let expected_outputs: Vec<Tensor<u8>> = Tensor::read_list(expected_outputs_path);
 
     for (raw_input, expected_output) in raw_inputs.into_iter().zip(expected_outputs.into_iter()) {
         assert_eq!(

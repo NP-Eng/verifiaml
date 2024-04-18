@@ -3,7 +3,7 @@ use crate::{
         requantize_bmm_ref::RequantizeBMMRefNode, requantize_bmm_single::RequantizeBMMSingleNode,
     },
     quantization::BMMRequantizationStrategy,
-    BMMNode, Model, Node, Poly, QArray, RequantizeBMMFloatNode, ReshapeNode,
+    BMMNode, Model, Node, Poly, RequantizeBMMFloatNode, ReshapeNode, Tensor,
 };
 
 use ark_crypto_primitives::sponge::{Absorb, CryptographicSponge};
@@ -40,8 +40,8 @@ where
 
     let reshape: ReshapeNode = ReshapeNode::new(INPUT_DIMS.to_vec(), vec![flat_dim]);
 
-    let w_array: QArray<i8> = QArray::read(&format!(PATH!(), "weights.json"));
-    let b_array: QArray<i32> = QArray::read(&format!(PATH!(), "bias.json"));
+    let w_array: Tensor<i8> = Tensor::read(&format!(PATH!(), "weights.json"));
+    let b_array: Tensor<i32> = Tensor::read(&format!(PATH!(), "bias.json"));
 
     let bmm: BMMNode<i8, i32> = BMMNode::new(w_array, b_array, Z_I);
 

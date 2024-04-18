@@ -1,6 +1,6 @@
 use ark_std::log2;
 
-use crate::model::qarray::{InnerType, QArray};
+use crate::model::tensor::{InnerType, Tensor};
 use crate::quantization::{requantize_fc, BMMQInfo, QInfo, QScaleType, RoundingScheme};
 use crate::{Commitment, CommitmentState};
 
@@ -41,7 +41,7 @@ where
         vec![self.size]
     }
 
-    fn evaluate(&self, input: &QArray<LT>) -> QArray<ST> {
+    fn evaluate(&self, input: &Tensor<LT>) -> Tensor<ST> {
         // Sanity checks
         // TODO systematise
         assert_eq!(
@@ -57,7 +57,7 @@ where
             input.len()
         );
 
-        let output: QArray<ST> = requantize_fc(
+        let output: Tensor<ST> = requantize_fc(
             input.values(),
             &self.q_info,
             RoundingScheme::NearestTiesEven,
@@ -81,7 +81,7 @@ where
         self.padded_size_log
     }
 
-    fn padded_evaluate(&self, input: &QArray<LT>) -> QArray<ST> {
+    fn padded_evaluate(&self, input: &Tensor<LT>) -> Tensor<ST> {
         let padded_size = 1 << self.padded_size_log;
 
         // Sanity checks
@@ -100,7 +100,7 @@ where
             input.len()
         );
 
-        let output: QArray<ST> = requantize_fc::<ST, LT>(
+        let output: Tensor<ST> = requantize_fc::<ST, LT>(
             input.values(),
             &self.q_info,
             RoundingScheme::NearestTiesEven,

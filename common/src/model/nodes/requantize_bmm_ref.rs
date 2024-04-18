@@ -1,6 +1,6 @@
 use ark_std::log2;
 
-use crate::model::qarray::{InnerType, QArray};
+use crate::model::tensor::{InnerType, Tensor};
 use crate::quantization::{quantize_multiplier, requantize_ref};
 use crate::{Commitment, CommitmentState};
 
@@ -48,7 +48,7 @@ where
         vec![self.size]
     }
 
-    fn evaluate(&self, input: &QArray<LT>) -> QArray<ST> {
+    fn evaluate(&self, input: &Tensor<LT>) -> Tensor<ST> {
         // Sanity checks
         // TODO systematise
         assert_eq!(
@@ -64,7 +64,7 @@ where
             input.len()
         );
 
-        let output: QArray<ST> = requantize_ref::<ST, LT>(
+        let output: Tensor<ST> = requantize_ref::<ST, LT>(
             input.values(),
             self.effective_multiplier,
             self.effective_shift,
@@ -89,7 +89,7 @@ where
         self.padded_size_log
     }
 
-    fn padded_evaluate(&self, input: &QArray<LT>) -> QArray<ST> {
+    fn padded_evaluate(&self, input: &Tensor<LT>) -> Tensor<ST> {
         let padded_size = 1 << self.padded_size_log;
 
         // Sanity checks
@@ -108,7 +108,7 @@ where
             input.len()
         );
 
-        let output: QArray<ST> = requantize_ref::<ST, LT>(
+        let output: Tensor<ST> = requantize_ref::<ST, LT>(
             input.values(),
             self.effective_multiplier,
             self.effective_shift,

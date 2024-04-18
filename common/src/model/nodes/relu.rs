@@ -1,6 +1,6 @@
 use ark_std::log2;
 
-use crate::{model::qarray::InnerType, QArray};
+use crate::{model::tensor::InnerType, Tensor};
 
 use super::{NodeOpsNative, NodeOpsPadded};
 
@@ -19,7 +19,7 @@ where
         vec![self.num_units]
     }
 
-    fn evaluate(&self, input: &QArray<ST>) -> QArray<ST> {
+    fn evaluate(&self, input: &Tensor<ST>) -> Tensor<ST> {
         // TODO sanity checks (cf. BMM); systematise
         input.maximum(self.zero_point)
     }
@@ -40,7 +40,7 @@ where
 
     // TODO this is the same as evaluate() for now; the two will likely differ
     // if/when we introduce input size checks
-    fn padded_evaluate(&self, input: &QArray<ST>) -> QArray<ST> {
+    fn padded_evaluate(&self, input: &Tensor<ST>) -> Tensor<ST> {
         // TODO sanity checks (cf. BMM); systematise
         input.maximum(self.zero_point)
     }
