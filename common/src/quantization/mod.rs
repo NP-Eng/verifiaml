@@ -1,9 +1,14 @@
+#[cfg(test)]
+pub mod tests;
+
 use ark_std::Zero;
 
 use crate::model::tensor::Integral;
 
-#[cfg(test)]
-pub mod tests;
+const F64_EXPONENT_SHIFT: u64 = 52;
+const F64_EXPONENT_BIAS: u64 = 1023;
+const F64_EXPONENT_MASK: u64 = 0x7ff0000000000000;
+const F64_FRACTION_MASK: u64 = 0x000fffffffffffff;
 
 // TODO if we decide to make the model generic on the quantisation process
 // types (which is probably correct now that the qtypes are generics), these
@@ -231,24 +236,17 @@ where
     ST: Integral + TryFrom<LT>,
     LT: Integral + From<ST>,
 {
-    // Computing auxiliary constants used for every input
-    // TODO minor optimisation possible
+    // Although these parameters could be directly saved into the node (with
+    // their final desired types), this computation/conversion is essentially
+    // free. For the first two, storing them in the node with their actual types
+    // (instead of the types needed for inference) makes the node more
+    // transparent as far as definitions and proof system goes. TF Lite does the
+    // same. For the other two, computing them here makes the function more
+    // usable.
     let effective_multiplier = LT::Double::from(effective_multiplier);
     let output_zero_point = LT::from(output_zero_point);
-
-    // TODO: Add associated constant MAX_PLUS_ONE to InnerType.
-    // let xt_pow2_bits_minus_one = LT::pow2_double(LT::BITS - 1);
-
-    // NOTE: Notice that they are independent of the input. Perhaps it is meaningful to turn:
-    // xt_pow2_bits_minus_one, non_neg_nudge, and neg_nudge
-    // into associated constants of type LT in order to avoid their recomputation per call?
-
-    // TODO: After splitting InnerType, rewrite pow2 to use << instead of *.
-
-    // Constants used during nudging
-    // TODO possible optimisation
     let non_neg_nudge = LT::ONE_DOUBLE << (full_shift - 1);
-    let neg_nudge = non_neg_nudge - LT::Double::from(LT::ONE); // keep this here
+    let neg_nudge = non_neg_nudge - LT::ONE_DOUBLE;
 
     // Requantize
     // TODO add rayon for parallelization?
@@ -279,7 +277,6 @@ where
         .collect()
 }
 
-//
 // https://github.com/tensorflow/tensorflow/blob/master/tensorflow/lite/kernels/internal/quantization_util.cc#L53-L104
 pub(crate) fn quantize_multiplier(double_multiplier: f64) -> (i32, usize) {
     if double_multiplier.is_zero() {
@@ -341,11 +338,6 @@ pub(crate) fn quantize_multiplier(double_multiplier: f64) -> (i32, usize) {
 // the normalized fraction and exponent should be zero. However, for our purposes, x should
 // always be positive.
 fn frexp(x: f64) -> (f64, isize) {
-    const F64_EXPONENT_SHIFT: u64 = 52;
-    const F64_EXPONENT_BIAS: u64 = 1023;
-    const F64_EXPONENT_MASK: u64 = 0x7ff0000000000000;
-    const F64_FRACTION_MASK: u64 = 0x000fffffffffffff;
-
     assert!(x > 0.0);
 
     let x_bits: u64 = x.to_bits();
@@ -367,7 +359,7 @@ fn frexp(x: f64) -> (f64, isize) {
     (q, expon as isize)
 }
 
-// This function is used to quantise model model inputs and its types are fixed
+// This function is used to quantise model inputs and its types are fixed
 pub fn quantise_f32_u8_nne(values: &[f32], scale: QScaleType, zero: u8) -> Vec<u8> {
     values
         .iter()

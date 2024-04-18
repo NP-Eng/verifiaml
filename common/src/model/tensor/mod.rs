@@ -66,68 +66,32 @@ pub trait Integral:
     fn to_qscaletype(&self) -> QScaleType;
 }
 
-impl Integral for i8 {
-    type Double = i16;
+#[macro_export]
+macro_rules! impl_integral {
+    ( $t1:ty, $t2:ty ) => {
+        impl Integral for $t1 {
+            type Double = $t2;
 
-    const ZERO: Self = 0;
-    const ONE: Self = 1;
-    const ONE_DOUBLE: Self::Double = 1;
-    const MIN: Self = Self::MIN;
-    const MAX: Self = Self::MAX;
-    // const MAX_PLUS_ONE: Self::Double = <Self::Double as From<Self>>::from(Self::MAX) + <Self::Double as From<Self>>::from(Self::ONE);
-    const BITS: usize = 8 * mem::size_of::<Self>();
-    // const NON_NEG_NUDGE: Self = Self::pow2((Self::BITS - 2) as usize);
+            const ZERO: Self = 0;
+            const ONE: Self = 1;
+            const ONE_DOUBLE: Self::Double = 1;
+            const MIN: Self = Self::MIN;
+            const MAX: Self = Self::MAX;
+            const BITS: usize = 8 * mem::size_of::<Self>();
 
-    fn from_qscaletype(x: QScaleType) -> Self {
-        x as Self
-    }
+            fn from_qscaletype(x: QScaleType) -> Self {
+                x as Self
+            }
 
-    fn to_qscaletype(&self) -> QScaleType {
-        *self as QScaleType
-    }
+            fn to_qscaletype(&self) -> QScaleType {
+                *self as QScaleType
+            }
+        }
+    };
 }
 
-impl Integral for i32 {
-    type Double = i64;
-
-    const ZERO: Self = 0;
-    const ONE: Self = 1;
-    const ONE_DOUBLE: Self::Double = 1;
-    const MIN: Self = Self::MIN;
-    const MAX: Self = Self::MAX;
-    // const MAX_PLUS_ONE: Self::Double = Self::Double::from(Self::MAX) + Self::Double::from(Self::ONE);
-    const BITS: usize = 8 * mem::size_of::<Self>();
-    // const NON_NEG_NUDGE: Self = Self::pow2((Self::BITS - 2) as usize);
-
-    fn from_qscaletype(x: QScaleType) -> Self {
-        x as Self
-    }
-
-    fn to_qscaletype(&self) -> QScaleType {
-        *self as QScaleType
-    }
-}
-
-impl Integral for u8 {
-    type Double = u16;
-
-    const ZERO: Self = 0;
-    const ONE: Self = 1;
-    const ONE_DOUBLE: Self::Double = 1;
-    const MIN: Self = Self::MIN;
-    const MAX: Self = Self::MAX;
-    // const MAX_PLUS_ONE: Self::Double = Self::Double::from(Self::MAX) + Self::Double::from(Self::ONE);
-    const BITS: usize = 8 * mem::size_of::<Self>();
-    // const NON_NEG_NUDGE: Self = Self::pow2((Self::BITS - 2) as usize);
-
-    fn from_qscaletype(x: QScaleType) -> Self {
-        x as Self
-    }
-
-    fn to_qscaletype(&self) -> QScaleType {
-        *self as QScaleType
-    }
-}
+impl_integral!(i8, i16);
+impl_integral!(i32, i64);
 
 #[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq)]
 pub struct Tensor<T> {
@@ -331,7 +295,7 @@ impl<T: Copy> Tensor<T> {
         self.flattened[self.flatten_index(index)]
     }
 
-    pub fn cast<S: Integral>(&self) -> Tensor<S>
+    pub fn cast<S>(&self) -> Tensor<S>
     where
         T: TryInto<S>,
         <T as TryInto<S>>::Error: Debug,
