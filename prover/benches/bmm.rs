@@ -219,15 +219,14 @@ fn bench_verifiaml_verification<PCS, S>(
         |b| {
             b.iter_batched(
                 || {
-                    let proof = model.prove_inference(
+                    model.prove_inference(
                         ck,
                         Some(&mut rng),
                         &mut sponge.clone(),
                         node_coms,
                         node_com_states,
                         quantise_input(&raw_input),
-                    );
-                    proof
+                    )
                 },
                 |proof| {
                     model.verify_inference(vk, &mut sponge.clone(), node_coms, proof);
