@@ -2,7 +2,7 @@ use ark_crypto_primitives::sponge::{Absorb, CryptographicSponge};
 use ark_ff::PrimeField;
 use ark_poly_commit::{LabeledCommitment, PolynomialCommitment};
 
-use hcs_common::{InnerType, Node, NodeCommitment, NodeProof, Poly};
+use hcs_common::{Node, NodeCommitment, NodeProof, Numeric, Poly};
 
 mod model;
 mod nodes;
@@ -31,8 +31,8 @@ where
     F: PrimeField + Absorb + From<ST>,
     S: CryptographicSponge,
     PCS: PolynomialCommitment<F, Poly<F>, S>,
-    ST: InnerType + TryFrom<LT>,
-    LT: InnerType + From<ST>,
+    ST: Numeric + TryFrom<LT>,
+    LT: Numeric + From<ST>,
 {
     fn verify(
         &self,
@@ -52,7 +52,7 @@ where
     F: PrimeField + Absorb + From<ST>,
     S: CryptographicSponge,
     PCS: PolynomialCommitment<F, Poly<F>, S>,
-    ST: InnerType,
+    ST: Numeric,
 {
     match node {
         Node::BMM(fc) => fc,

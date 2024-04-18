@@ -34,7 +34,7 @@ use self::{
     reshape::ReshapeNode,
 };
 
-use super::tensor::{InnerType, QTypeArray};
+use super::tensor::{Numeric, QTypeArray};
 
 // mod parser;
 
@@ -150,8 +150,8 @@ where
 // elegantly by simply implementing the trait
 impl<I, O> Node<I, O>
 where
-    I: InnerType + TryFrom<O>,
-    O: InnerType + From<I>,
+    I: Numeric + TryFrom<O>,
+    O: Numeric + From<I>,
 {
     // Print the type of the node. This cannot be cleantly achieved by deriving
     // Debug

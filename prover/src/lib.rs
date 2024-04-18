@@ -4,7 +4,7 @@ use ark_poly_commit::{LabeledCommitment, PolynomialCommitment};
 use ark_std::rand::RngCore;
 
 use hcs_common::{
-    InnerType, LabeledPoly, Node, NodeCommitment, NodeCommitmentState, NodeProof, Poly,
+    LabeledPoly, Node, NodeCommitment, NodeCommitmentState, NodeProof, Numeric, Poly,
 };
 
 mod model;
@@ -49,8 +49,8 @@ where
     F: PrimeField + Absorb + From<I> + From<O> + From<O>,
     S: CryptographicSponge,
     PCS: PolynomialCommitment<F, Poly<F>, S>,
-    I: InnerType + TryFrom<O>,
-    O: InnerType + From<I>,
+    I: Numeric + TryFrom<O>,
+    O: Numeric + From<I>,
 {
     fn prove(
         &self,

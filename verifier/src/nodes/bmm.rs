@@ -6,7 +6,7 @@ use ark_sumcheck::ml_sumcheck::{
     MLSumcheck,
 };
 use hcs_common::{
-    BMMNode, BMMNodeCommitment, BMMNodeProof, InnerType, NodeCommitment, NodeProof, Poly,
+    BMMNode, BMMNodeCommitment, BMMNodeProof, NodeCommitment, NodeProof, Numeric, Poly,
 };
 
 use crate::NodeOpsVerify;
@@ -16,7 +16,7 @@ where
     F: PrimeField + Absorb + From<ST>,
     S: CryptographicSponge,
     PCS: PolynomialCommitment<F, Poly<F>, S>,
-    ST: InnerType,
+    ST: Numeric,
 {
     fn verify(
         &self,

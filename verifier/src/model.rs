@@ -5,7 +5,7 @@ use ark_poly::Polynomial;
 use ark_poly_commit::PolynomialCommitment;
 use ark_std::log2;
 
-use hcs_common::{InferenceProof, InnerType, Model, NodeCommitment, Poly};
+use hcs_common::{InferenceProof, Model, NodeCommitment, Numeric, Poly};
 
 pub trait VerifyModel<F, S, PCS, ST, LT>
 where
@@ -27,8 +27,8 @@ where
     F: PrimeField + Absorb + From<ST> + From<LT>,
     S: CryptographicSponge,
     PCS: PolynomialCommitment<F, Poly<F>, S>,
-    ST: InnerType + TryFrom<LT>,
-    LT: InnerType + From<ST>,
+    ST: Numeric + TryFrom<LT>,
+    LT: Numeric + From<ST>,
 {
     fn verify_inference(
         &self,

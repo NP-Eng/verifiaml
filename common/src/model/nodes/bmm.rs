@@ -5,7 +5,7 @@ use ark_std::log2;
 
 use ark_sumcheck::ml_sumcheck::Proof;
 
-use crate::model::tensor::{InnerType, Tensor};
+use crate::model::tensor::{Numeric, Tensor};
 use crate::model::Poly;
 use crate::{Commitment, CommitmentState};
 
@@ -105,8 +105,8 @@ pub struct BMMNodeProof<
 
 impl<ST, LT> NodeOpsNative<ST, LT> for BMMNode<ST, LT>
 where
-    ST: InnerType,
-    LT: InnerType + From<ST>,
+    ST: Numeric,
+    LT: Numeric + From<ST>,
 {
     fn shape(&self) -> Vec<usize> {
         vec![self.dims.1]
@@ -153,8 +153,8 @@ where
 
 impl<ST, LT> NodeOpsPadded<ST, LT> for BMMNode<ST, LT>
 where
-    ST: InnerType + TryFrom<LT>,
-    LT: InnerType + From<ST>,
+    ST: Numeric + TryFrom<LT>,
+    LT: Numeric + From<ST>,
 {
     fn padded_shape_log(&self) -> Vec<usize> {
         vec![self.padded_dims_log.1]
@@ -212,8 +212,8 @@ where
 
 impl<ST, LT> BMMNode<ST, LT>
 where
-    ST: InnerType,
-    LT: InnerType,
+    ST: Numeric,
+    LT: Numeric,
 {
     pub fn new(weights: Tensor<ST>, bias: Tensor<LT>, input_zero_point: ST) -> Self {
         let dims = (weights.shape()[0], weights.shape()[1]);

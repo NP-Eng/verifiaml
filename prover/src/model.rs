@@ -4,7 +4,7 @@ use ark_crypto_primitives::sponge::{Absorb, CryptographicSponge};
 use ark_ff::PrimeField;
 use ark_poly::MultilinearExtension;
 use ark_poly_commit::{LabeledPolynomial, PolynomialCommitment};
-use hcs_common::{InferenceProof, InnerType, Model};
+use hcs_common::{InferenceProof, Model, Numeric};
 use hcs_common::{NodeCommitment, NodeCommitmentState, Poly, QTypeArray, Tensor};
 
 use crate::NodeOpsProve;
@@ -38,8 +38,8 @@ where
     F: PrimeField + Absorb + From<ST> + From<LT>,
     S: CryptographicSponge,
     PCS: PolynomialCommitment<F, Poly<F>, S>,
-    ST: InnerType + TryFrom<LT>,
-    LT: InnerType + From<ST>,
+    ST: Numeric + TryFrom<LT>,
+    LT: Numeric + From<ST>,
 {
     /// Unlike the node's `padded_evaluate`, the model's `padded_evaluate` accepts unpadded input
     /// and first re-sizes it before running inference.

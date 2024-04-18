@@ -1,6 +1,6 @@
 use ark_std::log2;
 
-use crate::model::tensor::{InnerType, Tensor};
+use crate::model::tensor::{Numeric, Tensor};
 use crate::quantization::{quantize_multiplier, requantize_ref};
 use crate::{Commitment, CommitmentState};
 
@@ -41,8 +41,8 @@ pub struct RequantizeBMMRefNodeProof {
 
 impl<ST, LT> NodeOpsNative<LT, ST> for RequantizeBMMRefNode<ST, LT>
 where
-    ST: InnerType + TryFrom<LT>,
-    LT: InnerType + From<ST>,
+    ST: Numeric + TryFrom<LT>,
+    LT: Numeric + From<ST>,
 {
     fn shape(&self) -> Vec<usize> {
         vec![self.size]
@@ -78,8 +78,8 @@ where
 
 impl<ST, LT> NodeOpsPadded<LT, ST> for RequantizeBMMRefNode<ST, LT>
 where
-    ST: InnerType + TryFrom<LT>,
-    LT: InnerType + From<ST>,
+    ST: Numeric + TryFrom<LT>,
+    LT: Numeric + From<ST>,
 {
     fn padded_shape_log(&self) -> Vec<usize> {
         vec![self.padded_size_log]

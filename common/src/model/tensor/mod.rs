@@ -20,7 +20,7 @@ mod tests;
 
 const TENSOR_NESTED_TAB: &str = "    ";
 
-pub trait InnerType:
+pub trait Numeric:
     Copy
     + Debug
     + PartialEq
@@ -91,7 +91,7 @@ pub trait InnerType:
     fn inner_shr_double(x: Self::Double, shift: usize) -> Self::Double;
 }
 
-impl InnerType for i8 {
+impl Numeric for i8 {
     const ZERO: Self = 0;
     const ONE: Self = 1;
     const TWO: Self = 2;
@@ -128,7 +128,7 @@ impl InnerType for i8 {
     }
 }
 
-impl InnerType for i32 {
+impl Numeric for i32 {
     const ZERO: Self = 0;
     const ONE: Self = 1;
     const TWO: Self = 2;
@@ -165,7 +165,7 @@ impl InnerType for i32 {
     }
 }
 
-impl InnerType for i64 {
+impl Numeric for i64 {
     const ZERO: Self = 0;
     const ONE: Self = 1;
     const TWO: Self = 2;
@@ -202,7 +202,7 @@ impl InnerType for i64 {
     }
 }
 
-impl InnerType for u8 {
+impl Numeric for u8 {
     const ZERO: Self = 0;
     const ONE: Self = 1;
     const TWO: Self = 2;
@@ -239,7 +239,7 @@ impl InnerType for u8 {
     }
 }
 
-impl InnerType for f32 {
+impl Numeric for f32 {
     const ZERO: Self = 0.0;
     const ONE: Self = 1.0;
     const TWO: Self = 2.0;
@@ -293,7 +293,7 @@ pub enum QTypeArray<ST, LT> {
 }
 
 // impl indexing into the Tensor
-impl<T: InnerType> Index<usize> for Tensor<T> {
+impl<T: Numeric> Index<usize> for Tensor<T> {
     type Output = T;
 
     fn index(&self, index: usize) -> &Self::Output {
@@ -301,7 +301,7 @@ impl<T: InnerType> Index<usize> for Tensor<T> {
     }
 }
 
-impl<T: InnerType> Tensor<T> {
+impl<T: Numeric> Tensor<T> {
     pub fn check_dimensions(&self) -> bool {
         self.flattened.len() == self.shape.iter().product::<usize>()
     }
@@ -332,7 +332,7 @@ impl<T: InnerType> Tensor<T> {
     // <T as TryInto<S>>::Error: Debug
     // and replace unwrap() by unwrap_or(), possibly panicking or propagating
     // the error
-    pub fn cast<S: InnerType>(&self) -> Tensor<S>
+    pub fn cast<S: Numeric>(&self) -> Tensor<S>
     where
         T: TryInto<S>,
         <T as TryInto<S>>::Error: Debug,
@@ -561,7 +561,7 @@ fn compact_resize_internal<T: Copy>(
 // insead of the more general Tensor<T> + S for any S which can be added to T,
 // thus forcing the programmer to make intentional casts. The same applies to
 // other operator implementations below.
-impl<T: InnerType> Add<T> for Tensor<T>
+impl<T: Numeric> Add<T> for Tensor<T>
 where
     T: Add<Output = T>,
 {
@@ -578,7 +578,7 @@ where
 // There is a workaround, but it is not necessary for now
 // impl<T: InnerType> ops::Add<Tensor<T>> for T where T: ops::Add<Output = T>
 
-impl<T: InnerType> Sub<T> for Tensor<T>
+impl<T: Numeric> Sub<T> for Tensor<T>
 where
     T: Sub<Output = T>,
 {
@@ -590,7 +590,7 @@ where
     }
 }
 
-impl<T: InnerType> Mul<T> for Tensor<T>
+impl<T: Numeric> Mul<T> for Tensor<T>
 where
     T: Mul<Output = T>,
 {
@@ -602,7 +602,7 @@ where
     }
 }
 
-impl<T: InnerType> Div<T> for Tensor<T>
+impl<T: Numeric> Div<T> for Tensor<T>
 where
     T: Div<Output = T>,
 {
@@ -616,14 +616,14 @@ where
 
 /******************* Conversion from Vec *******************/
 
-impl<T: InnerType> From<Vec<T>> for Tensor<T> {
+impl<T: Numeric> From<Vec<T>> for Tensor<T> {
     fn from(values: Vec<T>) -> Self {
         let l = values.len();
         Tensor::new(values, vec![l])
     }
 }
 
-impl<T: InnerType> From<Vec<Vec<T>>> for Tensor<T> {
+impl<T: Numeric> From<Vec<Vec<T>>> for Tensor<T> {
     fn from(values: Vec<Vec<T>>) -> Self {
         assert!(
             values.iter().all(|x| x.len() == values[0].len()),
@@ -639,7 +639,7 @@ impl<T: InnerType> From<Vec<Vec<T>>> for Tensor<T> {
 
 /************************* Display *************************/
 
-impl<T: InnerType> fmt::Display for Tensor<T> {
+impl<T: Numeric> fmt::Display for Tensor<T> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(
             f,
@@ -664,7 +664,7 @@ impl<T: InnerType> fmt::Display for Tensor<T> {
     }
 }
 
-fn print_flat_data<T: InnerType>(
+fn print_flat_data<T: Numeric>(
     f: &mut fmt::Formatter,
     data: &[T],
     cumulative_dimensions: &[usize],
@@ -713,7 +713,7 @@ fn print_flat_data<T: InnerType>(
 // We follow the convention (e.g. in numpy) that `maximum` and `minimum`
 // compare an array to a single element (element-wise); whereas `max` and `min`
 // (not implemented) compare two equally sized arrays element-wise.
-impl<T: InnerType + PartialOrd> Tensor<T> {
+impl<T: Numeric + PartialOrd> Tensor<T> {
     pub fn maximum(&self, x: T) -> Tensor<T> {
         let flattened_max: Vec<T> = self
             .flattened
