@@ -58,8 +58,6 @@ pub trait Integral:
     const MIN: Self;
     const MAX: Self;
     const BITS: usize;
-    // const MAX_PLUS_ONE: Self::Double;  // xt_pow2_bits_minus_one
-    // const NON_NEG_NUDGE: Self;
 
     // TODO this should be removed once  floating requantisation is made generic
     fn from_qscaletype(x: QScaleType) -> Self;
