@@ -168,7 +168,7 @@ where
     // TODO: After splitting InnerType, rewrite pow2 to use << instead of *.
 
     // Mask consists of full_shift ones
-    let mask = (LT::ONE >> effective_shift) - LT::ONE; // TODO: may overflow for some exponents
+    let mask = (LT::ONE << effective_shift) - LT::ONE; // TODO: may overflow for some exponents
     let mask_div2 = mask >> 1;
 
     // Constants used during nudging

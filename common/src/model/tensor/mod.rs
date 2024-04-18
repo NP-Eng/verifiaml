@@ -1,4 +1,4 @@
-use std::ops::{AddAssign, DivAssign, MulAssign, Shr, SubAssign};
+use std::ops::{AddAssign, DivAssign, MulAssign, Shl, Shr, SubAssign};
 
 use ark_std::any::type_name;
 use ark_std::cmp::PartialOrd;
@@ -35,6 +35,7 @@ pub trait Integral:
     + SubAssign
     + MulAssign
     + DivAssign
+    + Shl<usize, Output = Self>
     + Shr<usize, Output = Self>
 {
     // We can't simply require Double: Integral, as that would create an
@@ -47,6 +48,7 @@ pub trait Integral:
         + Div<Output = Self::Double>
         + Add<Output = Self::Double>
         + Sub<Output = Self::Double>
+        + Shl<usize, Output = Self::Double>
         + Shr<usize, Output = Self::Double>;
 
     const ZERO: Self;
