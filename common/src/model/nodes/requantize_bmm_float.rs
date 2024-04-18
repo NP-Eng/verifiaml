@@ -1,6 +1,6 @@
 use ark_std::log2;
 
-use crate::model::tensor::{Numeric, Tensor};
+use crate::model::tensor::{Integral, Tensor};
 use crate::quantization::{requantize_fc, BMMQInfo, QInfo, QScaleType, RoundingScheme};
 use crate::{Commitment, CommitmentState};
 
@@ -34,8 +34,8 @@ pub struct RequantizeBMMNodeProof {
 
 impl<ST, LT> NodeOpsNative<LT, ST> for RequantizeBMMFloatNode<ST>
 where
-    ST: Numeric + TryFrom<LT>,
-    LT: Numeric + From<ST>,
+    ST: Integral + TryFrom<LT>,
+    LT: Integral + From<ST>,
 {
     fn shape(&self) -> Vec<usize> {
         vec![self.size]
@@ -70,8 +70,8 @@ where
 
 impl<ST, LT> NodeOpsPadded<LT, ST> for RequantizeBMMFloatNode<ST>
 where
-    ST: Numeric + TryFrom<LT>,
-    LT: Numeric + From<ST>,
+    ST: Integral + TryFrom<LT>,
+    LT: Integral + From<ST>,
 {
     fn padded_shape_log(&self) -> Vec<usize> {
         vec![self.padded_size_log]

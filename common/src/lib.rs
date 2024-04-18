@@ -20,7 +20,7 @@ pub use model::nodes::{
     reshape::ReshapeNode,
     Node, NodeCommitment, NodeCommitmentState, NodeOpsPadded, NodeProof,
 };
-pub use model::tensor::{Numeric, QTypeArray, Tensor};
+pub use model::tensor::{Integral, QTypeArray, Tensor};
 pub use model::{InferenceProof, Model};
 pub use model::{LabeledPoly, Poly};
 pub use quantization::{

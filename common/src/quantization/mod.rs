@@ -1,6 +1,6 @@
 use ark_std::Zero;
 
-use crate::model::tensor::Numeric;
+use crate::model::tensor::Integral;
 
 #[cfg(test)]
 pub mod tests;
@@ -44,14 +44,14 @@ pub enum RoundingScheme {
     NearestTiesEven,
 }
 
-pub fn requantize_fc<ST: Numeric, LT: Numeric>(
+pub fn requantize_fc<ST: Integral, LT: Integral>(
     output: &[LT],
     q_info: &BMMQInfo<ST>,
     scheme: RoundingScheme,
 ) -> Vec<ST>
 where
-    ST: Numeric + TryFrom<LT>,
-    LT: Numeric + From<ST>,
+    ST: Integral + TryFrom<LT>,
+    LT: Integral + From<ST>,
 {
     match scheme {
         RoundingScheme::NearestTiesAwayFromZero => requantize_fc_ntafz::<ST, LT>(output, q_info),
@@ -61,8 +61,8 @@ where
 
 fn requantize_fc_ntafz<ST, LT>(output: &[LT], q_info: &BMMQInfo<ST>) -> Vec<ST>
 where
-    ST: Numeric + TryFrom<LT>,
-    LT: Numeric + From<ST>,
+    ST: Integral + TryFrom<LT>,
+    LT: Integral + From<ST>,
 {
     // 1. Computing scale
     // TODO In actual schemes, this will be decomposed as (int, shift)
@@ -94,7 +94,7 @@ where
 }
 
 // The (unstable) method clamp comes from the trait Ord, which we cannot
-// restrict Numeric to as we need f32 to implement the latter. Note that this
+// restrict Integral to as we need f32 to implement the latter. Note that this
 // method is not meaningfully defined for classes that genuinely do not
 // implement Ord (total order relation) but only PartialOrd (partial order
 // relation).
@@ -108,10 +108,10 @@ fn partial_ord_clamp<T: PartialOrd>(x: T, min: T, max: T) -> T {
     }
 }
 
-fn requantize_fc_nte<ST: Numeric, LT: Numeric>(output: &[LT], q_info: &BMMQInfo<ST>) -> Vec<ST>
+fn requantize_fc_nte<ST: Integral, LT: Integral>(output: &[LT], q_info: &BMMQInfo<ST>) -> Vec<ST>
 where
-    ST: Numeric + TryFrom<LT>,
-    LT: Numeric + From<ST>,
+    ST: Integral + TryFrom<LT>,
+    LT: Integral + From<ST>,
 {
     // 1. Computing scale
     // TODO In actual schemes, this will be decomposed as (int, shift)
@@ -151,14 +151,14 @@ pub fn requantize_ref<ST, LT>(
     output_zero_point: ST,
 ) -> Vec<ST>
 where
-    ST: Numeric + TryFrom<LT>,
-    LT: Numeric + From<ST>,
+    ST: Integral + TryFrom<LT>,
+    LT: Integral + From<ST>,
 {
     // Computing auxiliary constants used for every input
     let effective_multiplier = LT::Double::from(effective_multiplier);
     let output_zero_point = LT::from(output_zero_point);
 
-    // TODO: Add associated constant MAX_PLUS_ONE to Numeric.
+    // TODO: Add associated constant MAX_PLUS_ONE to Integral.
     let pow2_bits_minus_one = LT::pow2_double(LT::BITS - 1);
 
     // NOTE: Notice that they are independent of the input. Perhaps it is meaningful to turn:
@@ -225,8 +225,8 @@ pub fn requantize_single_round<ST, LT>(
     output_zero_point: ST,
 ) -> Vec<ST>
 where
-    ST: Numeric + TryFrom<LT>,
-    LT: Numeric + From<ST>,
+    ST: Integral + TryFrom<LT>,
+    LT: Integral + From<ST>,
 {
     // Computing auxiliary constants used for every input
     // TODO minor optimisation possible

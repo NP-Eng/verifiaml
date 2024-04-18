@@ -9,7 +9,7 @@ use ark_std::rand::RngCore;
 
 use crate::model::nodes::Node;
 
-use self::tensor::Numeric;
+use self::tensor::Integral;
 use self::tensor::QTypeArray;
 use self::{nodes::NodeProof, tensor::Tensor};
 
@@ -53,8 +53,8 @@ pub struct Model<ST, LT> {
 
 impl<ST, LT> Model<ST, LT>
 where
-    ST: Numeric + TryFrom<LT>,
-    LT: Numeric + From<ST>,
+    ST: Integral + TryFrom<LT>,
+    LT: Integral + From<ST>,
 {
     pub fn new(input_shape: Vec<usize>, nodes: Vec<Node<ST, LT>>) -> Self {
         // An empty model would cause panics later down the line e.g. when

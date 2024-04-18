@@ -20,7 +20,7 @@ mod tests;
 
 const TENSOR_NESTED_TAB: &str = "    ";
 
-pub trait Numeric:
+pub trait Integral:
     Copy
     + Debug
     + PartialEq
@@ -36,6 +36,16 @@ pub trait Numeric:
     + Serialize
     + DeserializeOwned
 {
+    type Double: From<Self> // We can't simply require Double: Integral, as
+        // that would create an infinite chain
+        + Mul<Output = Self::Double>
+        + Div<Output = Self::Double>
+        + // TODO to be readded after the "InnerType split" + TryInto<Self>;
+        Add<Output = Self::Double>
+        + Sub<Output = Self::Double>
+        + Copy
+        + Debug;
+
     const ZERO: Self;
     const ONE: Self;
     const TWO: Self;
@@ -44,15 +54,6 @@ pub trait Numeric:
     const BITS: usize;
     // const MAX_PLUS_ONE: Self::Double;  // xt_pow2_bits_minus_one
     // const NON_NEG_NUDGE: Self;
-
-    type Double: From<Self>
-        + Mul<Output = Self::Double>
-        + Div<Output = Self::Double>
-        + // TODO to be readded after the "InnerType split" + TryInto<Self>;
-        Add<Output = Self::Double>
-        + Sub<Output = Self::Double>
-        + Copy
-        + Debug;
 
     // TODO if we decide to make the model generic on the quantisation process
     // types, this will change
@@ -91,7 +92,7 @@ pub trait Numeric:
     fn inner_shr_double(x: Self::Double, shift: usize) -> Self::Double;
 }
 
-impl Numeric for i8 {
+impl Integral for i8 {
     const ZERO: Self = 0;
     const ONE: Self = 1;
     const TWO: Self = 2;
@@ -128,7 +129,7 @@ impl Numeric for i8 {
     }
 }
 
-impl Numeric for i32 {
+impl Integral for i32 {
     const ZERO: Self = 0;
     const ONE: Self = 1;
     const TWO: Self = 2;
@@ -165,7 +166,7 @@ impl Numeric for i32 {
     }
 }
 
-impl Numeric for i64 {
+impl Integral for i64 {
     const ZERO: Self = 0;
     const ONE: Self = 1;
     const TWO: Self = 2;
@@ -202,7 +203,7 @@ impl Numeric for i64 {
     }
 }
 
-impl Numeric for u8 {
+impl Integral for u8 {
     const ZERO: Self = 0;
     const ONE: Self = 1;
     const TWO: Self = 2;
@@ -239,7 +240,7 @@ impl Numeric for u8 {
     }
 }
 
-impl Numeric for f32 {
+impl Integral for f32 {
     const ZERO: Self = 0.0;
     const ONE: Self = 1.0;
     const TWO: Self = 2.0;
@@ -293,7 +294,7 @@ pub enum QTypeArray<ST, LT> {
 }
 
 // impl indexing into the Tensor
-impl<T: Numeric> Index<usize> for Tensor<T> {
+impl<T: Integral> Index<usize> for Tensor<T> {
     type Output = T;
 
     fn index(&self, index: usize) -> &Self::Output {
@@ -301,7 +302,7 @@ impl<T: Numeric> Index<usize> for Tensor<T> {
     }
 }
 
-impl<T: Numeric> Tensor<T> {
+impl<T: Integral> Tensor<T> {
     pub fn check_dimensions(&self) -> bool {
         self.flattened.len() == self.shape.iter().product::<usize>()
     }
@@ -332,7 +333,7 @@ impl<T: Numeric> Tensor<T> {
     // <T as TryInto<S>>::Error: Debug
     // and replace unwrap() by unwrap_or(), possibly panicking or propagating
     // the error
-    pub fn cast<S: Numeric>(&self) -> Tensor<S>
+    pub fn cast<S: Integral>(&self) -> Tensor<S>
     where
         T: TryInto<S>,
         <T as TryInto<S>>::Error: Debug,
@@ -561,7 +562,7 @@ fn compact_resize_internal<T: Copy>(
 // insead of the more general Tensor<T> + S for any S which can be added to T,
 // thus forcing the programmer to make intentional casts. The same applies to
 // other operator implementations below.
-impl<T: Numeric> Add<T> for Tensor<T>
+impl<T: Integral> Add<T> for Tensor<T>
 where
     T: Add<Output = T>,
 {
@@ -578,7 +579,7 @@ where
 // There is a workaround, but it is not necessary for now
 // impl<T: InnerType> ops::Add<Tensor<T>> for T where T: ops::Add<Output = T>
 
-impl<T: Numeric> Sub<T> for Tensor<T>
+impl<T: Integral> Sub<T> for Tensor<T>
 where
     T: Sub<Output = T>,
 {
@@ -590,7 +591,7 @@ where
     }
 }
 
-impl<T: Numeric> Mul<T> for Tensor<T>
+impl<T: Integral> Mul<T> for Tensor<T>
 where
     T: Mul<Output = T>,
 {
@@ -602,7 +603,7 @@ where
     }
 }
 
-impl<T: Numeric> Div<T> for Tensor<T>
+impl<T: Integral> Div<T> for Tensor<T>
 where
     T: Div<Output = T>,
 {
@@ -616,14 +617,14 @@ where
 
 /******************* Conversion from Vec *******************/
 
-impl<T: Numeric> From<Vec<T>> for Tensor<T> {
+impl<T: Integral> From<Vec<T>> for Tensor<T> {
     fn from(values: Vec<T>) -> Self {
         let l = values.len();
         Tensor::new(values, vec![l])
     }
 }
 
-impl<T: Numeric> From<Vec<Vec<T>>> for Tensor<T> {
+impl<T: Integral> From<Vec<Vec<T>>> for Tensor<T> {
     fn from(values: Vec<Vec<T>>) -> Self {
         assert!(
             values.iter().all(|x| x.len() == values[0].len()),
@@ -639,7 +640,7 @@ impl<T: Numeric> From<Vec<Vec<T>>> for Tensor<T> {
 
 /************************* Display *************************/
 
-impl<T: Numeric> fmt::Display for Tensor<T> {
+impl<T: Integral> fmt::Display for Tensor<T> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(
             f,
@@ -664,7 +665,7 @@ impl<T: Numeric> fmt::Display for Tensor<T> {
     }
 }
 
-fn print_flat_data<T: Numeric>(
+fn print_flat_data<T: Integral>(
     f: &mut fmt::Formatter,
     data: &[T],
     cumulative_dimensions: &[usize],
@@ -713,7 +714,7 @@ fn print_flat_data<T: Numeric>(
 // We follow the convention (e.g. in numpy) that `maximum` and `minimum`
 // compare an array to a single element (element-wise); whereas `max` and `min`
 // (not implemented) compare two equally sized arrays element-wise.
-impl<T: Numeric + PartialOrd> Tensor<T> {
+impl<T: Integral + PartialOrd> Tensor<T> {
     pub fn maximum(&self, x: T) -> Tensor<T> {
         let flattened_max: Vec<T> = self
             .flattened
