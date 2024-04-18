@@ -7,8 +7,8 @@ use ark_poly_commit::PolynomialCommitment;
 use ark_std::{rand::Rng, test_rng};
 use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion};
 use hcs_common::{
-    python::*, quantise_f32_u8_nne, test_sponge, BMMNode, InferenceProof, Ligero, Model, Node,
-    NodeCommitment, NodeCommitmentState, Poly, QArray, RequantiseBMMNode,
+    python::*, quantise_f32_u8_nne, test_sponge, BMMNode, Ligero, Model, Node, NodeCommitment,
+    NodeCommitmentState, Poly, QArray, RequantiseBMMNode,
 };
 use hcs_prover::ProveModel;
 use hcs_verifier::VerifyModel;
@@ -89,22 +89,17 @@ fn bench_fully_connected_layer(c: &mut Criterion) {
             .setup_keys::<Fr, PoseidonSponge<Fr>, Ligero<Fr>, _>(&mut rng)
             .unwrap();
 
-        let (node_coms, proof) = bench_verifiaml_proof(
-            c,
-            &fc_model,
-            &raw_input,
-            &ck,
-            rng,
-            &mut sponge,
-            resize_factor,
-        );
+        let (node_coms, node_coms_states) =
+            bench_verifiaml_proof(c, &fc_model, &raw_input, &ck, &mut sponge, resize_factor);
 
         bench_verifiaml_verification::<Ligero<Fr>, PoseidonSponge<Fr>>(
             c,
             &fc_model,
+            &ck,
             &vk,
             &node_coms,
-            &proof,
+            &node_coms_states,
+            &raw_input,
             &mut sponge,
             resize_factor,
         );
@@ -153,12 +148,11 @@ fn bench_verifiaml_proof<PCS, S>(
     model: &Model<i8, i32>,
     raw_input: &QArray<f32>,
     ck: &PCS::CommitterKey,
-    mut rng: impl Rng,
     sponge: &mut S,
     resize_factor: usize,
 ) -> (
     Vec<NodeCommitment<Fr, S, PCS>>,
-    InferenceProof<Fr, S, PCS, i8, i32>,
+    Vec<NodeCommitmentState<Fr, S, PCS>>,
 )
 where
     S: CryptographicSponge,
@@ -171,6 +165,8 @@ where
         Vec<NodeCommitment<Fr, S, PCS>>,
         Vec<NodeCommitmentState<Fr, S, PCS>>,
     ) = model.commit(ck, None).into_iter().unzip();
+
+    let mut rng = test_rng();
 
     group.bench_function(
         BenchmarkId::new(
@@ -193,24 +189,17 @@ where
         },
     );
 
-    let proof = model.prove_inference(
-        ck,
-        Some(&mut rng),
-        sponge,
-        &node_coms,
-        &node_com_states,
-        quantise_input(&raw_input),
-    );
-
-    (node_coms, proof)
+    (node_coms, node_com_states)
 }
 
 fn bench_verifiaml_verification<PCS, S>(
     c: &mut Criterion,
     model: &Model<i8, i32>,
+    ck: &PCS::CommitterKey,
     vk: &PCS::VerifierKey,
     node_coms: &Vec<NodeCommitment<Fr, S, PCS>>,
-    proof: &InferenceProof<Fr, S, PCS, i8, i32>,
+    node_com_states: &Vec<NodeCommitmentState<Fr, S, PCS>>,
+    raw_input: &QArray<f32>,
     sponge: &mut S,
     resize_factor: usize,
 ) where
@@ -220,15 +209,31 @@ fn bench_verifiaml_verification<PCS, S>(
     let mut group = c.benchmark_group("verifiaml");
     group.sample_size(1000);
 
+    let mut rng = test_rng();
+
     group.bench_function(
         BenchmarkId::new(
             "verification",
             format!("{} params", resize_factor * resize_factor * 28 * 28 * 10),
         ),
         |b| {
-            b.iter(|| {
-                model.verify_inference(vk, sponge, node_coms, proof);
-            })
+            b.iter_batched(
+                || {
+                    let proof = model.prove_inference(
+                        ck,
+                        Some(&mut rng),
+                        &mut sponge.clone(),
+                        node_coms,
+                        node_com_states,
+                        quantise_input(&raw_input),
+                    );
+                    proof
+                },
+                |proof| {
+                    model.verify_inference(vk, &mut sponge.clone(), node_coms, proof);
+                },
+                criterion::BatchSize::SmallInput,
+            )
         },
     );
 }

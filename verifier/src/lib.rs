@@ -22,7 +22,7 @@ where
         node_com: &NodeCommitment<F, S, PCS>,
         input_com: &LabeledCommitment<PCS::Commitment>,
         output_com: &LabeledCommitment<PCS::Commitment>,
-        proof: &NodeProof<F, S, PCS>,
+        proof: NodeProof<F, S, PCS>,
     ) -> bool;
 }
 
@@ -41,7 +41,7 @@ where
         node_com: &NodeCommitment<F, S, PCS>,
         input_com: &LabeledCommitment<PCS::Commitment>,
         output_com: &LabeledCommitment<PCS::Commitment>,
-        proof: &NodeProof<F, S, PCS>,
+        proof: NodeProof<F, S, PCS>,
     ) -> bool {
         node_as_node_ops_snark(self).verify(vk, s, node_com, input_com, output_com, proof)
     }

@@ -18,7 +18,7 @@ where
         vk: &PCS::VerifierKey,
         sponge: &mut S,
         node_commitments: &Vec<NodeCommitment<F, S, PCS>>,
-        inference_proof: &InferenceProof<F, S, PCS, ST, LT>,
+        inference_proof: InferenceProof<F, S, PCS, ST, LT>,
     ) -> bool;
 }
 
@@ -35,7 +35,7 @@ where
         vk: &PCS::VerifierKey,
         sponge: &mut S,
         node_commitments: &Vec<NodeCommitment<F, S, PCS>>,
-        inference_proof: &InferenceProof<F, S, PCS, ST, LT>,
+        inference_proof: InferenceProof<F, S, PCS, ST, LT>,
     ) -> bool {
         let InferenceProof {
             inputs,
@@ -47,7 +47,7 @@ where
         } = inference_proof;
 
         // Absorb all commitments into the sponge
-        sponge.absorb(node_value_commitments);
+        sponge.absorb(&node_value_commitments);
 
         // TODO Verify that all commited NIOs live in the right range (to be
         // discussed)

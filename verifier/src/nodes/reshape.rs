@@ -18,7 +18,7 @@ where
         _node_com: &NodeCommitment<F, S, PCS>,
         _input_com: &LabeledCommitment<PCS::Commitment>,
         _output_com: &LabeledCommitment<PCS::Commitment>,
-        _proof: &NodeProof<F, S, PCS>,
+        _proof: NodeProof<F, S, PCS>,
     ) -> bool {
         true
     }
