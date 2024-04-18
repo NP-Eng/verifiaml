@@ -159,7 +159,7 @@ where
     let output_zero_point = LT::from(output_zero_point);
 
     // TODO: Add associated constant MAX_PLUS_ONE to Integral.
-    let pow2_bits_minus_one = LT::pow2_double(LT::BITS - 1);
+    let pow2_bits_minus_one = LT::ONE_DOUBLE << (LT::BITS - 1);
 
     // NOTE: Notice that they are independent of the input. Perhaps it is meaningful to turn:
     // xt_pow2_bits_minus_one, non_neg_nudge, and neg_nudge
@@ -172,8 +172,8 @@ where
     let mask_div2 = mask >> 1;
 
     // Constants used during nudging
-    let non_neg_nudge = LT::pow2_double(LT::BITS - 2);
-    let neg_nudge = LT::Double::from(LT::ONE) - non_neg_nudge;
+    let non_neg_nudge = LT::ONE_DOUBLE << LT::BITS - 2;
+    let neg_nudge = LT::ONE_DOUBLE - non_neg_nudge;
 
     // Requantize
     // TODO add rayon for parallelization?
@@ -188,12 +188,15 @@ where
 
             let product = LT::Double::from(*x) * effective_multiplier;
 
-            let product_high = LT::inner_try_from((product + nudge) / pow2_bits_minus_one).unwrap();
+            let product_high: LT = ((product + nudge) / pow2_bits_minus_one)
+                .try_into()
+                .map_err(|_| "Error trying to convert LT::Double to LT")
+                .unwrap();
 
             // assert(full_shift <= 31);
 
             // TODO: change inner_bit_and by & after the "InnerType split"
-            let remainder = product_high.inner_bit_and(mask);
+            let remainder = product_high & mask;
             let threshold = mask_div2 + is_negative;
 
             let core = (product_high >> effective_shift)
@@ -244,7 +247,7 @@ where
 
     // Constants used during nudging
     // TODO possible optimisation
-    let non_neg_nudge = LT::pow2_double(full_shift - 1);
+    let non_neg_nudge = LT::ONE_DOUBLE << (full_shift - 1);
     let neg_nudge = non_neg_nudge - LT::Double::from(LT::ONE); // keep this here
 
     // Requantize
@@ -258,10 +261,10 @@ where
                 neg_nudge
             };
 
-            let core = LT::inner_try_from(
-                (LT::Double::from(*x) * effective_multiplier + nudge) >> full_shift,
-            )
-            .unwrap();
+            let core: LT = ((LT::Double::from(*x) * effective_multiplier + nudge) >> full_shift)
+                .try_into()
+                .map_err(|_| "Error trying to convert LT::Double to LT")
+                .unwrap();
 
             let shifted = core + output_zero_point;
 

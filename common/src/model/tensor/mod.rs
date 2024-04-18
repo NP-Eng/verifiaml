@@ -1,4 +1,4 @@
-use std::ops::{AddAssign, DivAssign, MulAssign, Shl, Shr, SubAssign};
+use std::ops::{AddAssign, BitAnd, DivAssign, MulAssign, Shl, Shr, SubAssign};
 
 use ark_std::any::type_name;
 use ark_std::cmp::PartialOrd;
@@ -37,6 +37,7 @@ pub trait Integral:
     + DivAssign
     + Shl<usize, Output = Self>
     + Shr<usize, Output = Self>
+    + BitAnd<Output = Self>
 {
     // We can't simply require Double: Integral, as that would create an
     // infinite chain
@@ -53,7 +54,7 @@ pub trait Integral:
 
     const ZERO: Self;
     const ONE: Self;
-    const TWO: Self;
+    const ONE_DOUBLE: Self::Double;
     const MIN: Self;
     const MAX: Self;
     const BITS: usize;
@@ -62,66 +63,41 @@ pub trait Integral:
 
     // TODO this should be removed once  floating requantisation is made generic
     fn from_qscaletype(x: QScaleType) -> Self;
-
     fn to_qscaletype(&self) -> QScaleType;
-
-    fn pow2_double(e: usize) -> Self::Double {
-        let mut pow = Self::Double::from(Self::ONE);
-
-        for _ in 0..e {
-            pow = pow * Self::Double::from(Self::TWO);
-        }
-
-        pow
-    }
-
-    // This ugly function will go away after the "InnerType split"
-    fn inner_try_from(x: Self::Double) -> Result<Self, ()>;
-
-    fn inner_bit_and(self, rhs: Self) -> Self;
 }
 
 impl Integral for i8 {
+    type Double = i16;
+
     const ZERO: Self = 0;
     const ONE: Self = 1;
-
-    const TWO: Self = 2;
+    const ONE_DOUBLE: Self::Double = 1;
     const MIN: Self = Self::MIN;
     const MAX: Self = Self::MAX;
     // const MAX_PLUS_ONE: Self::Double = <Self::Double as From<Self>>::from(Self::MAX) + <Self::Double as From<Self>>::from(Self::ONE);
     const BITS: usize = 8 * mem::size_of::<Self>();
     // const NON_NEG_NUDGE: Self = Self::pow2((Self::BITS - 2) as usize);
 
-    type Double = i16;
-
     fn from_qscaletype(x: QScaleType) -> Self {
         x as Self
     }
 
     fn to_qscaletype(&self) -> QScaleType {
         *self as QScaleType
-    }
-
-    fn inner_try_from(x: Self::Double) -> Result<Self, ()> {
-        Self::try_from(x).map_err(|_| ())
-    }
-
-    fn inner_bit_and(self, rhs: Self) -> Self {
-        self & rhs
     }
 }
 
 impl Integral for i32 {
+    type Double = i64;
+
     const ZERO: Self = 0;
     const ONE: Self = 1;
-    const TWO: Self = 2;
+    const ONE_DOUBLE: Self::Double = 1;
     const MIN: Self = Self::MIN;
     const MAX: Self = Self::MAX;
     // const MAX_PLUS_ONE: Self::Double = Self::Double::from(Self::MAX) + Self::Double::from(Self::ONE);
     const BITS: usize = 8 * mem::size_of::<Self>();
     // const NON_NEG_NUDGE: Self = Self::pow2((Self::BITS - 2) as usize);
-
-    type Double = i64;
 
     fn from_qscaletype(x: QScaleType) -> Self {
         x as Self
@@ -129,80 +105,27 @@ impl Integral for i32 {
 
     fn to_qscaletype(&self) -> QScaleType {
         *self as QScaleType
-    }
-
-    fn inner_try_from(x: Self::Double) -> Result<Self, ()> {
-        Self::try_from(x).map_err(|_| ())
-    }
-
-    fn inner_bit_and(self, rhs: Self) -> Self {
-        self & rhs
     }
 }
 
-/* impl Integral for i64 {
-    const ZERO: Self = 0;
-    const ONE: Self = 1;
-    const TWO: Self = 2;
-    const MIN: Self = Self::MIN;
-    const MAX: Self = Self::MAX;
-    // const MAX_PLUS_ONE: Self::Double = Self::Double::from(Self::MAX) + Self::Double::from(Self::ONE);
-    const BITS: usize = 8 * mem::size_of::<Self>();
-    // const NON_NEG_NUDGE: Self = Self::pow2((Self::BITS - 2) as usize);
-
-    type Double = i128;
-
-    fn from_qscaletype(x: QScaleType) -> Self {
-        x as Self
-    }
-
-    fn to_qscaletype(&self) -> QScaleType {
-        *self as QScaleType
-    }
-
-    fn inner_try_from(x: Self::Double) -> Result<Self, ()> {
-        Self::try_from(x).map_err(|_| ())
-    }
-
-    fn inner_bit_and(self, rhs: Self) -> Self {
-        self & rhs
-    }
-
-    fn inner_shr(self, shift: usize) -> Self {
-        self >> shift
-    }
-
-    fn inner_shr_double(x: Self::Double, shift: usize) -> Self::Double {
-        x >> shift
-    }
-} */
-
 impl Integral for u8 {
-    const ZERO: Self = 0;
-    const ONE: Self = 1;
-    const TWO: Self = 2;
-    const MIN: Self = Self::MIN;
-    const MAX: Self = Self::MAX;
-    // const MAX_PLUS_ONE: Self::Double = Self::Double::from(Self::MAX) + Self::Double::from(Self::ONE);
-    const BITS: usize = 8 * mem::size_of::<Self>();
-    // const NON_NEG_NUDGE: Self = Self::pow2((Self::BITS - 2) as usize);
-
     type Double = u16;
 
+    const ZERO: Self = 0;
+    const ONE: Self = 1;
+    const ONE_DOUBLE: Self::Double = 1;
+    const MIN: Self = Self::MIN;
+    const MAX: Self = Self::MAX;
+    // const MAX_PLUS_ONE: Self::Double = Self::Double::from(Self::MAX) + Self::Double::from(Self::ONE);
+    const BITS: usize = 8 * mem::size_of::<Self>();
+    // const NON_NEG_NUDGE: Self = Self::pow2((Self::BITS - 2) as usize);
+
     fn from_qscaletype(x: QScaleType) -> Self {
         x as Self
     }
 
     fn to_qscaletype(&self) -> QScaleType {
         *self as QScaleType
-    }
-
-    fn inner_try_from(x: Self::Double) -> Result<Self, ()> {
-        Self::try_from(x).map_err(|_| ())
-    }
-
-    fn inner_bit_and(self, rhs: Self) -> Self {
-        self & rhs
     }
 }
 
