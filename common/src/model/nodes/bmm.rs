@@ -73,6 +73,7 @@ where
 
 /// Proof of execution of a BMM node, consisting of a sumcheck proof and four
 /// PCS opening proofs
+#[derive(Clone)]
 pub struct BMMNodeProof<
     F: PrimeField + Absorb,
     S: CryptographicSponge,

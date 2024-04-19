@@ -16,11 +16,13 @@ pub mod qarray;
 pub type Poly<F> = DenseMultilinearExtension<F>;
 pub type LabeledPoly<F> = LabeledPolynomial<F, DenseMultilinearExtension<F>>;
 
+#[derive(Clone)]
 pub struct InferenceProof<F, S, PCS, ST, LT>
 where
     F: PrimeField + Absorb,
     S: CryptographicSponge,
     PCS: PolynomialCommitment<F, Poly<F>, S>,
+    LabeledCommitment<PCS::Commitment>: Clone,
 {
     // Model input tensors in plain
     pub inputs: Vec<QTypeArray<ST, LT>>,

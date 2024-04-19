@@ -92,6 +92,7 @@ pub enum Node<ST, LT> {
     Reshape(ReshapeNode),
 }
 
+#[derive(Clone)]
 pub enum NodeProof<F, S, PCS>
 where
     F: PrimeField + Absorb,

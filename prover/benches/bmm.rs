@@ -4,7 +4,7 @@ use ark_bn254::Fr;
 use ark_crypto_primitives::sponge::{poseidon::PoseidonSponge, Absorb, CryptographicSponge};
 use ark_ff::PrimeField;
 use ark_poly_commit::PolynomialCommitment;
-use ark_std::{rand::Rng, test_rng};
+use ark_std::test_rng;
 use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion};
 use hcs_common::{
     python::*, quantise_f32_u8_nne, test_sponge, BMMNode, Ligero, Model, Node, NodeCommitment,
@@ -13,6 +13,8 @@ use hcs_common::{
 use hcs_prover::ProveModel;
 use hcs_verifier::VerifyModel;
 use pyo3::Python;
+
+const SAMPLE_SIZE: usize = 10;
 
 pub const S_INPUT: f32 = 0.003921568859368563;
 pub const Z_INPUT: u8 = 0;
@@ -62,7 +64,7 @@ fn quantise_input(raw_input: &QArray<f32>) -> QArray<i8> {
 }
 
 fn bench_fully_connected_layer(c: &mut Criterion) {
-    for resize_factor in 1..=5 {
+    for resize_factor in (1..=16).step_by(3) {
         let resize_factor_str = resize_factor.to_string();
         let args: Vec<(&str, &str)> = vec![
             ("resize_factor", &resize_factor_str),
@@ -108,7 +110,7 @@ fn bench_fully_connected_layer(c: &mut Criterion) {
 
 fn bench_tf_inference(c: &mut Criterion, resize_factor: usize, args: Vec<(&str, &str)>) {
     let mut group = c.benchmark_group("TensorFlow");
-    group.sample_size(1000);
+    group.sample_size(SAMPLE_SIZE);
 
     Python::with_gil(|py| {
         let model = get_model(py, "QFullyConnectedLayer", Some(args.clone()));
@@ -130,7 +132,7 @@ fn bench_verifiaml_inference(
     resize_factor: usize,
 ) {
     let mut group = c.benchmark_group("verifiaml");
-    group.sample_size(1000);
+    group.sample_size(SAMPLE_SIZE);
 
     // Quantisation happens in the tf inference benchmark, so we benchmark it here
     // too in order to make the comparison as fair as possible
@@ -159,7 +161,7 @@ where
     PCS: PolynomialCommitment<Fr, Poly<Fr>, S>,
 {
     let mut group = c.benchmark_group("verifiaml");
-    group.sample_size(1000);
+    group.sample_size(SAMPLE_SIZE);
 
     let (node_coms, node_com_states): (
         Vec<NodeCommitment<Fr, S, PCS>>,
@@ -207,33 +209,25 @@ fn bench_verifiaml_verification<PCS, S>(
     PCS: PolynomialCommitment<Fr, Poly<Fr>, S>,
 {
     let mut group = c.benchmark_group("verifiaml");
-    group.sample_size(1000);
+    group.sample_size(SAMPLE_SIZE);
 
     let mut rng = test_rng();
+
+    let proof = model.prove_inference(
+        ck,
+        Some(&mut rng),
+        &mut sponge.clone(),
+        node_coms,
+        node_com_states,
+        quantise_input(&raw_input),
+    );
 
     group.bench_function(
         BenchmarkId::new(
             "verification",
             format!("{} params", resize_factor * resize_factor * 28 * 28 * 10),
         ),
-        |b| {
-            b.iter_batched(
-                || {
-                    model.prove_inference(
-                        ck,
-                        Some(&mut rng),
-                        &mut sponge.clone(),
-                        node_coms,
-                        node_com_states,
-                        quantise_input(&raw_input),
-                    )
-                },
-                |proof| {
-                    model.verify_inference(vk, &mut sponge.clone(), node_coms, proof);
-                },
-                criterion::BatchSize::SmallInput,
-            )
-        },
+        |b| b.iter(|| model.verify_inference(vk, &mut sponge.clone(), node_coms, proof.clone())),
     );
 }
 

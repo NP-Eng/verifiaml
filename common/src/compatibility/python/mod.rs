@@ -1,6 +1,8 @@
 #[cfg(test)]
 mod tests;
 
+use std::{fs::create_dir_all, path::Path};
+
 use pyo3::{prelude::*, PyAny};
 
 use crate::QArray;
@@ -20,6 +22,13 @@ pub fn get_model(py: Python, model_name: &str, args: Option<Vec<(&str, &str)>>) 
 }
 
 pub fn save_model_parameters_as_qarray(py: Python, model: &Py<PyAny>, path: &str) {
+    let path = Path::new(path);
+
+    if !path.exists() {
+        println!("Creating model directory: {:?}", path);
+        create_dir_all(path.parent().unwrap()).unwrap();
+    }
+
     model
         .call_method1(py, "save_params_as_qarray", (path,))
         .unwrap();
