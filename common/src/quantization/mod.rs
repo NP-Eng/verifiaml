@@ -177,7 +177,7 @@ where
     let mask_div2 = mask >> 1;
 
     // Constants used during nudging
-    let non_neg_nudge = LT::ONE_DOUBLE << LT::BITS - 2;
+    let non_neg_nudge = LT::ONE_DOUBLE << (LT::BITS - 2);
     let neg_nudge = LT::ONE_DOUBLE - non_neg_nudge;
 
     // Requantize
