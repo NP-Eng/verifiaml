@@ -30,7 +30,7 @@ macro_rules! PATH {
 
 pub fn build_two_layer_perceptron_mnist<F, S, PCS>(
     req_strategy: BMMRequantizationStrategy,
-) -> Model<i8, i32>
+) -> Model<i8>
 where
     F: PrimeField + Absorb,
     S: CryptographicSponge,
@@ -45,7 +45,7 @@ where
     let w2_array: Tensor<i8> = Tensor::read(&format!(PATH!(), "weights_2.json"));
     let b2_array: Tensor<i32> = Tensor::read(&format!(PATH!(), "bias_2.json"));
 
-    let bmm_1: BMMNode<i8, i32> = BMMNode::new(w1_array, b1_array, Z_1_I);
+    let bmm_1: BMMNode<i8> = BMMNode::new(w1_array, b1_array, Z_1_I);
 
     let req_bmm_1 = match req_strategy {
         BMMRequantizationStrategy::Floating => Node::RequantizeBMMFloat(
@@ -61,7 +61,7 @@ where
 
     let relu: ReLUNode<i8> = ReLUNode::new(28, Z_1_O);
 
-    let bmm_2: BMMNode<i8, i32> = BMMNode::new(w2_array, b2_array, Z_2_I);
+    let bmm_2: BMMNode<i8> = BMMNode::new(w2_array, b2_array, Z_2_I);
 
     let req_bmm_2 = match req_strategy {
         BMMRequantizationStrategy::Floating => Node::RequantizeBMMFloat(

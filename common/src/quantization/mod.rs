@@ -49,14 +49,14 @@ pub enum RoundingScheme {
     NearestTiesEven,
 }
 
-pub fn requantize_fc<ST: Integral, LT: Integral>(
+pub fn requantize_fc<ST, LT>(
     output: &[LT],
     q_info: &BMMQInfo<ST>,
     scheme: RoundingScheme,
 ) -> Vec<ST>
 where
-    ST: Integral + TryFrom<LT>,
-    LT: Integral + From<ST>,
+    ST: Integral,
+    LT: Integral + From<ST> + TryInto<ST>,
 {
     match scheme {
         RoundingScheme::NearestTiesAwayFromZero => requantize_fc_ntafz::<ST, LT>(output, q_info),
@@ -66,8 +66,8 @@ where
 
 fn requantize_fc_ntafz<ST, LT>(output: &[LT], q_info: &BMMQInfo<ST>) -> Vec<ST>
 where
-    ST: Integral + TryFrom<LT>,
-    LT: Integral + From<ST>,
+    ST: Integral,
+    LT: Integral + From<ST> + TryInto<ST>,
 {
     // 1. Computing scale
     // TODO In actual schemes, this will be decomposed as (int, shift)
@@ -91,7 +91,8 @@ where
             let x = LT::to_qscaletype(x) * s;
             let mut x = LT::from_qscaletype(x.round());
             x += LT::from(q_info.output_info.zero_point);
-            ST::try_from(partial_ord_clamp(x, LT::from(ST::MIN), LT::from(ST::MAX)))
+            partial_ord_clamp(x, LT::from(ST::MIN), LT::from(ST::MAX))
+                .try_into()
                 .map_err(|_| "Unable to convert Large Type to Small Type")
                 .unwrap()
         })
@@ -115,8 +116,8 @@ fn partial_ord_clamp<T: PartialOrd>(x: T, min: T, max: T) -> T {
 
 fn requantize_fc_nte<ST: Integral, LT: Integral>(output: &[LT], q_info: &BMMQInfo<ST>) -> Vec<ST>
 where
-    ST: Integral + TryFrom<LT>,
-    LT: Integral + From<ST>,
+    ST: Integral,
+    LT: Integral + From<ST> + TryInto<ST>,
 {
     // 1. Computing scale
     // TODO In actual schemes, this will be decomposed as (int, shift)
@@ -140,7 +141,8 @@ where
             let x = LT::to_qscaletype(x) * s;
             let mut x = LT::from_qscaletype(x.round_ties_even()); // TODO which type to pick here? Should we check for overflows?
             x += LT::from(q_info.output_info.zero_point);
-            ST::try_from(partial_ord_clamp(x, LT::from(ST::MIN), LT::from(ST::MAX)))
+            partial_ord_clamp(x, LT::from(ST::MIN), LT::from(ST::MAX))
+                .try_into()
                 .map_err(|_| "Unable to convert Large Type to Small Type")
                 .unwrap()
         })
@@ -156,8 +158,8 @@ pub fn requantize_ref<ST, LT>(
     output_zero_point: ST,
 ) -> Vec<ST>
 where
-    ST: Integral + TryFrom<LT>,
-    LT: Integral + From<ST>,
+    ST: Integral,
+    LT: Integral + From<ST> + TryInto<ST>,
 {
     // Computing auxiliary constants used for every input
     let effective_multiplier = LT::Double::from(effective_multiplier);
@@ -213,13 +215,10 @@ where
 
             let shifted = core + output_zero_point;
 
-            ST::try_from(partial_ord_clamp(
-                shifted,
-                LT::from(ST::MIN),
-                LT::from(ST::MAX),
-            ))
-            .map_err(|_| "Unable to convert Large Type to Small Type")
-            .unwrap()
+            partial_ord_clamp(shifted, LT::from(ST::MIN), LT::from(ST::MAX))
+                .try_into()
+                .map_err(|_| "Unable to convert Large Type to Small Type")
+                .unwrap()
         })
         .collect()
 }
@@ -233,8 +232,8 @@ pub fn requantize_single_round<ST, LT>(
     output_zero_point: ST,
 ) -> Vec<ST>
 where
-    ST: Integral + TryFrom<LT>,
-    LT: Integral + From<ST>,
+    ST: Integral,
+    LT: Integral + From<ST> + TryInto<ST>,
 {
     // Although these parameters could be directly saved into the node (with
     // their final desired types), this computation/conversion is essentially
@@ -266,13 +265,10 @@ where
 
             let shifted = core + output_zero_point;
 
-            ST::try_from(partial_ord_clamp(
-                shifted,
-                LT::from(ST::MIN),
-                LT::from(ST::MAX),
-            ))
-            .map_err(|_| "Unable to convert Large Type to Small Type")
-            .unwrap()
+            partial_ord_clamp(shifted, LT::from(ST::MIN), LT::from(ST::MAX))
+                .try_into()
+                .map_err(|_| "Unable to convert Large Type to Small Type")
+                .unwrap()
         })
         .collect()
 }

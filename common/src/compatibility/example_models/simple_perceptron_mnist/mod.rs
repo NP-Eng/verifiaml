@@ -30,7 +30,7 @@ macro_rules! PATH {
 // TODO this is incorrect now that we have switched to logs
 pub fn build_simple_perceptron_mnist<F, S, PCS>(
     req_strategy: BMMRequantizationStrategy,
-) -> Model<i8, i32>
+) -> Model<i8>
 where
     F: PrimeField + Absorb,
     S: CryptographicSponge,
@@ -43,7 +43,7 @@ where
     let w_array: Tensor<i8> = Tensor::read(&format!(PATH!(), "weights.json"));
     let b_array: Tensor<i32> = Tensor::read(&format!(PATH!(), "bias.json"));
 
-    let bmm: BMMNode<i8, i32> = BMMNode::new(w_array, b_array, Z_I);
+    let bmm: BMMNode<i8> = BMMNode::new(w_array, b_array, Z_I);
 
     let req_bmm = match req_strategy {
         BMMRequantizationStrategy::Floating => Node::RequantizeBMMFloat(

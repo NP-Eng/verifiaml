@@ -1,6 +1,6 @@
 use ark_std::log2;
 
-use crate::{model::tensor::Integral, Tensor};
+use crate::{model::tensor::SmallNIO, Tensor};
 
 use super::{NodeOpsNative, NodeOpsPadded};
 
@@ -13,7 +13,7 @@ pub struct ReshapeNode {
 
 impl<ST> NodeOpsNative<ST, ST> for ReshapeNode
 where
-    ST: Integral,
+    ST: SmallNIO,
 {
     fn shape(&self) -> Vec<usize> {
         self.output_shape.clone()
@@ -37,7 +37,7 @@ where
 
 impl<ST> NodeOpsPadded<ST, ST> for ReshapeNode
 where
-    ST: Integral,
+    ST: SmallNIO,
 {
     fn padded_shape_log(&self) -> Vec<usize> {
         self.padded_output_shape_log.clone()

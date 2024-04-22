@@ -5,37 +5,37 @@ use ark_poly::Polynomial;
 use ark_poly_commit::PolynomialCommitment;
 use ark_std::log2;
 
-use hcs_common::{InferenceProof, Integral, Model, NodeCommitment, Poly};
+use hcs_common::{InferenceProof, Model, NodeCommitment, Poly, SmallNIO};
 
-pub trait VerifyModel<F, S, PCS, ST, LT>
+pub trait VerifyModel<F, S, PCS, ST>
 where
     F: PrimeField + Absorb,
     S: CryptographicSponge,
     PCS: PolynomialCommitment<F, Poly<F>, S>,
+    ST: SmallNIO,
 {
     fn verify_inference(
         &self,
         vk: &PCS::VerifierKey,
         sponge: &mut S,
         node_commitments: &Vec<NodeCommitment<F, S, PCS>>,
-        inference_proof: InferenceProof<F, S, PCS, ST, LT>,
+        inference_proof: InferenceProof<F, S, PCS, ST>,
     ) -> bool;
 }
 
-impl<F, S, PCS, ST, LT> VerifyModel<F, S, PCS, ST, LT> for Model<ST, LT>
+impl<F, S, PCS, ST> VerifyModel<F, S, PCS, ST> for Model<ST>
 where
-    F: PrimeField + Absorb + From<ST> + From<LT>,
+    F: PrimeField + Absorb + From<ST> + From<ST::LT>,
     S: CryptographicSponge,
     PCS: PolynomialCommitment<F, Poly<F>, S>,
-    ST: Integral + TryFrom<LT>,
-    LT: Integral + From<ST>,
+    ST: SmallNIO,
 {
     fn verify_inference(
         &self,
         vk: &PCS::VerifierKey,
         sponge: &mut S,
         node_commitments: &Vec<NodeCommitment<F, S, PCS>>,
-        inference_proof: InferenceProof<F, S, PCS, ST, LT>,
+        inference_proof: InferenceProof<F, S, PCS, ST>,
     ) -> bool {
         let InferenceProof {
             inputs,

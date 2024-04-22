@@ -34,7 +34,7 @@ use self::{
     reshape::ReshapeNode,
 };
 
-use super::tensor::{Integral, QTypeArray};
+use super::tensor::{NIOTensor, SmallNIO};
 
 // mod parser;
 
@@ -95,11 +95,11 @@ pub trait NodeOpsPadded<I, O>: NodeOpsNative<I, O> {
     fn padded_evaluate(&self, input: &Tensor<I>) -> Tensor<O>;
 }
 
-pub enum Node<ST, LT> {
-    BMM(BMMNode<ST, LT>),
+pub enum Node<ST: SmallNIO> {
+    BMM(BMMNode<ST>),
     RequantizeBMMFloat(RequantizeBMMFloatNode<ST>),
-    RequantizeBMMRef(RequantizeBMMRefNode<ST, LT>),
-    RequantizeBMMSingle(RequantizeBMMSingleNode<ST, LT>),
+    RequantizeBMMRef(RequantizeBMMRefNode<ST>),
+    RequantizeBMMSingle(RequantizeBMMSingleNode<ST>),
     ReLU(ReLUNode<ST>),
     Reshape(ReshapeNode),
 }
@@ -148,10 +148,9 @@ where
 
 // A lot of this overlaps with the NodeOps trait and could be handled more
 // elegantly by simply implementing the trait
-impl<I, O> Node<I, O>
+impl<ST> Node<ST>
 where
-    I: Integral + TryFrom<O>,
-    O: Integral + From<I>,
+    ST: SmallNIO,
 {
     // Print the type of the node. This cannot be cleantly achieved by deriving
     // Debug
@@ -172,16 +171,14 @@ where
     }
 
     /// Evaluate the node natively (without padding)
-    pub fn evaluate(&self, input: &QTypeArray<I, O>) -> QTypeArray<I, O> {
+    pub fn evaluate(&self, input: &NIOTensor<ST>) -> NIOTensor<ST> {
         match (self, input) {
-            (Node::BMM(fc), QTypeArray::S(input)) => QTypeArray::L(fc.evaluate(input)),
-            (Node::RequantizeBMMFloat(r), QTypeArray::L(input)) => QTypeArray::S(r.evaluate(input)),
-            (Node::RequantizeBMMRef(r), QTypeArray::L(input)) => QTypeArray::S(r.evaluate(input)),
-            (Node::RequantizeBMMSingle(r), QTypeArray::L(input)) => {
-                QTypeArray::S(r.evaluate(input))
-            }
-            (Node::ReLU(r), QTypeArray::S(input)) => QTypeArray::S(r.evaluate(input)),
-            (Node::Reshape(r), QTypeArray::S(input)) => QTypeArray::S(r.evaluate(input)),
+            (Node::BMM(fc), NIOTensor::S(input)) => NIOTensor::L(fc.evaluate(input)),
+            (Node::RequantizeBMMFloat(r), NIOTensor::L(input)) => NIOTensor::S(r.evaluate(input)),
+            (Node::RequantizeBMMRef(r), NIOTensor::L(input)) => NIOTensor::S(r.evaluate(input)),
+            (Node::RequantizeBMMSingle(r), NIOTensor::L(input)) => NIOTensor::S(r.evaluate(input)),
+            (Node::ReLU(r), NIOTensor::S(input)) => NIOTensor::S(r.evaluate(input)),
+            (Node::Reshape(r), NIOTensor::S(input)) => NIOTensor::S(r.evaluate(input)),
             _ => panic!(
                 "Type mismatch: node of type {} received input of type {}",
                 self.type_name(),
@@ -197,20 +194,20 @@ where
     /// Here we perform matching without sanity checks. By design, the input type of the
     /// next node in the model is the same as the output type of the current node,
     /// so hiccups should never occur.
-    pub fn padded_evaluate(&self, input: &QTypeArray<I, O>) -> QTypeArray<I, O> {
+    pub fn padded_evaluate(&self, input: &NIOTensor<ST>) -> NIOTensor<ST> {
         match (self, input) {
-            (Node::BMM(fc), QTypeArray::S(input)) => QTypeArray::L(fc.padded_evaluate(input)),
-            (Node::RequantizeBMMFloat(r), QTypeArray::L(input)) => {
-                QTypeArray::S(r.padded_evaluate(input))
+            (Node::BMM(fc), NIOTensor::S(input)) => NIOTensor::L(fc.padded_evaluate(input)),
+            (Node::RequantizeBMMFloat(r), NIOTensor::L(input)) => {
+                NIOTensor::S(r.padded_evaluate(input))
             }
-            (Node::RequantizeBMMRef(r), QTypeArray::L(input)) => {
-                QTypeArray::S(r.padded_evaluate(input))
+            (Node::RequantizeBMMRef(r), NIOTensor::L(input)) => {
+                NIOTensor::S(r.padded_evaluate(input))
             }
-            (Node::RequantizeBMMSingle(r), QTypeArray::L(input)) => {
-                QTypeArray::S(r.padded_evaluate(input))
+            (Node::RequantizeBMMSingle(r), NIOTensor::L(input)) => {
+                NIOTensor::S(r.padded_evaluate(input))
             }
-            (Node::ReLU(r), QTypeArray::S(input)) => QTypeArray::S(r.padded_evaluate(input)),
-            (Node::Reshape(r), QTypeArray::S(input)) => QTypeArray::S(r.padded_evaluate(input)),
+            (Node::ReLU(r), NIOTensor::S(input)) => NIOTensor::S(r.padded_evaluate(input)),
+            (Node::Reshape(r), NIOTensor::S(input)) => NIOTensor::S(r.padded_evaluate(input)),
             _ => panic!("Invalid input type for node"),
         }
     }

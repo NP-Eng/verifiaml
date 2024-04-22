@@ -2,7 +2,7 @@ use ark_crypto_primitives::sponge::{Absorb, CryptographicSponge};
 use ark_ff::PrimeField;
 use ark_poly_commit::{LabeledCommitment, PolynomialCommitment};
 
-use hcs_common::{Integral, Node, NodeCommitment, NodeProof, Poly};
+use hcs_common::{Node, NodeCommitment, NodeProof, Poly, SmallNIO};
 
 mod model;
 mod nodes;
@@ -26,13 +26,12 @@ where
     ) -> bool;
 }
 
-impl<F, S, PCS, ST, LT> NodeOpsVerify<F, S, PCS> for Node<ST, LT>
+impl<F, S, PCS, ST> NodeOpsVerify<F, S, PCS> for Node<ST>
 where
     F: PrimeField + Absorb + From<ST>,
     S: CryptographicSponge,
     PCS: PolynomialCommitment<F, Poly<F>, S>,
-    ST: Integral + TryFrom<LT>,
-    LT: Integral + From<ST>,
+    ST: SmallNIO,
 {
     fn verify(
         &self,
@@ -47,12 +46,12 @@ where
     }
 }
 
-fn node_as_node_ops_snark<F, S, PCS, ST, LT>(node: &Node<ST, LT>) -> &dyn NodeOpsVerify<F, S, PCS>
+fn node_as_node_ops_snark<F, S, PCS, ST>(node: &Node<ST>) -> &dyn NodeOpsVerify<F, S, PCS>
 where
     F: PrimeField + Absorb + From<ST>,
     S: CryptographicSponge,
     PCS: PolynomialCommitment<F, Poly<F>, S>,
-    ST: Integral,
+    ST: SmallNIO,
 {
     match node {
         Node::BMM(fc) => fc,

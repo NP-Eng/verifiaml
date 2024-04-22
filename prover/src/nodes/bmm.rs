@@ -8,19 +8,18 @@ use ark_std::rand::RngCore;
 use ark_sumcheck::ml_sumcheck::{protocol::ListOfProductsOfPolynomials, MLSumcheck};
 
 use hcs_common::{
-    BMMNode, BMMNodeCommitment, BMMNodeCommitmentState, BMMNodeProof, Integral, LabeledPoly,
-    NodeCommitment, NodeCommitmentState, NodeOpsPadded, NodeProof, Poly,
+    BMMNode, BMMNodeCommitment, BMMNodeCommitmentState, BMMNodeProof, LabeledPoly, NodeCommitment,
+    NodeCommitmentState, NodeOpsPadded, NodeProof, Poly, SmallNIO,
 };
 
 use crate::NodeOpsProve;
 
-impl<F, S, PCS, ST, LT> NodeOpsProve<F, S, PCS, ST, LT> for BMMNode<ST, LT>
+impl<F, S, PCS, ST> NodeOpsProve<F, S, PCS> for BMMNode<ST>
 where
-    F: PrimeField + Absorb + From<ST> + From<LT>,
+    F: PrimeField + Absorb + From<ST> + From<ST::LT>,
     S: CryptographicSponge,
     PCS: PolynomialCommitment<F, Poly<F>, S>,
-    ST: Integral + TryFrom<LT>,
-    LT: Integral + From<ST>,
+    ST: SmallNIO,
 {
     fn prove(
         &self,

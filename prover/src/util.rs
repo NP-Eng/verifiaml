@@ -7,7 +7,7 @@ macro_rules! node_operation {
             Node::RequantizeBMMRef(_) => unimplemented!(),
             Node::RequantizeBMMSingle(_) => unimplemented!(),
             Node::ReLU(node) => node.$method($($arg),*),
-            Node::Reshape(node) => NodeOpsProve::<_, _, _, I, _>::$method(node, $($arg),*),
+            Node::Reshape(node) => NodeOpsProve::<_, _, _>::$method(node, $($arg),*),
         }
     };
 }

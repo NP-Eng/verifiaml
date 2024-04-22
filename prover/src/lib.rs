@@ -4,7 +4,7 @@ use ark_poly_commit::{LabeledCommitment, PolynomialCommitment};
 use ark_std::rand::RngCore;
 
 use hcs_common::{
-    Integral, LabeledPoly, Node, NodeCommitment, NodeCommitmentState, NodeProof, Poly,
+    LabeledPoly, Node, NodeCommitment, NodeCommitmentState, NodeProof, Poly, SmallNIO,
 };
 
 mod model;
@@ -15,7 +15,7 @@ mod util;
 pub use model::ProveModel;
 
 /// SNARK-specific operations that each node must implement.
-pub trait NodeOpsProve<F, S, PCS, I, O>
+pub trait NodeOpsProve<F, S, PCS>
 where
     F: PrimeField + Absorb,
     S: CryptographicSponge,
@@ -44,13 +44,12 @@ where
     ) -> (NodeCommitment<F, S, PCS>, NodeCommitmentState<F, S, PCS>);
 }
 
-impl<F, S, PCS, I, O> NodeOpsProve<F, S, PCS, I, O> for Node<I, O>
+impl<F, S, PCS, ST> NodeOpsProve<F, S, PCS> for Node<ST>
 where
-    F: PrimeField + Absorb + From<I> + From<O> + From<O>,
+    F: PrimeField + Absorb + From<ST> + From<ST::LT>,
     S: CryptographicSponge,
     PCS: PolynomialCommitment<F, Poly<F>, S>,
-    I: Integral + TryFrom<O>,
-    O: Integral + From<I>,
+    ST: SmallNIO,
 {
     fn prove(
         &self,

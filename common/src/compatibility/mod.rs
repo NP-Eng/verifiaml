@@ -68,7 +68,7 @@ mod tests {
 
     fn unpadded_inference(
         raw_input: Tensor<f32>,
-        model: &Model<i8, i32>,
+        model: &Model<i8>,
         qinfo: (f32, u8),
     ) -> Tensor<u8> {
         let quantised_input: Tensor<u8> = Tensor::new(

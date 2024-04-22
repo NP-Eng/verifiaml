@@ -3,18 +3,15 @@ use ark_ff::PrimeField;
 use ark_poly_commit::{LabeledCommitment, PolynomialCommitment};
 use ark_std::rand::RngCore;
 
-use hcs_common::{
-    Integral, LabeledPoly, NodeCommitment, NodeCommitmentState, NodeProof, Poly, ReshapeNode,
-};
+use hcs_common::{LabeledPoly, NodeCommitment, NodeCommitmentState, NodeProof, Poly, ReshapeNode};
 
 use crate::NodeOpsProve;
 
-impl<F, S, PCS, ST> NodeOpsProve<F, S, PCS, ST, ST> for ReshapeNode
+impl<F, S, PCS> NodeOpsProve<F, S, PCS> for ReshapeNode
 where
     F: PrimeField + Absorb,
     S: CryptographicSponge,
     PCS: PolynomialCommitment<F, Poly<F>, S>,
-    ST: Integral,
 {
     fn prove(
         &self,
