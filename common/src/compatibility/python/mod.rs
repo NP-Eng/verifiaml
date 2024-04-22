@@ -26,7 +26,7 @@ pub fn save_model_parameters_as_qarray(py: Python, model: &Py<PyAny>, path: &str
 
     if !path.exists() {
         println!("Creating model directory: {:?}", path);
-        create_dir_all(path.parent().unwrap()).unwrap();
+        create_dir_all(path).unwrap();
     }
 
     model
