@@ -40,7 +40,7 @@ mod tests {
     const ALLOWED_ERROR_MARGIN: f32 = 0.1;
 
     fn get_model(py: Python, model_name: &str) -> Py<PyAny> {
-        let func: Py<PyAny> = PyModule::from_code(py, PERCEPTRON_PATH, "", "")
+        let func: Py<PyAny> = PyModule::from_code_bound(py, PERCEPTRON_PATH, "", "")
             .unwrap()
             .getattr("get_model")
             .unwrap()

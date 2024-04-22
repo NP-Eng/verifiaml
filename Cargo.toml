@@ -28,6 +28,6 @@ ark-ff = { git = "https://github.com/HungryCatsStudio/algebra", rev = "97c7a4f" 
 ark-ec = { git = "https://github.com/HungryCatsStudio/algebra", rev = "97c7a4f" }
 ark-serialize = { git = "https://github.com/HungryCatsStudio/algebra", rev = "97c7a4f" }
 ark-poly = { git = "https://github.com/HungryCatsStudio/algebra", rev = "97c7a4f" }
-ark-poly-commit = { git = "https://github.com/HungryCatsStudio/poly-commit", rev = "bedc753" }
+ark-poly-commit = { git = "https://github.com/HungryCatsStudio/poly-commit", rev = "e637709" }
 ark-crypto-primitives = { git = "https://github.com/HungryCatsStudio/crypto-primitives", rev = "9ef1753" }
 ark-bn254 = { git = "https://github.com/HungryCatsStudio/algebra", rev = "97c7a4f" }
