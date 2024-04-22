@@ -1,3 +1,10 @@
+pub(crate) mod bmm;
+pub(crate) mod relu;
+pub(crate) mod requantize_bmm_float;
+pub(crate) mod requantize_bmm_ref;
+pub(crate) mod requantize_bmm_single;
+pub(crate) mod reshape;
+
 use ark_crypto_primitives::sponge::Absorb;
 use ark_ff::PrimeField;
 use ark_poly_commit::PolynomialCommitment;
@@ -7,7 +14,7 @@ use crate::{
         nodes::{bmm::BMMNode, relu::ReLUNode},
         CryptographicSponge, Poly,
     },
-    QArray,
+    Tensor,
 };
 
 use self::{
@@ -27,14 +34,7 @@ use self::{
     reshape::ReshapeNode,
 };
 
-use super::qarray::{InnerType, QTypeArray};
-
-pub(crate) mod bmm;
-pub(crate) mod relu;
-pub(crate) mod requantize_bmm_float;
-pub(crate) mod requantize_bmm_ref;
-pub(crate) mod requantize_bmm_single;
-pub(crate) mod reshape;
+use super::tensor::{Integral, QTypeArray};
 
 // mod parser;
 
@@ -57,7 +57,7 @@ pub trait NodeOpsNative<I, O> {
 
     /// Evaluate the node natively (without padding)
     /// TODO decide whether this method should stay on `NodeOps`, or maybe go to `NodeOpsSNARKVerify`
-    fn evaluate(&self, input: &QArray<I>) -> QArray<O>;
+    fn evaluate(&self, input: &Tensor<I>) -> Tensor<O>;
 }
 
 pub trait NodeOpsPadded<I, O>: NodeOpsNative<I, O> {
@@ -92,7 +92,7 @@ pub trait NodeOpsPadded<I, O>: NodeOpsNative<I, O> {
     fn com_num_vars(&self) -> usize;
 
     /// Evaluate the padded node natively
-    fn padded_evaluate(&self, input: &QArray<I>) -> QArray<O>;
+    fn padded_evaluate(&self, input: &Tensor<I>) -> Tensor<O>;
 }
 
 pub enum Node<ST, LT> {
@@ -150,8 +150,8 @@ where
 // elegantly by simply implementing the trait
 impl<I, O> Node<I, O>
 where
-    I: InnerType + TryFrom<O>,
-    O: InnerType + From<I>,
+    I: Integral + TryFrom<O>,
+    O: Integral + From<I>,
 {
     // Print the type of the node. This cannot be cleantly achieved by deriving
     // Debug

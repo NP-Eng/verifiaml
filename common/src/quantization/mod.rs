@@ -1,9 +1,14 @@
-use ark_std::Zero;
-
-use crate::model::qarray::InnerType;
-
 #[cfg(test)]
 pub mod tests;
+
+use ark_std::Zero;
+
+use crate::model::tensor::Integral;
+
+const F64_EXPONENT_SHIFT: u64 = 52;
+const F64_EXPONENT_BIAS: u64 = 1023;
+const F64_EXPONENT_MASK: u64 = 0x7ff0000000000000;
+const F64_FRACTION_MASK: u64 = 0x000fffffffffffff;
 
 // TODO if we decide to make the model generic on the quantisation process
 // types (which is probably correct now that the qtypes are generics), these
@@ -44,14 +49,14 @@ pub enum RoundingScheme {
     NearestTiesEven,
 }
 
-pub fn requantize_fc<ST: InnerType, LT: InnerType>(
+pub fn requantize_fc<ST: Integral, LT: Integral>(
     output: &[LT],
     q_info: &BMMQInfo<ST>,
     scheme: RoundingScheme,
 ) -> Vec<ST>
 where
-    ST: InnerType + TryFrom<LT>,
-    LT: InnerType + From<ST>,
+    ST: Integral + TryFrom<LT>,
+    LT: Integral + From<ST>,
 {
     match scheme {
         RoundingScheme::NearestTiesAwayFromZero => requantize_fc_ntafz::<ST, LT>(output, q_info),
@@ -61,8 +66,8 @@ where
 
 fn requantize_fc_ntafz<ST, LT>(output: &[LT], q_info: &BMMQInfo<ST>) -> Vec<ST>
 where
-    ST: InnerType + TryFrom<LT>,
-    LT: InnerType + From<ST>,
+    ST: Integral + TryFrom<LT>,
+    LT: Integral + From<ST>,
 {
     // 1. Computing scale
     // TODO In actual schemes, this will be decomposed as (int, shift)
@@ -94,7 +99,7 @@ where
 }
 
 // The (unstable) method clamp comes from the trait Ord, which we cannot
-// restrict InnerType to as we need f32 to implement the latter. Note that this
+// restrict Integral to as we need f32 to implement the latter. Note that this
 // method is not meaningfully defined for classes that genuinely do not
 // implement Ord (total order relation) but only PartialOrd (partial order
 // relation).
@@ -108,10 +113,10 @@ fn partial_ord_clamp<T: PartialOrd>(x: T, min: T, max: T) -> T {
     }
 }
 
-fn requantize_fc_nte<ST: InnerType, LT: InnerType>(output: &[LT], q_info: &BMMQInfo<ST>) -> Vec<ST>
+fn requantize_fc_nte<ST: Integral, LT: Integral>(output: &[LT], q_info: &BMMQInfo<ST>) -> Vec<ST>
 where
-    ST: InnerType + TryFrom<LT>,
-    LT: InnerType + From<ST>,
+    ST: Integral + TryFrom<LT>,
+    LT: Integral + From<ST>,
 {
     // 1. Computing scale
     // TODO In actual schemes, this will be decomposed as (int, shift)
@@ -151,15 +156,15 @@ pub fn requantize_ref<ST, LT>(
     output_zero_point: ST,
 ) -> Vec<ST>
 where
-    ST: InnerType + TryFrom<LT>,
-    LT: InnerType + From<ST>,
+    ST: Integral + TryFrom<LT>,
+    LT: Integral + From<ST>,
 {
     // Computing auxiliary constants used for every input
     let effective_multiplier = LT::Double::from(effective_multiplier);
     let output_zero_point = LT::from(output_zero_point);
 
-    // TODO: Add associated constant MAX_PLUS_ONE to InnerType.
-    let pow2_bits_minus_one = LT::pow2_double(LT::BITS - 1);
+    // TODO: Add associated constant MAX_PLUS_ONE to Integral.
+    let pow2_bits_minus_one = LT::ONE_DOUBLE << (LT::BITS - 1);
 
     // NOTE: Notice that they are independent of the input. Perhaps it is meaningful to turn:
     // xt_pow2_bits_minus_one, non_neg_nudge, and neg_nudge
@@ -168,12 +173,12 @@ where
     // TODO: After splitting InnerType, rewrite pow2 to use << instead of *.
 
     // Mask consists of full_shift ones
-    let mask = LT::pow2(effective_shift) - LT::ONE; // TODO: may overflow for some exponents
-    let mask_div2 = mask.inner_shr(1);
+    let mask = (LT::ONE << effective_shift) - LT::ONE; // TODO: may overflow for some exponents
+    let mask_div2 = mask >> 1;
 
     // Constants used during nudging
-    let non_neg_nudge = LT::pow2_double(LT::BITS - 2);
-    let neg_nudge = LT::Double::from(LT::ONE) - non_neg_nudge;
+    let non_neg_nudge = LT::ONE_DOUBLE << (LT::BITS - 2);
+    let neg_nudge = LT::ONE_DOUBLE - non_neg_nudge;
 
     // Requantize
     // TODO add rayon for parallelization?
@@ -188,15 +193,18 @@ where
 
             let product = LT::Double::from(*x) * effective_multiplier;
 
-            let product_high = LT::inner_try_from((product + nudge) / pow2_bits_minus_one).unwrap();
+            let product_high: LT = ((product + nudge) / pow2_bits_minus_one)
+                .try_into()
+                .map_err(|_| "Error trying to convert LT::Double to LT")
+                .unwrap();
 
             // assert(full_shift <= 31);
 
             // TODO: change inner_bit_and by & after the "InnerType split"
-            let remainder = product_high.inner_bit_and(mask);
+            let remainder = product_high & mask;
             let threshold = mask_div2 + is_negative;
 
-            let core = product_high.inner_shr(effective_shift)
+            let core = (product_high >> effective_shift)
                 + if remainder > threshold {
                     LT::ONE
                 } else {
@@ -225,27 +233,20 @@ pub fn requantize_single_round<ST, LT>(
     output_zero_point: ST,
 ) -> Vec<ST>
 where
-    ST: InnerType + TryFrom<LT>,
-    LT: InnerType + From<ST>,
+    ST: Integral + TryFrom<LT>,
+    LT: Integral + From<ST>,
 {
-    // Computing auxiliary constants used for every input
-    // TODO minor optimisation possible
+    // Although these parameters could be directly saved into the node (with
+    // their final desired types), this computation/conversion is essentially
+    // free. For the first two, storing them in the node with their actual types
+    // (instead of the types needed for inference) makes the node more
+    // transparent as far as definitions and proof system goes. TF Lite does the
+    // same. For the other two, computing them here makes the function more
+    // usable.
     let effective_multiplier = LT::Double::from(effective_multiplier);
     let output_zero_point = LT::from(output_zero_point);
-
-    // TODO: Add associated constant MAX_PLUS_ONE to InnerType.
-    // let xt_pow2_bits_minus_one = LT::pow2_double(LT::BITS - 1);
-
-    // NOTE: Notice that they are independent of the input. Perhaps it is meaningful to turn:
-    // xt_pow2_bits_minus_one, non_neg_nudge, and neg_nudge
-    // into associated constants of type LT in order to avoid their recomputation per call?
-
-    // TODO: After splitting InnerType, rewrite pow2 to use << instead of *.
-
-    // Constants used during nudging
-    // TODO possible optimisation
-    let non_neg_nudge = LT::pow2_double(full_shift - 1);
-    let neg_nudge = non_neg_nudge - LT::Double::from(LT::ONE); // keep this here
+    let non_neg_nudge = LT::ONE_DOUBLE << (full_shift - 1);
+    let neg_nudge = non_neg_nudge - LT::ONE_DOUBLE;
 
     // Requantize
     // TODO add rayon for parallelization?
@@ -258,11 +259,10 @@ where
                 neg_nudge
             };
 
-            let core = LT::inner_try_from(LT::inner_shr_double(
-                LT::Double::from(*x) * effective_multiplier + nudge,
-                full_shift,
-            ))
-            .unwrap();
+            let core: LT = ((LT::Double::from(*x) * effective_multiplier + nudge) >> full_shift)
+                .try_into()
+                .map_err(|_| "Error trying to convert LT::Double to LT")
+                .unwrap();
 
             let shifted = core + output_zero_point;
 
@@ -277,7 +277,6 @@ where
         .collect()
 }
 
-//
 // https://github.com/tensorflow/tensorflow/blob/master/tensorflow/lite/kernels/internal/quantization_util.cc#L53-L104
 pub(crate) fn quantize_multiplier(double_multiplier: f64) -> (i32, usize) {
     if double_multiplier.is_zero() {
@@ -339,11 +338,6 @@ pub(crate) fn quantize_multiplier(double_multiplier: f64) -> (i32, usize) {
 // the normalized fraction and exponent should be zero. However, for our purposes, x should
 // always be positive.
 fn frexp(x: f64) -> (f64, isize) {
-    const F64_EXPONENT_SHIFT: u64 = 52;
-    const F64_EXPONENT_BIAS: u64 = 1023;
-    const F64_EXPONENT_MASK: u64 = 0x7ff0000000000000;
-    const F64_FRACTION_MASK: u64 = 0x000fffffffffffff;
-
     assert!(x > 0.0);
 
     let x_bits: u64 = x.to_bits();
@@ -365,7 +359,7 @@ fn frexp(x: f64) -> (f64, isize) {
     (q, expon as isize)
 }
 
-// This function is used to quantise model model inputs and its types are fixed
+// This function is used to quantise model inputs and its types are fixed
 pub fn quantise_f32_u8_nne(values: &[f32], scale: QScaleType, zero: u8) -> Vec<u8> {
     values
         .iter()

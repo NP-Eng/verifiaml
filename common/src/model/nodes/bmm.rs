@@ -5,7 +5,7 @@ use ark_std::log2;
 
 use ark_sumcheck::ml_sumcheck::Proof;
 
-use crate::model::qarray::{InnerType, QArray};
+use crate::model::tensor::{Integral, Tensor};
 use crate::model::Poly;
 use crate::{Commitment, CommitmentState};
 
@@ -16,13 +16,13 @@ use super::{NodeOpsNative, NodeOpsPadded};
 /// Start with 2D matrices, and Mat-by-vector multiplication only
 pub struct BMMNode<ST, LT> {
     /// The row-major flattened unpadded vector of weights
-    weights: QArray<ST>,
+    weights: Tensor<ST>,
     /// The padded weight vector
-    pub padded_weights: QArray<ST>,
+    pub padded_weights: Tensor<ST>,
     /// The unpadded vector of biases
-    bias: QArray<LT>,
+    bias: Tensor<LT>,
     /// The padded bias vector
-    pub padded_bias: QArray<LT>,
+    pub padded_bias: Tensor<LT>,
     /// Unpadded imensions (rows, columns)
     dims: (usize, usize),
     /// The logarithm of the padded dimensions (rows, columns)
@@ -105,14 +105,14 @@ pub struct BMMNodeProof<
 
 impl<ST, LT> NodeOpsNative<ST, LT> for BMMNode<ST, LT>
 where
-    ST: InnerType,
-    LT: InnerType + From<ST>,
+    ST: Integral,
+    LT: Integral + From<ST>,
 {
     fn shape(&self) -> Vec<usize> {
         vec![self.dims.1]
     }
 
-    fn evaluate(&self, input: &QArray<ST>) -> QArray<LT> {
+    fn evaluate(&self, input: &Tensor<ST>) -> Tensor<LT> {
         // Sanity checks
         // TODO systematise
         assert_eq!(
@@ -128,7 +128,7 @@ where
             input.len()
         );
 
-        let input: QArray<LT> = input.cast();
+        let input: Tensor<LT> = input.cast();
 
         // TODO this is a bigger question: can this overflow an i8? Supposedly the point of quantisation
         // is that input-by-weight products can be computed in i8. To be safe, let us use the large type here
@@ -136,7 +136,7 @@ where
 
         let mut accumulators = self.bias.values().clone();
 
-        // TODO this can be made more elegant (efficient?) using addition of QArrays after defining suitable operators
+        // TODO this can be made more elegant (efficient?) using addition of Tensors after defining suitable operators
 
         // TODO since we have acumulators, this can be done more efficiently going row-wise to avoid re-caching the input
         for col in 0..self.dims.1 {
@@ -147,14 +147,14 @@ where
             }
         }
 
-        QArray::new(accumulators, vec![self.dims.1])
+        Tensor::new(accumulators, vec![self.dims.1])
     }
 }
 
 impl<ST, LT> NodeOpsPadded<ST, LT> for BMMNode<ST, LT>
 where
-    ST: InnerType + TryFrom<LT>,
-    LT: InnerType + From<ST>,
+    ST: Integral + TryFrom<LT>,
+    LT: Integral + From<ST>,
 {
     fn padded_shape_log(&self) -> Vec<usize> {
         vec![self.padded_dims_log.1]
@@ -168,7 +168,7 @@ where
     // meant to exactly mirror the proof-system multiplication proved by the
     // sumcheck argument. Requantization and shifting are also applied to these
     // trivial entries, as the proof system does.
-    fn padded_evaluate(&self, input: &QArray<ST>) -> QArray<LT> {
+    fn padded_evaluate(&self, input: &Tensor<ST>) -> Tensor<LT> {
         let padded_dims = (1 << self.padded_dims_log.0, 1 << self.padded_dims_log.1);
 
         // Sanity checks
@@ -187,7 +187,7 @@ where
             input.len()
         );
 
-        let input: QArray<LT> = input.cast();
+        let input: Tensor<LT> = input.cast();
 
         // TODO this is a bigger question: can this overflow an i8? Supposedly the point of quantisation
         // is that input-by-weight products can be computed in i8. To be safe, let us use the large type here
@@ -195,7 +195,7 @@ where
 
         let mut accumulators = self.padded_bias.values().clone();
 
-        // TODO this can be made more elegant (efficient?) using addition of QArrays after defining suitable operators
+        // TODO this can be made more elegant (efficient?) using addition of Tensors after defining suitable operators
 
         // TODO since we have acumulators, this can be done more efficiently going row-wise to avoid re-caching the input
         for col in 0..padded_dims.1 {
@@ -206,16 +206,16 @@ where
             }
         }
 
-        QArray::new(accumulators, vec![padded_dims.1])
+        Tensor::new(accumulators, vec![padded_dims.1])
     }
 }
 
 impl<ST, LT> BMMNode<ST, LT>
 where
-    ST: InnerType,
-    LT: InnerType,
+    ST: Integral,
+    LT: Integral,
 {
-    pub fn new(weights: QArray<ST>, bias: QArray<LT>, input_zero_point: ST) -> Self {
+    pub fn new(weights: Tensor<ST>, bias: Tensor<LT>, input_zero_point: ST) -> Self {
         let dims = (weights.shape()[0], weights.shape()[1]);
 
         assert_eq!(

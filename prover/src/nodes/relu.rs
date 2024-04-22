@@ -4,7 +4,7 @@ use ark_poly_commit::{LabeledCommitment, PolynomialCommitment};
 use ark_std::rand::RngCore;
 
 use hcs_common::{
-    InnerType, LabeledPoly, NodeCommitment, NodeCommitmentState, NodeProof, Poly, ReLUNode,
+    Integral, LabeledPoly, NodeCommitment, NodeCommitmentState, NodeProof, Poly, ReLUNode,
 };
 
 use crate::NodeOpsProve;
@@ -14,7 +14,7 @@ where
     F: PrimeField + Absorb,
     S: CryptographicSponge,
     PCS: PolynomialCommitment<F, Poly<F>, S>,
-    ST: InnerType,
+    ST: Integral,
 {
     fn prove(
         &self,

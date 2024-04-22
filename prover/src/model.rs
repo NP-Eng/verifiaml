@@ -4,8 +4,8 @@ use ark_crypto_primitives::sponge::{Absorb, CryptographicSponge};
 use ark_ff::PrimeField;
 use ark_poly::MultilinearExtension;
 use ark_poly_commit::{LabeledPolynomial, PolynomialCommitment};
-use hcs_common::{InferenceProof, InnerType, Model};
-use hcs_common::{NodeCommitment, NodeCommitmentState, Poly, QArray, QTypeArray};
+use hcs_common::{InferenceProof, Integral, Model};
+use hcs_common::{NodeCommitment, NodeCommitmentState, Poly, QTypeArray, Tensor};
 
 use crate::NodeOpsProve;
 pub trait ProveModel<F, S, PCS, ST, LT>
@@ -14,7 +14,7 @@ where
     S: CryptographicSponge,
     PCS: PolynomialCommitment<F, Poly<F>, S>,
 {
-    fn padded_evaluate(&self, input: QArray<ST>) -> QArray<ST>;
+    fn padded_evaluate(&self, input: Tensor<ST>) -> Tensor<ST>;
 
     fn prove_inference(
         &self,
@@ -23,7 +23,7 @@ where
         sponge: &mut S,
         node_coms: &Vec<NodeCommitment<F, S, PCS>>,
         node_com_states: &Vec<NodeCommitmentState<F, S, PCS>>,
-        input: QArray<ST>,
+        input: Tensor<ST>,
     ) -> InferenceProof<F, S, PCS, ST, LT>;
 
     fn commit(
@@ -38,12 +38,12 @@ where
     F: PrimeField + Absorb + From<ST> + From<LT>,
     S: CryptographicSponge,
     PCS: PolynomialCommitment<F, Poly<F>, S>,
-    ST: InnerType + TryFrom<LT>,
-    LT: InnerType + From<ST>,
+    ST: Integral + TryFrom<LT>,
+    LT: Integral + From<ST>,
 {
     /// Unlike the node's `padded_evaluate`, the model's `padded_evaluate` accepts unpadded input
     /// and first re-sizes it before running inference.
-    fn padded_evaluate(&self, input: QArray<ST>) -> QArray<ST> {
+    fn padded_evaluate(&self, input: Tensor<ST>) -> Tensor<ST> {
         // TODO sanity check: input shape matches model input shape
 
         let input = input.compact_resize(
@@ -74,7 +74,7 @@ where
         sponge: &mut S,
         node_coms: &Vec<NodeCommitment<F, S, PCS>>,
         node_com_states: &Vec<NodeCommitmentState<F, S, PCS>>,
-        input: QArray<ST>,
+        input: Tensor<ST>,
     ) -> InferenceProof<F, S, PCS, ST, LT> {
         // TODO Absorb public parameters into s (to be determined what exactly)
 

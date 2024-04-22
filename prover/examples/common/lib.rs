@@ -1,4 +1,4 @@
-use hcs_common::{quantise_f32_u8_nne, InferenceProof, Model, Poly, QArray};
+use hcs_common::{quantise_f32_u8_nne, InferenceProof, Model, Poly, Tensor};
 use hcs_prover::ProveModel;
 
 use hcs_verifier::VerifyModel;
@@ -20,10 +20,10 @@ pub fn prove_inference<F, S, PCS>(
     S: CryptographicSponge,
     PCS: PolynomialCommitment<F, Poly<F>, S>,
 {
-    let input: QArray<f32> = QArray::read(input_path);
-    let expected_output: QArray<u8> = QArray::read(expected_output_path);
+    let input: Tensor<f32> = Tensor::read(input_path);
+    let expected_output: Tensor<u8> = Tensor::read(expected_output_path);
 
-    let quantised_input: QArray<u8> = QArray::new(
+    let quantised_input: Tensor<u8> = Tensor::new(
         quantise_f32_u8_nne(input.values(), qinfo.0, qinfo.1),
         input.shape().clone(),
     );
@@ -51,7 +51,7 @@ pub fn prove_inference<F, S, PCS>(
 
     let output_i8 = output_qtypearray.unwrap_small();
 
-    let output_u8: QArray<u8> = (output_i8.cast::<i32>() + 128).cast();
+    let output_u8: Tensor<u8> = (output_i8.cast::<i32>() + 128).cast();
 
     assert_eq!(output_u8.compact_resize(output_shape, 0), expected_output);
 
@@ -70,10 +70,10 @@ pub fn verify_inference<F, S, PCS>(
     S: CryptographicSponge,
     PCS: PolynomialCommitment<F, Poly<F>, S>,
 {
-    let input: QArray<f32> = QArray::read(input_path);
-    let expected_output: QArray<u8> = QArray::read(expected_output_path);
+    let input: Tensor<f32> = Tensor::read(input_path);
+    let expected_output: Tensor<u8> = Tensor::read(expected_output_path);
 
-    let quantised_input: QArray<u8> = QArray::new(
+    let quantised_input: Tensor<u8> = Tensor::new(
         quantise_f32_u8_nne(input.values(), qinfo.0, qinfo.1),
         input.shape().clone(),
     );

@@ -2,7 +2,7 @@ use super::*;
 
 #[test]
 fn test_flatten_index_trivial() {
-    let q = QArray::from(vec![1, 2, 3, 4, 5, 6, 7, 8, 9]);
+    let q = Tensor::from(vec![1, 2, 3, 4, 5, 6, 7, 8, 9]);
     for i in 0..9 {
         assert_eq!(q.flatten_index(vec![i]), i);
     }
@@ -12,7 +12,7 @@ fn test_flatten_index_trivial() {
 fn test_flatten_index_2d() {
     let shape = vec![3, 3];
     let flattened: Vec<i32> = (1..=9).collect();
-    let q = QArray::new(flattened, shape);
+    let q = Tensor::new(flattened, shape);
     assert_eq!(q.flatten_index(vec![0, 0]), 0);
     assert_eq!(q.flatten_index(vec![0, 1]), 1);
     assert_eq!(q.flatten_index(vec![0, 2]), 2);
@@ -26,7 +26,7 @@ fn test_flatten_index_2d() {
 fn test_flatten_index_3d() {
     let shape = vec![2, 3, 4];
     let flattened: Vec<i32> = (1..=24).collect();
-    let q = QArray::new(flattened, shape);
+    let q = Tensor::new(flattened, shape);
     assert_eq!(q.flatten_index(vec![0, 0, 0]), 0);
     assert_eq!(q.flatten_index(vec![0, 0, 1]), 1);
     assert_eq!(q.flatten_index(vec![0, 0, 2]), 2);
@@ -39,9 +39,9 @@ fn test_flatten_index_3d() {
 fn test_resize_1d_pad() {
     let shape = vec![5];
     let flattened: Vec<i32> = (1..=5).collect();
-    let qarray = QArray::new(flattened, shape);
+    let tensor = Tensor::new(flattened, shape);
 
-    let padded = qarray.compact_resize(vec![7], 0);
+    let padded = tensor.compact_resize(vec![7], 0);
 
     assert_eq!(padded.shape, vec![7]);
     assert_eq!(padded.flattened, vec![1, 2, 3, 4, 5, 0, 0]);
@@ -51,9 +51,9 @@ fn test_resize_1d_pad() {
 fn test_resize_2d_pad() {
     let shape = vec![2, 3];
     let flattened: Vec<i32> = (1..=6).collect();
-    let qarray = QArray::new(flattened, shape);
+    let tensor = Tensor::new(flattened, shape);
 
-    let padded = qarray.compact_resize(vec![5, 4], 0);
+    let padded = tensor.compact_resize(vec![5, 4], 0);
 
     let expected = vec![1, 2, 3, 0, 4, 5, 6, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
 
@@ -65,9 +65,9 @@ fn test_resize_2d_pad() {
 fn test_resize_3d_pad() {
     let shape = vec![2, 3, 4];
     let flattened: Vec<i32> = (1..=24).collect();
-    let qarray = QArray::new(flattened, shape);
+    let tensor = Tensor::new(flattened, shape);
 
-    let padded = qarray.compact_resize(vec![3, 5, 7], 0);
+    let padded = tensor.compact_resize(vec![3, 5, 7], 0);
 
     let expected = vec![
         1, 2, 3, 4, 0, 0, 0, 5, 6, 7, 8, 0, 0, 0, 9, 10, 11, 12, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
@@ -84,11 +84,11 @@ fn test_resize_3d_pad() {
 fn test_resize_1d_truncate() {
     let shape = vec![7];
     let original = vec![1, 2, 3, 4, 5, 0, 0];
-    let qarray = QArray::new(original, shape);
+    let tensor = Tensor::new(original, shape);
 
     let expected: Vec<i32> = (1..=5).collect();
 
-    let padded = qarray.compact_resize(vec![5], 0);
+    let padded = tensor.compact_resize(vec![5], 0);
 
     assert_eq!(padded.shape, vec![5]);
     assert_eq!(padded.flattened, expected);
@@ -98,9 +98,9 @@ fn test_resize_1d_truncate() {
 fn test_resize_2d_truncate() {
     let shape = vec![5, 4];
     let original = vec![1, 2, 3, 0, 4, 5, 6, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
-    let qarray = QArray::new(original, shape);
+    let tensor = Tensor::new(original, shape);
 
-    let padded = qarray.compact_resize(vec![2, 3], 0);
+    let padded = tensor.compact_resize(vec![2, 3], 0);
 
     let expected: Vec<i32> = (1..=6).collect();
 
@@ -117,9 +117,9 @@ fn test_resize_3d_truncate() {
         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
     ];
-    let qarray = QArray::new(original, shape);
+    let tensor = Tensor::new(original, shape);
 
-    let padded = qarray.compact_resize(vec![2, 3, 4], 0);
+    let padded = tensor.compact_resize(vec![2, 3, 4], 0);
 
     let expected: Vec<i32> = (1..=24).collect();
 
@@ -131,9 +131,9 @@ fn test_resize_3d_truncate() {
 fn test_resize_3d_mixed() {
     let shape = vec![2, 2, 3];
     let flattened: Vec<i32> = (1..=12).collect();
-    let qarray = QArray::new(flattened, shape);
+    let tensor = Tensor::new(flattened, shape);
 
-    let padded = qarray.compact_resize(vec![3, 1, 5], 0);
+    let padded = tensor.compact_resize(vec![3, 1, 5], 0);
 
     let expected = vec![1, 2, 3, 0, 0, 7, 8, 9, 0, 0, 0, 0, 0, 0, 0];
 
@@ -143,48 +143,48 @@ fn test_resize_3d_mixed() {
 
 #[test]
 fn test_print_1d() {
-    println!("{}", QArray::from(vec![1, 2, 3, 4, 5]));
+    println!("{}", Tensor::from(vec![1, 2, 3, 4, 5]));
 }
 
 #[test]
 fn test_print_2d_1() {
-    println!("{}", QArray::new((1..=6).collect(), vec![2, 3]));
+    println!("{}", Tensor::new((1..=6).collect(), vec![2, 3]));
 }
 
 #[test]
 fn test_print_2d_2() {
-    println!("{}", QArray::new((1..=6).collect(), vec![3, 2]));
+    println!("{}", Tensor::new((1..=6).collect(), vec![3, 2]));
 }
 
 #[test]
 fn test_print_3d_1() {
-    println!("{}", QArray::new((1..=24).collect(), vec![2, 3, 4]));
+    println!("{}", Tensor::new((1..=24).collect(), vec![2, 3, 4]));
 }
 
 #[test]
 fn test_print_3d_2() {
-    println!("{}", QArray::new((1..=24).collect(), vec![3, 2, 4]));
+    println!("{}", Tensor::new((1..=24).collect(), vec![3, 2, 4]));
 }
 
 #[test]
 fn test_print_4d() {
-    println!("{}", QArray::new((1..=24).collect(), vec![2, 3, 2, 2]));
+    println!("{}", Tensor::new((1..=24).collect(), vec![2, 3, 2, 2]));
 }
 
 #[test]
 fn test_maximum() {
-    let qarray: QArray<i32> = QArray::new(vec![-1, 2, 3, 4, -5, 6], vec![2, 3]);
+    let tensor: Tensor<i32> = Tensor::new(vec![-1, 2, 3, 4, -5, 6], vec![2, 3]);
 
     // TODO the call to move_values will change once other branches are merged
     // Do it here and elsewhere
-    assert_eq!(qarray.maximum(3).move_values(), vec![3, 3, 3, 4, 3, 6]);
+    assert_eq!(tensor.maximum(3).move_values(), vec![3, 3, 3, 4, 3, 6]);
 }
 
 #[test]
 fn test_minimum() {
-    let qarray: QArray<i32> = QArray::new(vec![-1, 2, 3, 4, -5, 6], vec![2, 3]);
+    let tensor: Tensor<i32> = Tensor::new(vec![-1, 2, 3, 4, -5, 6], vec![2, 3]);
 
     // TODO the call to move_values will change once other branches are merged
     // Do it here and elsewhere
-    assert_eq!(qarray.minimum(3).move_values(), vec![-1, 2, 3, 3, -5, 3]);
+    assert_eq!(tensor.minimum(3).move_values(), vec![-1, 2, 3, 3, -5, 3]);
 }

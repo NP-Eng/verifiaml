@@ -1,3 +1,6 @@
+pub mod nodes;
+pub mod tensor;
+
 use ark_crypto_primitives::sponge::{Absorb, CryptographicSponge};
 use ark_ff::PrimeField;
 use ark_poly::DenseMultilinearExtension;
@@ -6,12 +9,9 @@ use ark_std::rand::RngCore;
 
 use crate::model::nodes::Node;
 
-use self::qarray::InnerType;
-use self::qarray::QTypeArray;
-use self::{nodes::NodeProof, qarray::QArray};
-
-pub mod nodes;
-pub mod qarray;
+use self::tensor::Integral;
+use self::tensor::QTypeArray;
+use self::{nodes::NodeProof, tensor::Tensor};
 
 pub type Poly<F> = DenseMultilinearExtension<F>;
 pub type LabeledPoly<F> = LabeledPolynomial<F, DenseMultilinearExtension<F>>;
@@ -53,8 +53,8 @@ pub struct Model<ST, LT> {
 
 impl<ST, LT> Model<ST, LT>
 where
-    ST: InnerType + TryFrom<LT>,
-    LT: InnerType + From<ST>,
+    ST: Integral + TryFrom<LT>,
+    LT: Integral + From<ST>,
 {
     pub fn new(input_shape: Vec<usize>, nodes: Vec<Node<ST, LT>>) -> Self {
         // An empty model would cause panics later down the line e.g. when
@@ -92,7 +92,7 @@ where
         PCS::trim(&pp, 0, 0, None)
     }
 
-    pub fn evaluate(&self, input: QArray<ST>) -> QArray<ST> {
+    pub fn evaluate(&self, input: Tensor<ST>) -> Tensor<ST> {
         let mut output = QTypeArray::S(input);
 
         for node in &self.nodes {
