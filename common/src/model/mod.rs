@@ -21,7 +21,8 @@ where
     F: PrimeField + Absorb,
     S: CryptographicSponge,
     PCS: PolynomialCommitment<F, Poly<F>, S>,
-    LabeledCommitment<PCS::Commitment>: Clone,
+    ST: Clone,
+    LT: Clone,
 {
     // Model input tensors in plain
     pub inputs: Vec<QTypeArray<ST, LT>>,
@@ -42,12 +43,13 @@ where
     pub output_opening_proofs: Vec<PCS::Proof>,
 }
 
-impl<F, S, PCS, ST, LT> Clone for InferenceProof<F, S, PCS, ST, LT>
+impl <F, S, PCS, ST, LT> Clone for InferenceProof<F, S, PCS, ST, LT>
 where
     F: PrimeField + Absorb,
     S: CryptographicSponge,
     PCS: PolynomialCommitment<F, Poly<F>, S>,
-    LabeledCommitment<PCS::Commitment>: Clone,
+    ST: Clone,
+    LT: Clone,
 {
     fn clone(&self) -> Self {
         Self {
@@ -60,7 +62,6 @@ where
         }
     }
 }
-
 // TODO change the functions that receive vectors to receive slices instead whenever it makes sense
 
 // TODO: for now, we require all nodes to use the same PCS; this might change

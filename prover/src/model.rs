@@ -13,6 +13,8 @@ where
     F: PrimeField + Absorb,
     S: CryptographicSponge,
     PCS: PolynomialCommitment<F, Poly<F>, S>,
+    ST: Clone,
+    LT: Clone,
 {
     fn padded_evaluate(&self, input: QArray<ST>) -> QArray<ST>;
 

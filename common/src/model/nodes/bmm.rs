@@ -103,6 +103,8 @@ pub struct BMMNodeProof<
     pub bias_opening_value: F,
 }
 
+// Must be implemented manually (at least until PCS: Clone), since derive: Clone
+// requires all generic types to be Clone
 impl<F, S, PCS> Clone for BMMNodeProof<F, S, PCS>
 where
     F: PrimeField + Absorb,
