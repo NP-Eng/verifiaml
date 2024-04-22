@@ -104,22 +104,6 @@ where
     Reshape(()),
 }
 
-impl<F, S, PCS> Clone for NodeProof<F, S, PCS>
-where
-    F: PrimeField + Absorb,
-    S: CryptographicSponge,
-    PCS: PolynomialCommitment<F, Poly<F>, S>,
-{
-    fn clone(&self) -> Self {
-        match self {
-            NodeProof::BMM(p) => NodeProof::BMM(p.clone()),
-            NodeProof::RequantiseBMM(p) => NodeProof::RequantiseBMM(p.clone()),
-            NodeProof::ReLU(_) => NodeProof::ReLU(()),
-            NodeProof::Reshape(_) => NodeProof::Reshape(()),
-        }
-    }
-}
-
 pub enum NodeCommitment<F, S, PCS>
 where
     F: PrimeField,

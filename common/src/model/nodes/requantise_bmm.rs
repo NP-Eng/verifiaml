@@ -28,7 +28,6 @@ pub struct RequantiseBMMNodeCommitmentState();
 
 impl CommitmentState for RequantiseBMMNodeCommitmentState {}
 
-#[derive(Clone)]
 pub struct RequantiseBMMNodeProof {
     // this will be the sumcheck proof
 }

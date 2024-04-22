@@ -213,21 +213,29 @@ fn bench_verifiaml_verification<PCS, S>(
 
     let mut rng = test_rng();
 
-    let proof = model.prove_inference(
-        ck,
-        Some(&mut rng),
-        &mut sponge.clone(),
-        node_coms,
-        node_com_states,
-        quantise_input(&raw_input),
-    );
-
     group.bench_function(
         BenchmarkId::new(
             "verification",
             format!("{} params", resize_factor * resize_factor * 28 * 28 * 10),
         ),
-        |b| b.iter(|| model.verify_inference(vk, &mut sponge.clone(), node_coms, proof.clone())),
+        |b| {
+            b.iter_batched(
+                || {
+                    model.prove_inference(
+                        ck,
+                        Some(&mut rng),
+                        &mut sponge.clone(),
+                        node_coms,
+                        node_com_states,
+                        quantise_input(&raw_input),
+                    )
+                },
+                |proof| {
+                    model.verify_inference(vk, &mut sponge.clone(), node_coms, proof);
+                },
+                criterion::BatchSize::SmallInput,
+            )
+        },
     );
 }
 

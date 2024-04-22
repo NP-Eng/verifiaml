@@ -103,28 +103,6 @@ pub struct BMMNodeProof<
     pub bias_opening_value: F,
 }
 
-// Must be implemented manually (at least until PCS: Clone), since derive: Clone
-// requires all generic types to be Clone
-impl<F, S, PCS> Clone for BMMNodeProof<F, S, PCS>
-where
-    F: PrimeField + Absorb,
-    S: CryptographicSponge,
-    PCS: PolynomialCommitment<F, Poly<F>, S>,
-{
-    fn clone(&self) -> Self {
-        Self {
-            sumcheck_proof: self.sumcheck_proof.clone(),
-            input_opening_proof: self.input_opening_proof.clone(),
-            input_opening_value: self.input_opening_value.clone(),
-            weight_opening_proof: self.weight_opening_proof.clone(),
-            weight_opening_value: self.weight_opening_value.clone(),
-            output_bias_opening_proof: self.output_bias_opening_proof.clone(),
-            output_opening_value: self.output_opening_value.clone(),
-            bias_opening_value: self.bias_opening_value.clone(),
-        }
-    }
-}
-
 impl<ST, LT> NodeOpsNative<ST, LT> for BMMNode<ST, LT>
 where
     ST: InnerType,

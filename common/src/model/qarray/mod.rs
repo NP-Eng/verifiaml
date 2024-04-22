@@ -89,8 +89,7 @@ impl InnerType for u8 {
 impl InnerType for f32 {
     const ZERO: Self = 0.0;
     const MIN: Self = Self::MIN;
-    const MAX: Self =
-     Self::MAX;
+    const MAX: Self = Self::MAX;
 
     fn from_qscaletype(x: QScaleType) -> Self {
         x as Self
@@ -112,7 +111,7 @@ pub struct QArray<T> {
 }
 
 #[derive(Clone)]
-pub enum QTypeArray<ST: Clone, LT: Clone> {
+pub enum QTypeArray<ST, LT> {
     S(QArray<ST>),
     L(QArray<LT>),
 }
@@ -574,7 +573,7 @@ impl<T: InnerType + PartialOrd> QArray<T> {
 
 /************************ QTypeArray ***********************/
 
-impl<ST: Clone, LT: Clone> QTypeArray<ST, LT> {
+impl<ST, LT> QTypeArray<ST, LT> {
     #[inline]
     pub fn unwrap_small(self) -> QArray<ST> {
         match self {

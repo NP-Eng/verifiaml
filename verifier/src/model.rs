@@ -12,8 +12,6 @@ where
     F: PrimeField + Absorb,
     S: CryptographicSponge,
     PCS: PolynomialCommitment<F, Poly<F>, S>,
-    ST: Clone,
-    LT: Clone,
 {
     fn verify_inference(
         &self,
