@@ -38,12 +38,12 @@ pub trait Integral:
     + Shl<usize, Output = Self>
     + Shr<usize, Output = Self>
     + BitAnd<Output = Self>
+    + Into<Self::Double>
 {
     // We can't simply require Double: Integral, as that would create an
     // infinite chain
     type Double: Copy
         + Debug
-        + From<Self>
         + TryInto<Self>
         + Mul<Output = Self::Double>
         + Div<Output = Self::Double>
@@ -91,8 +91,8 @@ macro_rules! impl_integral {
 impl_integral!(i8, i16);
 impl_integral!(i32, i64);
 
-pub trait SmallNIO: Integral {
-    type LT: Integral + From<Self> + TryInto<Self>;
+pub trait SmallNIO: Integral + Into<Self::LT> {
+    type LT: Integral + TryInto<Self>;
 }
 
 impl SmallNIO for i8 {

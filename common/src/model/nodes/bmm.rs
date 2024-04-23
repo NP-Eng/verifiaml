@@ -131,7 +131,7 @@ where
 
         // TODO this is a bigger question: can this overflow an i8? Supposedly the point of quantisation
         // is that input-by-weight products can be computed in i8. To be safe, let us use the large type here
-        let shifted_input = input - ST::LT::from(self.input_zero_point);
+        let shifted_input = input - self.input_zero_point.into();
 
         let mut accumulators = self.bias.values().clone();
 
@@ -142,7 +142,7 @@ where
             // TODO does the compiler realise it doesn't need to access accumulators[col] on every iteration of the inner loop? ow change
             for row in 0..self.dims.0 {
                 accumulators[col] +=
-                    shifted_input[row] * ST::LT::from(self.weights[row * self.dims.1 + col])
+                    shifted_input[row] * self.weights[row * self.dims.1 + col].into();
             }
         }
 
@@ -189,7 +189,7 @@ where
 
         // TODO this is a bigger question: can this overflow an i8? Supposedly the point of quantisation
         // is that input-by-weight products can be computed in i8. To be safe, let us use the large type here
-        let shifted_input = input - ST::LT::from(self.input_zero_point);
+        let shifted_input = input - self.input_zero_point.into();
 
         let mut accumulators = self.padded_bias.values().clone();
 
@@ -199,8 +199,8 @@ where
         for col in 0..padded_dims.1 {
             // TODO does the compiler realise it doesn't need to access accumulators[col] on every iteration of the inner loop? ow change
             for row in 0..padded_dims.0 {
-                accumulators[col] += shifted_input[row]
-                    * ST::LT::from(self.padded_weights[row * padded_dims.1 + col])
+                accumulators[col] +=
+                    shifted_input[row] * self.padded_weights[row * padded_dims.1 + col].into();
             }
         }
 

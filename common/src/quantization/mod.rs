@@ -55,8 +55,8 @@ pub fn requantize_fc<ST, LT>(
     scheme: RoundingScheme,
 ) -> Vec<ST>
 where
-    ST: Integral,
-    LT: Integral + From<ST> + TryInto<ST>,
+    ST: Integral + Into<LT>,
+    LT: Integral + TryInto<ST>,
 {
     match scheme {
         RoundingScheme::NearestTiesAwayFromZero => requantize_fc_ntafz::<ST, LT>(output, q_info),
@@ -66,8 +66,8 @@ where
 
 fn requantize_fc_ntafz<ST, LT>(output: &[LT], q_info: &BMMQInfo<ST>) -> Vec<ST>
 where
-    ST: Integral,
-    LT: Integral + From<ST> + TryInto<ST>,
+    ST: Integral + Into<LT>,
+    LT: Integral + TryInto<ST>,
 {
     // 1. Computing scale
     // TODO In actual schemes, this will be decomposed as (int, shift)
@@ -90,8 +90,8 @@ where
         .map(|x| {
             let x = LT::to_qscaletype(x) * s;
             let mut x = LT::from_qscaletype(x.round());
-            x += LT::from(q_info.output_info.zero_point);
-            partial_ord_clamp(x, LT::from(ST::MIN), LT::from(ST::MAX))
+            x += q_info.output_info.zero_point.into();
+            partial_ord_clamp(x, ST::MIN.into(), ST::MAX.into())
                 .try_into()
                 .map_err(|_| "Unable to convert Large Type to Small Type")
                 .unwrap()
@@ -116,8 +116,8 @@ fn partial_ord_clamp<T: PartialOrd>(x: T, min: T, max: T) -> T {
 
 fn requantize_fc_nte<ST: Integral, LT: Integral>(output: &[LT], q_info: &BMMQInfo<ST>) -> Vec<ST>
 where
-    ST: Integral,
-    LT: Integral + From<ST> + TryInto<ST>,
+    ST: Integral + Into<LT>,
+    LT: Integral + TryInto<ST>,
 {
     // 1. Computing scale
     // TODO In actual schemes, this will be decomposed as (int, shift)
@@ -140,8 +140,8 @@ where
         .map(|x| {
             let x = LT::to_qscaletype(x) * s;
             let mut x = LT::from_qscaletype(x.round_ties_even()); // TODO which type to pick here? Should we check for overflows?
-            x += LT::from(q_info.output_info.zero_point);
-            partial_ord_clamp(x, LT::from(ST::MIN), LT::from(ST::MAX))
+            x += q_info.output_info.zero_point.into();
+            partial_ord_clamp(x, ST::MIN.into(), ST::MAX.into())
                 .try_into()
                 .map_err(|_| "Unable to convert Large Type to Small Type")
                 .unwrap()
@@ -158,12 +158,12 @@ pub fn requantize_ref<ST, LT>(
     output_zero_point: ST,
 ) -> Vec<ST>
 where
-    ST: Integral,
-    LT: Integral + From<ST> + TryInto<ST>,
+    ST: Integral + Into<LT>,
+    LT: Integral + TryInto<ST>,
 {
     // Computing auxiliary constants used for every input
-    let effective_multiplier = LT::Double::from(effective_multiplier);
-    let output_zero_point = LT::from(output_zero_point);
+    let effective_multiplier: LT::Double = effective_multiplier.into();
+    let output_zero_point: LT = output_zero_point.into();
 
     // TODO: Add associated constant MAX_PLUS_ONE to Integral.
     let pow2_bits_minus_one = LT::ONE_DOUBLE << (LT::BITS - 1);
@@ -171,8 +171,6 @@ where
     // NOTE: Notice that they are independent of the input. Perhaps it is meaningful to turn:
     // xt_pow2_bits_minus_one, non_neg_nudge, and neg_nudge
     // into associated constants of type LT in order to avoid their recomputation per call?
-
-    // TODO: After splitting InnerType, rewrite pow2 to use << instead of *.
 
     // Mask consists of full_shift ones
     let mask = (LT::ONE << effective_shift) - LT::ONE; // TODO: may overflow for some exponents
@@ -193,7 +191,7 @@ where
                 (LT::ONE, neg_nudge)
             };
 
-            let product = LT::Double::from(*x) * effective_multiplier;
+            let product = effective_multiplier * (*x).into();
 
             let product_high: LT = ((product + nudge) / pow2_bits_minus_one)
                 .try_into()
@@ -201,8 +199,6 @@ where
                 .unwrap();
 
             // assert(full_shift <= 31);
-
-            // TODO: change inner_bit_and by & after the "InnerType split"
             let remainder = product_high & mask;
             let threshold = mask_div2 + is_negative;
 
@@ -215,7 +211,7 @@ where
 
             let shifted = core + output_zero_point;
 
-            partial_ord_clamp(shifted, LT::from(ST::MIN), LT::from(ST::MAX))
+            partial_ord_clamp(shifted, ST::MIN.into(), ST::MAX.into())
                 .try_into()
                 .map_err(|_| "Unable to convert Large Type to Small Type")
                 .unwrap()
@@ -232,8 +228,8 @@ pub fn requantize_single_round<ST, LT>(
     output_zero_point: ST,
 ) -> Vec<ST>
 where
-    ST: Integral,
-    LT: Integral + From<ST> + TryInto<ST>,
+    ST: Integral + Into<LT>,
+    LT: Integral + TryInto<ST>,
 {
     // Although these parameters could be directly saved into the node (with
     // their final desired types), this computation/conversion is essentially
@@ -242,8 +238,8 @@ where
     // transparent as far as definitions and proof system goes. TF Lite does the
     // same. For the other two, computing them here makes the function more
     // usable.
-    let effective_multiplier = LT::Double::from(effective_multiplier);
-    let output_zero_point = LT::from(output_zero_point);
+    let effective_multiplier: LT::Double = effective_multiplier.into();
+    let output_zero_point: LT = output_zero_point.into();
     let non_neg_nudge = LT::ONE_DOUBLE << (full_shift - 1);
     let neg_nudge = non_neg_nudge - LT::ONE_DOUBLE;
 
@@ -258,14 +254,14 @@ where
                 neg_nudge
             };
 
-            let core: LT = ((LT::Double::from(*x) * effective_multiplier + nudge) >> full_shift)
+            let core: LT = (((*x).into() * effective_multiplier + nudge) >> full_shift)
                 .try_into()
                 .map_err(|_| "Error trying to convert LT::Double to LT")
                 .unwrap();
 
             let shifted = core + output_zero_point;
 
-            partial_ord_clamp(shifted, LT::from(ST::MIN), LT::from(ST::MAX))
+            partial_ord_clamp(shifted, ST::MIN.into(), ST::MAX.into())
                 .try_into()
                 .map_err(|_| "Unable to convert Large Type to Small Type")
                 .unwrap()
