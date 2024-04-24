@@ -191,7 +191,7 @@ where
                 (LT::ONE, neg_nudge)
             };
 
-            let product = effective_multiplier * (*x).into();
+            let product = (*x).into() * effective_multiplier;
 
             let product_high: LT = ((product + nudge) / pow2_bits_minus_one)
                 .try_into()
