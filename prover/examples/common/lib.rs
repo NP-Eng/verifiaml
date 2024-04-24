@@ -11,7 +11,7 @@ use ark_std::test_rng;
 pub fn prove_inference<F, S, PCS>(
     input_path: &str,
     expected_output_path: &str,
-    model: &Model<i8, i32>,
+    model: &Model<i8>,
     qinfo: (f32, u8),
     sponge: S,
     output_shape: Vec<usize>,
@@ -38,7 +38,7 @@ pub fn prove_inference<F, S, PCS>(
     let (node_coms, node_com_states): (Vec<_>, Vec<_>) =
         model.commit(&ck, None).into_iter().unzip();
 
-    let inference_proof: InferenceProof<F, S, PCS, i8, i32> = model.prove_inference(
+    let inference_proof: InferenceProof<F, S, PCS, i8> = model.prove_inference(
         &ck,
         Some(&mut rng),
         &mut sponge,
@@ -61,7 +61,7 @@ pub fn prove_inference<F, S, PCS>(
 pub fn verify_inference<F, S, PCS>(
     input_path: &str,
     expected_output_path: &str,
-    model: &Model<i8, i32>,
+    model: &Model<i8>,
     qinfo: (f32, u8),
     sponge: S,
     output_shape: Vec<usize>,
@@ -91,7 +91,7 @@ pub fn verify_inference<F, S, PCS>(
     let (node_coms, node_com_states): (Vec<_>, Vec<_>) =
         model.commit(&ck, None).into_iter().unzip();
 
-    let inference_proof: InferenceProof<F, S, PCS, i8, i32> = model.prove_inference(
+    let inference_proof: InferenceProof<F, S, PCS, i8> = model.prove_inference(
         &ck,
         Some(&mut rng),
         &mut proving_sponge,

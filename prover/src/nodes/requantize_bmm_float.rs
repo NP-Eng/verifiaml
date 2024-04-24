@@ -4,20 +4,19 @@ use ark_poly_commit::{LabeledCommitment, PolynomialCommitment};
 use ark_std::rand::RngCore;
 
 use hcs_common::{
-    Integral, LabeledPoly, NodeCommitment, NodeCommitmentState, NodeProof, Poly,
-    RequantizeBMMFloatNode, RequantizeBMMNodeCommitment, RequantizeBMMNodeCommitmentState,
-    RequantizeBMMNodeProof,
+    LabeledPoly, NodeCommitment, NodeCommitmentState, NodeProof, Poly, RequantizeBMMFloatNode,
+    RequantizeBMMNodeCommitment, RequantizeBMMNodeCommitmentState, RequantizeBMMNodeProof,
+    SmallNIO,
 };
 
 use crate::NodeOpsProve;
 
-impl<F, S, PCS, ST, LT> NodeOpsProve<F, S, PCS, LT, ST> for RequantizeBMMFloatNode<ST>
+impl<F, S, PCS, ST> NodeOpsProve<F, S, PCS> for RequantizeBMMFloatNode<ST>
 where
     F: PrimeField + Absorb,
     S: CryptographicSponge,
     PCS: PolynomialCommitment<F, Poly<F>, S>,
-    ST: Integral + TryFrom<LT>,
-    LT: Integral + From<ST>,
+    ST: SmallNIO,
 {
     fn prove(
         &self,

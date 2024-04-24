@@ -9,24 +9,24 @@ use ark_std::rand::RngCore;
 
 use crate::model::nodes::Node;
 
-use self::tensor::Integral;
-use self::tensor::QTypeArray;
+use self::tensor::{NIOTensor, SmallNIO};
 use self::{nodes::NodeProof, tensor::Tensor};
 
 pub type Poly<F> = DenseMultilinearExtension<F>;
 pub type LabeledPoly<F> = LabeledPolynomial<F, DenseMultilinearExtension<F>>;
 
-pub struct InferenceProof<F, S, PCS, ST, LT>
+pub struct InferenceProof<F, S, PCS, ST>
 where
     F: PrimeField + Absorb,
     S: CryptographicSponge,
     PCS: PolynomialCommitment<F, Poly<F>, S>,
+    ST: SmallNIO,
 {
     // Model input tensors in plain
-    pub inputs: Vec<QTypeArray<ST, LT>>,
+    pub inputs: Vec<NIOTensor<ST>>,
 
     // Model output tensors in plain
-    pub outputs: Vec<QTypeArray<ST, LT>>,
+    pub outputs: Vec<NIOTensor<ST>>,
 
     // Commitments to each of the node values
     pub node_value_commitments: Vec<LabeledCommitment<PCS::Commitment>>,
@@ -45,18 +45,14 @@ where
 
 // TODO: for now, we require all nodes to use the same PCS; this might change
 // in the future
-pub struct Model<ST, LT> {
+pub struct Model<ST: SmallNIO> {
     pub input_shape: Vec<usize>,
     pub output_shape: Vec<usize>,
-    pub nodes: Vec<Node<ST, LT>>,
+    pub nodes: Vec<Node<ST>>,
 }
 
-impl<ST, LT> Model<ST, LT>
-where
-    ST: Integral + TryFrom<LT>,
-    LT: Integral + From<ST>,
-{
-    pub fn new(input_shape: Vec<usize>, nodes: Vec<Node<ST, LT>>) -> Self {
+impl<ST: SmallNIO> Model<ST> {
+    pub fn new(input_shape: Vec<usize>, nodes: Vec<Node<ST>>) -> Self {
         // An empty model would cause panics later down the line e.g. when
         // determining the number of variables needed to commit to it.
         assert!(!nodes.is_empty(), "A model cannot have no nodes",);
@@ -77,7 +73,7 @@ where
         rng: &mut R,
     ) -> Result<(PCS::CommitterKey, PCS::VerifierKey), PCS::Error>
     where
-        F: PrimeField + Absorb + From<ST> + From<LT>,
+        F: PrimeField + Absorb + From<ST> + From<ST::LT>,
         S: CryptographicSponge,
         PCS: PolynomialCommitment<F, Poly<F>, S>,
         R: RngCore,
@@ -93,7 +89,7 @@ where
     }
 
     pub fn evaluate(&self, input: Tensor<ST>) -> Tensor<ST> {
-        let mut output = QTypeArray::S(input);
+        let mut output = NIOTensor::S(input);
 
         for node in &self.nodes {
             output = node.evaluate(&output);

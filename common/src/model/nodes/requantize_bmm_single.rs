@@ -1,6 +1,6 @@
 use ark_std::log2;
 
-use crate::model::tensor::{Integral, Tensor};
+use crate::model::tensor::{SmallNIO, Tensor};
 use crate::quantization::{quantize_multiplier, requantize_single_round};
 use crate::{Commitment, CommitmentState};
 
@@ -9,7 +9,7 @@ use super::{NodeOpsNative, NodeOpsPadded};
 // TODO convention: input, bias and output are rows, the op is vec-by-mat (in that order)
 
 /// Apply requantization after a BMM argument
-pub struct RequantizeBMMSingleNode<ST, LT> {
+pub struct RequantizeBMMSingleNode<ST: SmallNIO> {
     // Number of units
     size: usize,
 
@@ -20,7 +20,7 @@ pub struct RequantizeBMMSingleNode<ST, LT> {
     full_shift: usize,
 
     //
-    effective_multiplier: LT,
+    effective_multiplier: ST::LT,
 
     //
     output_zero_point: ST,
@@ -38,16 +38,15 @@ pub struct RequantizeBMMSingleNodeProof {
     // this will be the sumcheck proof
 }
 
-impl<ST, LT> NodeOpsNative<LT, ST> for RequantizeBMMSingleNode<ST, LT>
+impl<ST> NodeOpsNative<ST::LT, ST> for RequantizeBMMSingleNode<ST>
 where
-    ST: Integral + TryFrom<LT>,
-    LT: Integral + From<ST>,
+    ST: SmallNIO,
 {
     fn shape(&self) -> Vec<usize> {
         vec![self.size]
     }
 
-    fn evaluate(&self, input: &Tensor<LT>) -> Tensor<ST> {
+    fn evaluate(&self, input: &Tensor<ST::LT>) -> Tensor<ST> {
         // Sanity checks
         // TODO systematise
         assert_eq!(
@@ -63,7 +62,7 @@ where
             input.len()
         );
 
-        let output: Tensor<ST> = requantize_single_round::<ST, LT>(
+        let output: Tensor<ST> = requantize_single_round::<ST, ST::LT>(
             input.values(),
             self.effective_multiplier,
             self.full_shift,
@@ -75,10 +74,9 @@ where
     }
 }
 
-impl<ST, LT> NodeOpsPadded<LT, ST> for RequantizeBMMSingleNode<ST, LT>
+impl<ST> NodeOpsPadded<ST::LT, ST> for RequantizeBMMSingleNode<ST>
 where
-    ST: Integral + TryFrom<LT>,
-    LT: Integral + From<ST>,
+    ST: SmallNIO,
 {
     fn padded_shape_log(&self) -> Vec<usize> {
         vec![self.padded_size_log]
@@ -88,7 +86,7 @@ where
         self.padded_size_log
     }
 
-    fn padded_evaluate(&self, input: &Tensor<LT>) -> Tensor<ST> {
+    fn padded_evaluate(&self, input: &Tensor<ST::LT>) -> Tensor<ST> {
         let padded_size = 1 << self.padded_size_log;
 
         // Sanity checks
@@ -107,7 +105,7 @@ where
             input.len()
         );
 
-        let output: Tensor<ST> = requantize_single_round::<ST, LT>(
+        let output: Tensor<ST> = requantize_single_round::<ST, ST::LT>(
             input.values(),
             self.effective_multiplier,
             self.full_shift,
@@ -118,7 +116,7 @@ where
     }
 }
 
-impl RequantizeBMMSingleNode<i8, i32> {
+impl RequantizeBMMSingleNode<i8> {
     pub fn new(size: usize, s_i: f32, s_w: f32, s_o: f32, z_o: i8) -> Self {
         let padded_size_log = log2(size.next_power_of_two()) as usize;
 

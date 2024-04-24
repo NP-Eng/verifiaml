@@ -7,7 +7,7 @@ use ark_poly_commit::PolynomialCommitment;
 // Auxiliary function
 fn unpadded_inference<F, S, PCS>(
     raw_input: Tensor<f32>,
-    model: &Model<i8, i32>,
+    model: &Model<i8>,
     qinfo: (f32, u8),
 ) -> Tensor<u8>
 where
@@ -32,7 +32,7 @@ where
 /* // Auxiliary function
 fn padded_inference<F, S, PCS>(
     raw_input: Tensor<f32>,
-    model: &Model<i8, i32>,
+    model: &Model<i8>,
     qinfo: (f32, u8),
 ) -> Tensor<u8>
 where
@@ -48,7 +48,7 @@ where
     let input_i8 = (quantised_input.cast::<i32>() - 128).cast::<i8>();
 
     let output_i8 =
-        <Model<i8, i32> as ProveModel<F, S, PCS, i8, i32>>::padded_evaluate(model, input_i8);
+        <Model<i8> as ProveModel<F, S, PCS, i8>>::padded_evaluate(model, input_i8);
 
     (output_i8.cast::<i32>() + 128).cast()
 } */
@@ -56,7 +56,7 @@ where
 pub fn run_unpadded<F, S, PCS>(
     input_path: &str,
     expected_output_path: &str,
-    model: &Model<i8, i32>,
+    model: &Model<i8>,
     qinfo: (f32, u8),
 ) where
     F: PrimeField + Absorb,
@@ -78,7 +78,7 @@ pub fn run_unpadded<F, S, PCS>(
 /* pub fn run_padded<F, S, PCS>(
     input_path: &str,
     expected_output_path: &str,
-    model: &Model<i8, i32>,
+    model: &Model<i8>,
     qinfo: (f32, u8),
 ) where
     F: PrimeField + Absorb,
@@ -98,7 +98,7 @@ pub fn run_unpadded<F, S, PCS>(
 pub fn multi_run_unpadded<F, S, PCS>(
     inputs_path: &str,
     expected_outputs_path: &str,
-    model: &Model<i8, i32>,
+    model: &Model<i8>,
     qinfo: (f32, u8),
 ) where
     F: PrimeField + Absorb,

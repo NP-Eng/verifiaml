@@ -4,17 +4,17 @@ use ark_poly_commit::{LabeledCommitment, PolynomialCommitment};
 use ark_std::rand::RngCore;
 
 use hcs_common::{
-    Integral, LabeledPoly, NodeCommitment, NodeCommitmentState, NodeProof, Poly, ReLUNode,
+    LabeledPoly, NodeCommitment, NodeCommitmentState, NodeProof, Poly, ReLUNode, SmallNIO,
 };
 
 use crate::NodeOpsProve;
 
-impl<F, S, PCS, ST> NodeOpsProve<F, S, PCS, ST, ST> for ReLUNode<ST>
+impl<F, S, PCS, ST> NodeOpsProve<F, S, PCS> for ReLUNode<ST>
 where
     F: PrimeField + Absorb,
     S: CryptographicSponge,
     PCS: PolynomialCommitment<F, Poly<F>, S>,
-    ST: Integral,
+    ST: SmallNIO,
 {
     fn prove(
         &self,

@@ -38,12 +38,12 @@ pub trait Integral:
     + Shl<usize, Output = Self>
     + Shr<usize, Output = Self>
     + BitAnd<Output = Self>
+    + Into<Self::Double>
 {
     // We can't simply require Double: Integral, as that would create an
     // infinite chain
     type Double: Copy
         + Debug
-        + From<Self>
         + TryInto<Self>
         + Mul<Output = Self::Double>
         + Div<Output = Self::Double>
@@ -91,6 +91,14 @@ macro_rules! impl_integral {
 impl_integral!(i8, i16);
 impl_integral!(i32, i64);
 
+pub trait SmallNIO: Integral + Into<Self::LT> {
+    type LT: Integral + TryInto<Self>;
+}
+
+impl SmallNIO for i8 {
+    type LT = i32;
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize, Eq, PartialEq)]
 pub struct Tensor<T> {
     #[serde(rename = "f")]
@@ -102,9 +110,9 @@ pub struct Tensor<T> {
 }
 
 #[derive(Clone)]
-pub enum QTypeArray<ST, LT> {
+pub enum NIOTensor<ST: SmallNIO> {
     S(Tensor<ST>),
-    L(Tensor<LT>),
+    L(Tensor<ST::LT>),
 }
 
 // indexing syntax tensor[idx] for Tensor
@@ -559,20 +567,20 @@ impl<T: Integral + PartialOrd> Tensor<T> {
     }
 }
 
-/************************ QTypeArray ***********************/
-impl<ST, LT> QTypeArray<ST, LT> {
+/************************ NIOTensor ***********************/
+impl<ST: SmallNIO> NIOTensor<ST> {
     #[inline]
     pub fn unwrap_small(self) -> Tensor<ST> {
         match self {
-            QTypeArray::S(s) => s,
+            NIOTensor::S(s) => s,
             _ => panic!("Expected S variant"),
         }
     }
 
     #[inline]
-    pub fn unwrap_large(self) -> Tensor<LT> {
+    pub fn unwrap_large(self) -> Tensor<ST::LT> {
         match self {
-            QTypeArray::L(l) => l,
+            NIOTensor::L(l) => l,
             _ => panic!("Expected L variant"),
         }
     }
@@ -580,15 +588,15 @@ impl<ST, LT> QTypeArray<ST, LT> {
     #[inline]
     pub fn ref_small(&self) -> &Tensor<ST> {
         match self {
-            QTypeArray::S(s) => s,
+            NIOTensor::S(s) => s,
             _ => panic!("Expected S variant"),
         }
     }
 
     #[inline]
-    pub fn ref_large(&self) -> &Tensor<LT> {
+    pub fn ref_large(&self) -> &Tensor<ST::LT> {
         match self {
-            QTypeArray::L(l) => l,
+            NIOTensor::L(l) => l,
             _ => panic!("Expected L variant"),
         }
     }
@@ -596,8 +604,8 @@ impl<ST, LT> QTypeArray<ST, LT> {
     #[inline]
     pub fn variant_name(&self) -> &'static str {
         match self {
-            QTypeArray::S(_) => "QTypeArray::S",
-            QTypeArray::L(_) => "QTypeArray::L",
+            NIOTensor::S(_) => "NIOTensor::S",
+            NIOTensor::L(_) => "NIOTensor::L",
         }
     }
 }
