@@ -568,7 +568,6 @@ impl<T: Integral + PartialOrd> Tensor<T> {
 }
 
 /************************ NIOTensor ***********************/
-
 impl<ST: SmallNIO> NIOTensor<ST> {
     #[inline]
     pub fn unwrap_small(self) -> Tensor<ST> {
