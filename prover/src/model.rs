@@ -5,46 +5,53 @@ use ark_ff::PrimeField;
 use ark_poly::MultilinearExtension;
 use ark_poly_commit::{LabeledPolynomial, PolynomialCommitment};
 use hcs_common::{
-    InferenceProof, Model, NIOTensor, NodeCommitment, NodeCommitmentState, Poly, SmallNIO, Tensor,
+    InferenceProof, NIOTensor, NodeCommitment, NodeCommitmentState, Poly, SmallNIO, Tensor,
 };
 
 use crate::NodeOpsProve;
-pub trait ProveModel<F, S, PCS, ST>
-where
-    F: PrimeField + Absorb,
-    S: CryptographicSponge,
-    PCS: PolynomialCommitment<F, Poly<F>, S>,
-    ST: SmallNIO,
-{
-    fn padded_evaluate(&self, input: Tensor<ST>) -> Tensor<ST>;
 
-    fn prove_inference(
-        &self,
-        ck: &PCS::CommitterKey,
-        rng: Option<&mut dyn RngCore>,
-        sponge: &mut S,
-        node_coms: &Vec<NodeCommitment<F, S, PCS>>,
-        node_com_states: &Vec<NodeCommitmentState<F, S, PCS>>,
-        input: Tensor<ST>,
-    ) -> InferenceProof<F, S, PCS, ST>;
-
-    fn commit(
-        &self,
-        ck: &PCS::CommitterKey,
-        _rng: Option<&mut dyn RngCore>,
-    ) -> Vec<(NodeCommitment<F, S, PCS>, NodeCommitmentState<F, S, PCS>)>;
-}
-
-impl<F, S, PCS, ST> ProveModel<F, S, PCS, ST> for Model<ST>
+pub struct ProvableModel<F, S, PCS, ST>
 where
     F: PrimeField + Absorb + From<ST> + From<ST::LT>,
     S: CryptographicSponge,
     PCS: PolynomialCommitment<F, Poly<F>, S>,
     ST: SmallNIO,
 {
+    pub nodes: Vec<Box<dyn NodeOpsProve<F, S, PCS, ST>>>,
+    pub input_shape: Vec<usize>,
+    pub output_shape: Vec<usize>,
+}
+
+impl<F, S, PCS, ST> ProvableModel<F, S, PCS, ST>
+where
+    F: PrimeField + Absorb + From<ST> + From<ST::LT>,
+    S: CryptographicSponge,
+    PCS: PolynomialCommitment<F, Poly<F>, S>,
+    ST: SmallNIO,
+{
+    pub fn setup_keys<R>(
+        &self,
+        rng: &mut R,
+    ) -> Result<(PCS::CommitterKey, PCS::VerifierKey), PCS::Error>
+    where
+        F: PrimeField + Absorb + From<ST> + From<ST::LT>,
+        S: CryptographicSponge,
+        PCS: PolynomialCommitment<F, Poly<F>, S>,
+        R: RngCore,
+    {
+        let num_vars = self.nodes.iter().map(|n| n.com_num_vars()).max().unwrap();
+
+        let pp = PCS::setup(1, Some(num_vars), rng).unwrap();
+
+        // Make sure supported_degree, supported_hiding_bound and
+        // enforced_degree_bounds have a consistent meaning across ML PCSs and
+        // we are using them securely.
+        PCS::trim(&pp, 0, 0, None)
+    }
+
     /// Unlike the node's `padded_evaluate`, the model's `padded_evaluate` accepts unpadded input
     /// and first re-sizes it before running inference.
-    fn padded_evaluate(&self, input: Tensor<ST>) -> Tensor<ST> {
+    pub fn padded_evaluate(&self, input: Tensor<ST>) -> Tensor<ST> {
         // TODO sanity check: input shape matches model input shape
 
         let input = input.compact_resize(
@@ -56,19 +63,17 @@ where
             ST::ZERO,
         );
 
-        let mut output = NIOTensor::S(input);
-
-        for node in &self.nodes {
-            output = node.padded_evaluate(&output);
-        }
-
         // TODO switch to reference in reshape?
-        output
+        self.nodes
+            .iter()
+            .fold(NIOTensor::S(input), |output, node| {
+                node.padded_evaluate(&output)
+            })
             .unwrap_small()
             .compact_resize(self.output_shape.clone(), ST::ZERO)
     }
 
-    fn prove_inference(
+    pub fn prove_inference(
         &self,
         ck: &PCS::CommitterKey,
         rng: Option<&mut dyn RngCore>,
@@ -231,7 +236,7 @@ where
         }
     }
 
-    fn commit(
+    pub fn commit(
         &self,
         ck: &PCS::CommitterKey,
         _rng: Option<&mut dyn RngCore>,

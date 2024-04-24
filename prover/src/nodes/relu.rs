@@ -9,7 +9,7 @@ use hcs_common::{
 
 use crate::NodeOpsProve;
 
-impl<F, S, PCS, ST> NodeOpsProve<F, S, PCS> for ReLUNode<ST>
+impl<F, S, PCS, ST> NodeOpsProve<F, S, PCS, ST> for ReLUNode<ST>
 where
     F: PrimeField + Absorb,
     S: CryptographicSponge,

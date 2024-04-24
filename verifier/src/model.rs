@@ -6,31 +6,27 @@ use ark_poly_commit::PolynomialCommitment;
 use ark_std::log2;
 
 use hcs_common::{InferenceProof, Model, NodeCommitment, Poly, SmallNIO};
-
-pub trait VerifyModel<F, S, PCS, ST>
+pub struct VerifiableModel<F, S, PCS, ST>
 where
     F: PrimeField + Absorb,
     S: CryptographicSponge,
     PCS: PolynomialCommitment<F, Poly<F>, S>,
     ST: SmallNIO,
 {
-    fn verify_inference(
-        &self,
-        vk: &PCS::VerifierKey,
-        sponge: &mut S,
-        node_commitments: &Vec<NodeCommitment<F, S, PCS>>,
-        inference_proof: InferenceProof<F, S, PCS, ST>,
-    ) -> bool;
+    pub nodes: Vec<Box<dyn NodeOpsVerify<F, S, PCS, ST>>>,
+    pub input_shape: Vec<usize>,
+    pub output_shape: Vec<usize>,
 }
 
-impl<F, S, PCS, ST> VerifyModel<F, S, PCS, ST> for Model<ST>
+
+impl<F, S, PCS, ST> VerifiableModel<F, S, PCS, ST>
 where
     F: PrimeField + Absorb + From<ST> + From<ST::LT>,
     S: CryptographicSponge,
     PCS: PolynomialCommitment<F, Poly<F>, S>,
     ST: SmallNIO,
 {
-    fn verify_inference(
+    pub fn verify_inference(
         &self,
         vk: &PCS::VerifierKey,
         sponge: &mut S,
@@ -98,7 +94,7 @@ where
         // Verifying that the actual input was honestly padded with zeros
         let padded_input_shape = input_node_tensor.shape().clone();
         let honestly_padded_input = input_node_tensor
-            .compact_resize(self.input_shape().clone(), ST::ZERO)
+            .compact_resize(self.input_shape.clone(), ST::ZERO)
             .compact_resize(padded_input_shape, ST::ZERO);
 
         if honestly_padded_input.values() != input_node_tensor.values() {

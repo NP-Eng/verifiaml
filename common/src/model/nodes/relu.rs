@@ -1,6 +1,8 @@
+use std::any::Any;
+
 use ark_std::log2;
 
-use crate::{model::tensor::SmallNIO, Tensor};
+use crate::{model::tensor::SmallNIO, NIOTensor};
 
 use super::{NodeOpsNative, NodeOpsPadded};
 
@@ -11,7 +13,7 @@ pub struct ReLUNode<ST> {
     pub zero_point: ST,
 }
 
-impl<ST> NodeOpsNative<ST, ST> for ReLUNode<ST>
+impl<ST> NodeOpsNative<ST> for ReLUNode<ST>
 where
     ST: SmallNIO,
 {
@@ -19,14 +21,18 @@ where
         vec![self.num_units]
     }
 
-    fn evaluate(&self, input: &Tensor<ST>) -> Tensor<ST> {
+    fn evaluate(&self, input: &NIOTensor<ST>) -> NIOTensor<ST> {
         // TODO sanity checks (cf. BMM); systematise
-        input.maximum(self.zero_point)
+        NIOTensor::S(input.ref_small().maximum(self.zero_point))
+    }
+
+    fn type_name(&self) -> &'static str {
+        "ReLU"
     }
 }
 
 // impl NodeOpsSnark
-impl<ST> NodeOpsPadded<ST, ST> for ReLUNode<ST>
+impl<ST> NodeOpsPadded<ST> for ReLUNode<ST>
 where
     ST: SmallNIO,
 {
@@ -34,15 +40,11 @@ where
         vec![self.log_num_units]
     }
 
-    fn com_num_vars(&self) -> usize {
-        0
-    }
-
     // TODO this is the same as evaluate() for now; the two will likely differ
     // if/when we introduce input size checks
-    fn padded_evaluate(&self, input: &Tensor<ST>) -> Tensor<ST> {
+    fn padded_evaluate(&self, input: &NIOTensor<ST>) -> NIOTensor<ST> {
         // TODO sanity checks (cf. BMM); systematise
-        input.maximum(self.zero_point)
+        NIOTensor::S(input.ref_small().maximum(self.zero_point))
     }
 }
 

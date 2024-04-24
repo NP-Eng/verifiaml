@@ -9,7 +9,6 @@ use ark_crypto_primitives::sponge::poseidon::PoseidonSponge;
 #[path = "../common/lib.rs"]
 mod common;
 use common::*;
-
 macro_rules! PATH {
     () => {
         "prover/examples/simple_perceptron_mnist/{}"
@@ -18,8 +17,8 @@ macro_rules! PATH {
 
 fn main() {
     let simple_perceptron = build_simple_perceptron_mnist::<Fr, PoseidonSponge<Fr>, Ligero<Fr>>(
-        BMMRequantizationStrategy::Floating,
-    );
+            BMMRequantizationStrategy::Floating,
+        );
 
     // Right now this can't be QInfo because the latter is always a pair
     // (f32, i8), which indeed matches in-model quantisation, but not

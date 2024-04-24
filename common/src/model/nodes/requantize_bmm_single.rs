@@ -1,8 +1,10 @@
+use std::any::Any;
+
 use ark_std::log2;
 
-use crate::model::tensor::{SmallNIO, Tensor};
+use crate::model::tensor::SmallNIO;
 use crate::quantization::{quantize_multiplier, requantize_single_round};
-use crate::{Commitment, CommitmentState};
+use crate::{Commitment, CommitmentState, NIOTensor};
 
 use super::{NodeOpsNative, NodeOpsPadded};
 
@@ -38,7 +40,7 @@ pub struct RequantizeBMMSingleNodeProof {
     // this will be the sumcheck proof
 }
 
-impl<ST> NodeOpsNative<ST::LT, ST> for RequantizeBMMSingleNode<ST>
+impl<ST> NodeOpsNative<ST> for RequantizeBMMSingleNode<ST>
 where
     ST: SmallNIO,
 {
@@ -46,7 +48,9 @@ where
         vec![self.size]
     }
 
-    fn evaluate(&self, input: &Tensor<ST::LT>) -> Tensor<ST> {
+    fn evaluate(&self, input: &NIOTensor<ST>) -> NIOTensor<ST> {
+        let input = input.ref_large();
+
         // Sanity checks
         // TODO systematise
         assert_eq!(
@@ -62,7 +66,7 @@ where
             input.len()
         );
 
-        let output: Tensor<ST> = requantize_single_round::<ST, ST::LT>(
+        let output = requantize_single_round::<ST, ST::LT>(
             input.values(),
             self.effective_multiplier,
             self.full_shift,
@@ -70,11 +74,19 @@ where
         )
         .into();
 
-        output
+        NIOTensor::S(output)
+    }
+
+    fn type_name(&self) -> &'static str {
+        "RequantizeBMMSingle"
+    }
+
+    fn com_num_vars(&self) -> usize {
+        self.padded_size_log
     }
 }
 
-impl<ST> NodeOpsPadded<ST::LT, ST> for RequantizeBMMSingleNode<ST>
+impl<ST> NodeOpsPadded<ST> for RequantizeBMMSingleNode<ST>
 where
     ST: SmallNIO,
 {
@@ -82,12 +94,9 @@ where
         vec![self.padded_size_log]
     }
 
-    fn com_num_vars(&self) -> usize {
-        self.padded_size_log
-    }
-
-    fn padded_evaluate(&self, input: &Tensor<ST::LT>) -> Tensor<ST> {
+    fn padded_evaluate(&self, input: &NIOTensor<ST>) -> NIOTensor<ST> {
         let padded_size = 1 << self.padded_size_log;
+        let input = input.ref_large();
 
         // Sanity checks
         // TODO systematise
@@ -105,14 +114,15 @@ where
             input.len()
         );
 
-        let output: Tensor<ST> = requantize_single_round::<ST, ST::LT>(
+        let output = requantize_single_round::<ST, ST::LT>(
             input.values(),
             self.effective_multiplier,
             self.full_shift,
             self.output_zero_point,
         )
         .into();
-        output
+
+        NIOTensor::S(output)
     }
 }
 

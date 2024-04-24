@@ -9,12 +9,12 @@ use ark_sumcheck::ml_sumcheck::{protocol::ListOfProductsOfPolynomials, MLSumchec
 
 use hcs_common::{
     BMMNode, BMMNodeCommitment, BMMNodeCommitmentState, BMMNodeProof, LabeledPoly, NodeCommitment,
-    NodeCommitmentState, NodeOpsPadded, NodeProof, Poly, SmallNIO,
+    NodeCommitmentState, NodeOpsNative, NodeProof, Poly, SmallNIO,
 };
 
 use crate::NodeOpsProve;
 
-impl<F, S, PCS, ST> NodeOpsProve<F, S, PCS> for BMMNode<ST>
+impl<F, S, PCS, ST> NodeOpsProve<F, S, PCS, ST> for BMMNode<ST>
 where
     F: PrimeField + Absorb + From<ST> + From<ST::LT>,
     S: CryptographicSponge,

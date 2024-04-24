@@ -1,3 +1,5 @@
+use std::any::Any;
+
 use ark_crypto_primitives::sponge::{Absorb, CryptographicSponge};
 use ark_ff::PrimeField;
 use ark_poly_commit::{LabeledCommitment, PolynomialCommitment};
@@ -7,7 +9,7 @@ use ark_sumcheck::ml_sumcheck::Proof;
 
 use crate::model::tensor::{Integral, SmallNIO, Tensor};
 use crate::model::Poly;
-use crate::{Commitment, CommitmentState};
+use crate::{Commitment, CommitmentState, NIOTensor};
 
 use super::{NodeOpsNative, NodeOpsPadded};
 
@@ -103,7 +105,7 @@ pub struct BMMNodeProof<
     pub bias_opening_value: F,
 }
 
-impl<ST> NodeOpsNative<ST, ST::LT> for BMMNode<ST>
+impl<ST> NodeOpsNative<ST> for BMMNode<ST>
 where
     ST: SmallNIO,
 {
@@ -111,9 +113,11 @@ where
         vec![self.dims.1]
     }
 
-    fn evaluate(&self, input: &Tensor<ST>) -> Tensor<ST::LT> {
+    fn evaluate(&self, input: &NIOTensor<ST>) -> NIOTensor<ST> {
         // Sanity checks
         // TODO systematise
+        let input = input.ref_small();
+
         assert_eq!(
             input.num_dims(),
             1,
@@ -146,11 +150,19 @@ where
             }
         }
 
-        Tensor::new(accumulators, vec![self.dims.1])
+        NIOTensor::L(Tensor::new(accumulators, vec![self.dims.1]))
+    }
+
+    fn com_num_vars(&self) -> usize {
+        self.padded_dims_log.0 + self.padded_dims_log.1
+    }
+
+    fn type_name(&self) -> &'static str {
+        "BMM"
     }
 }
 
-impl<ST> NodeOpsPadded<ST, ST::LT> for BMMNode<ST>
+impl<ST> NodeOpsPadded<ST> for BMMNode<ST>
 where
     ST: SmallNIO,
 {
@@ -158,16 +170,13 @@ where
         vec![self.padded_dims_log.1]
     }
 
-    fn com_num_vars(&self) -> usize {
-        self.padded_dims_log.0 + self.padded_dims_log.1
-    }
-
     // This function naively computes entries which are known to be zero. It is
     // meant to exactly mirror the proof-system multiplication proved by the
     // sumcheck argument. Requantization and shifting are also applied to these
     // trivial entries, as the proof system does.
-    fn padded_evaluate(&self, input: &Tensor<ST>) -> Tensor<ST::LT> {
+    fn padded_evaluate(&self, input: &NIOTensor<ST>) -> NIOTensor<ST> {
         let padded_dims = (1 << self.padded_dims_log.0, 1 << self.padded_dims_log.1);
+        let input = input.ref_small();
 
         // Sanity checks
         // TODO systematise
@@ -204,7 +213,7 @@ where
             }
         }
 
-        Tensor::new(accumulators, vec![padded_dims.1])
+        NIOTensor::L(Tensor::new(accumulators, vec![padded_dims.1]))
     }
 }
 

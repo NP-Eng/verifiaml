@@ -1,8 +1,10 @@
+use std::any::Any;
+
 use ark_std::log2;
 
 use crate::model::tensor::{SmallNIO, Tensor};
 use crate::quantization::{requantize_fc, BMMQInfo, QInfo, QScaleType, RoundingScheme};
-use crate::{Commitment, CommitmentState};
+use crate::{Commitment, CommitmentState, NIOTensor};
 
 use super::{NodeOpsNative, NodeOpsPadded};
 
@@ -32,7 +34,7 @@ pub struct RequantizeBMMNodeProof {
     // this will be the sumcheck proof
 }
 
-impl<ST> NodeOpsNative<ST::LT, ST> for RequantizeBMMFloatNode<ST>
+impl<ST> NodeOpsNative<ST> for RequantizeBMMFloatNode<ST>
 where
     ST: SmallNIO,
 {
@@ -40,9 +42,11 @@ where
         vec![self.size]
     }
 
-    fn evaluate(&self, input: &Tensor<ST::LT>) -> Tensor<ST> {
+    fn evaluate(&self, input: &NIOTensor<ST>) -> NIOTensor<ST> {
         // Sanity checks
         // TODO systematise
+        let input = input.ref_large();
+
         assert_eq!(
             input.num_dims(),
             1,
@@ -63,11 +67,19 @@ where
         )
         .into();
 
-        output
+        NIOTensor::S(output)
+    }
+
+    fn type_name(&self) -> &'static str {
+        "RequantizeBMMFloat"
+    }
+
+    fn com_num_vars(&self) -> usize {
+        self.padded_size_log
     }
 }
 
-impl<ST> NodeOpsPadded<ST::LT, ST> for RequantizeBMMFloatNode<ST>
+impl<ST> NodeOpsPadded<ST> for RequantizeBMMFloatNode<ST>
 where
     ST: SmallNIO,
 {
@@ -75,12 +87,9 @@ where
         vec![self.padded_size_log]
     }
 
-    fn com_num_vars(&self) -> usize {
-        self.padded_size_log
-    }
-
-    fn padded_evaluate(&self, input: &Tensor<ST::LT>) -> Tensor<ST> {
+    fn padded_evaluate(&self, input: &NIOTensor<ST>) -> NIOTensor<ST> {
         let padded_size = 1 << self.padded_size_log;
+        let input = input.ref_large();
 
         // Sanity checks
         // TODO systematise
@@ -104,7 +113,8 @@ where
             RoundingScheme::NearestTiesEven,
         )
         .into();
-        output
+
+        NIOTensor::S(output)
     }
 }
 

@@ -18,7 +18,7 @@ pub use model::nodes::{
         RequantizeBMMNodeProof,
     },
     reshape::ReshapeNode,
-    Node, NodeCommitment, NodeCommitmentState, NodeOpsPadded, NodeProof,
+    NodeCommitment, NodeCommitmentState, NodeOpsNative, NodeOpsPadded, NodeProof,
 };
 pub use model::tensor::{Integral, NIOTensor, SmallNIO, Tensor};
 pub use model::{InferenceProof, Model};

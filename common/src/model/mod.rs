@@ -5,10 +5,8 @@ use ark_crypto_primitives::sponge::{Absorb, CryptographicSponge};
 use ark_ff::PrimeField;
 use ark_poly::DenseMultilinearExtension;
 use ark_poly_commit::{LabeledCommitment, LabeledPolynomial, PolynomialCommitment};
-use ark_std::rand::RngCore;
 
-use crate::model::nodes::Node;
-
+use self::nodes::NodeOpsNative;
 use self::tensor::{NIOTensor, SmallNIO};
 use self::{nodes::NodeProof, tensor::Tensor};
 
@@ -48,11 +46,11 @@ where
 pub struct Model<ST: SmallNIO> {
     pub input_shape: Vec<usize>,
     pub output_shape: Vec<usize>,
-    pub nodes: Vec<Node<ST>>,
+    pub nodes: Vec<Box<dyn NodeOpsNative<ST>>>,
 }
 
 impl<ST: SmallNIO> Model<ST> {
-    pub fn new(input_shape: Vec<usize>, nodes: Vec<Node<ST>>) -> Self {
+    pub fn new(input_shape: Vec<usize>, nodes: Vec<Box<dyn NodeOpsNative<ST>>>) -> Self {
         // An empty model would cause panics later down the line e.g. when
         // determining the number of variables needed to commit to it.
         assert!(!nodes.is_empty(), "A model cannot have no nodes",);
@@ -68,33 +66,10 @@ impl<ST: SmallNIO> Model<ST> {
         &self.input_shape
     }
 
-    pub fn setup_keys<F, S, PCS, R>(
-        &self,
-        rng: &mut R,
-    ) -> Result<(PCS::CommitterKey, PCS::VerifierKey), PCS::Error>
-    where
-        F: PrimeField + Absorb + From<ST> + From<ST::LT>,
-        S: CryptographicSponge,
-        PCS: PolynomialCommitment<F, Poly<F>, S>,
-        R: RngCore,
-    {
-        let num_vars = self.nodes.iter().map(|n| n.com_num_vars()).max().unwrap();
-
-        let pp = PCS::setup(1, Some(num_vars), rng).unwrap();
-
-        // Make sure supported_degree, supported_hiding_bound and
-        // enforced_degree_bounds have a consistent meaning across ML PCSs and
-        // we are using them securely.
-        PCS::trim(&pp, 0, 0, None)
-    }
-
     pub fn evaluate(&self, input: Tensor<ST>) -> Tensor<ST> {
-        let mut output = NIOTensor::S(input);
-
-        for node in &self.nodes {
-            output = node.evaluate(&output);
-        }
-
-        output.unwrap_small()
+        self.nodes
+            .iter()
+            .fold(NIOTensor::S(input), |output, node| node.evaluate(&output))
+            .unwrap_small()
     }
 }

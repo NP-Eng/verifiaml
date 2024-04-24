@@ -11,7 +11,7 @@ use hcs_common::{
 
 use crate::NodeOpsProve;
 
-impl<F, S, PCS, ST> NodeOpsProve<F, S, PCS> for RequantizeBMMFloatNode<ST>
+impl<F, S, PCS, ST> NodeOpsProve<F, S, PCS, ST> for RequantizeBMMFloatNode<ST>
 where
     F: PrimeField + Absorb,
     S: CryptographicSponge,

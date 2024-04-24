@@ -5,33 +5,27 @@ pub(crate) mod requantize_bmm_ref;
 pub(crate) mod requantize_bmm_single;
 pub(crate) mod reshape;
 
+use std::any::Any;
+
 use ark_crypto_primitives::sponge::Absorb;
 use ark_ff::PrimeField;
 use ark_poly_commit::PolynomialCommitment;
 
-use crate::{
-    model::{
-        nodes::{bmm::BMMNode, relu::ReLUNode},
-        CryptographicSponge, Poly,
-    },
-    Tensor,
-};
+use crate::model::{CryptographicSponge, Poly};
 
 use self::{
     bmm::{BMMNodeCommitment, BMMNodeCommitmentState, BMMNodeProof},
     requantize_bmm_float::{
-        RequantizeBMMFloatNode, RequantizeBMMNodeCommitment, RequantizeBMMNodeCommitmentState,
-        RequantizeBMMNodeProof,
+        RequantizeBMMNodeCommitment, RequantizeBMMNodeCommitmentState, RequantizeBMMNodeProof,
     },
     requantize_bmm_ref::{
-        RequantizeBMMRefNode, RequantizeBMMRefNodeCommitment, RequantizeBMMRefNodeCommitmentState,
+        RequantizeBMMRefNodeCommitment, RequantizeBMMRefNodeCommitmentState,
         RequantizeBMMRefNodeProof,
     },
     requantize_bmm_single::{
-        RequantizeBMMSingleNode, RequantizeBMMSingleNodeCommitment,
-        RequantizeBMMSingleNodeCommitmentState, RequantizeBMMSingleNodeProof,
+        RequantizeBMMSingleNodeCommitment, RequantizeBMMSingleNodeCommitmentState,
+        RequantizeBMMSingleNodeProof,
     },
-    reshape::ReshapeNode,
 };
 
 use super::tensor::{NIOTensor, SmallNIO};
@@ -46,7 +40,15 @@ use super::tensor::{NIOTensor, SmallNIO};
 /// It stores information about the transition (such as a matrix and bias, if
 /// applicable), but not about about the specific values of its nodes: these
 /// are handled by the methods only.
-pub trait NodeOpsNative<I, O> {
+pub trait NodeOpsNative<ST: SmallNIO> 
+{
+
+    /// Returns the maximum number of variables of the MLEs committed to as part of
+    /// this nodes's commitment.
+    fn com_num_vars(&self) -> usize {
+        0
+    }
+
     /// Returns the shape of the node's output tensor
     fn shape(&self) -> Vec<usize>;
 
@@ -57,10 +59,15 @@ pub trait NodeOpsNative<I, O> {
 
     /// Evaluate the node natively (without padding)
     /// TODO decide whether this method should stay on `NodeOps`, or maybe go to `NodeOpsSNARKVerify`
-    fn evaluate(&self, input: &Tensor<I>) -> Tensor<O>;
+    fn evaluate(&self, input: &NIOTensor<ST>) -> NIOTensor<ST>;
+
+    fn type_name(&self) -> &'static str;
 }
 
-pub trait NodeOpsPadded<I, O>: NodeOpsNative<I, O> {
+pub trait NodeOpsPadded<ST>: NodeOpsNative<ST> 
+where
+    ST: SmallNIO,
+{
     /// Returns the element-wise base-two logarithm of the padded node's
     /// output shape, i.e. the list of numbers of variables of the associated
     /// MLE
@@ -87,21 +94,8 @@ pub trait NodeOpsPadded<I, O>: NodeOpsNative<I, O> {
         self.padded_shape().iter().product()
     }
 
-    /// Returns the maximum number of variables of the MLEs committed to as part of
-    /// this nodes's commitment.
-    fn com_num_vars(&self) -> usize;
-
     /// Evaluate the padded node natively
-    fn padded_evaluate(&self, input: &Tensor<I>) -> Tensor<O>;
-}
-
-pub enum Node<ST: SmallNIO> {
-    BMM(BMMNode<ST>),
-    RequantizeBMMFloat(RequantizeBMMFloatNode<ST>),
-    RequantizeBMMRef(RequantizeBMMRefNode<ST>),
-    RequantizeBMMSingle(RequantizeBMMSingleNode<ST>),
-    ReLU(ReLUNode<ST>),
-    Reshape(ReshapeNode),
+    fn padded_evaluate(&self, input: &NIOTensor<ST>) -> NIOTensor<ST>;
 }
 
 pub enum NodeProof<F, S, PCS>
@@ -144,71 +138,4 @@ where
     RequantizeBMMSingle(RequantizeBMMSingleNodeCommitmentState),
     ReLU(()),
     Reshape(()),
-}
-
-// A lot of this overlaps with the NodeOps trait and could be handled more
-// elegantly by simply implementing the trait
-impl<ST> Node<ST>
-where
-    ST: SmallNIO,
-{
-    // Print the type of the node. This cannot be cleantly achieved by deriving
-    // Debug
-    pub fn type_name(&self) -> &'static str {
-        match self {
-            Node::BMM(_) => "BMM",
-            Node::RequantizeBMMFloat(_r) => "RequantizeBMM",
-            Node::RequantizeBMMRef(_r) => "RequantizeBMMRef",
-            Node::RequantizeBMMSingle(_r) => "RequantizeBMMSingle",
-            Node::ReLU(_) => "ReLU",
-            Node::Reshape(_) => "Reshape",
-        }
-    }
-
-    /// Returns the shape of the node's output tensor
-    pub fn shape(&self) -> Vec<usize> {
-        node_op!(self, shape, NodeOpsNative)
-    }
-
-    /// Evaluate the node natively (without padding)
-    pub fn evaluate(&self, input: &NIOTensor<ST>) -> NIOTensor<ST> {
-        match (self, input) {
-            (Node::BMM(fc), NIOTensor::S(input)) => NIOTensor::L(fc.evaluate(input)),
-            (Node::RequantizeBMMFloat(r), NIOTensor::L(input)) => NIOTensor::S(r.evaluate(input)),
-            (Node::RequantizeBMMRef(r), NIOTensor::L(input)) => NIOTensor::S(r.evaluate(input)),
-            (Node::RequantizeBMMSingle(r), NIOTensor::L(input)) => NIOTensor::S(r.evaluate(input)),
-            (Node::ReLU(r), NIOTensor::S(input)) => NIOTensor::S(r.evaluate(input)),
-            (Node::Reshape(r), NIOTensor::S(input)) => NIOTensor::S(r.evaluate(input)),
-            _ => panic!(
-                "Type mismatch: node of type {} received input of type {}",
-                self.type_name(),
-                input.variant_name()
-            ),
-        }
-    }
-
-    pub fn com_num_vars(&self) -> usize {
-        node_op!(self, com_num_vars, NodeOpsPadded)
-    }
-
-    /// Here we perform matching without sanity checks. By design, the input type of the
-    /// next node in the model is the same as the output type of the current node,
-    /// so hiccups should never occur.
-    pub fn padded_evaluate(&self, input: &NIOTensor<ST>) -> NIOTensor<ST> {
-        match (self, input) {
-            (Node::BMM(fc), NIOTensor::S(input)) => NIOTensor::L(fc.padded_evaluate(input)),
-            (Node::RequantizeBMMFloat(r), NIOTensor::L(input)) => {
-                NIOTensor::S(r.padded_evaluate(input))
-            }
-            (Node::RequantizeBMMRef(r), NIOTensor::L(input)) => {
-                NIOTensor::S(r.padded_evaluate(input))
-            }
-            (Node::RequantizeBMMSingle(r), NIOTensor::L(input)) => {
-                NIOTensor::S(r.padded_evaluate(input))
-            }
-            (Node::ReLU(r), NIOTensor::S(input)) => NIOTensor::S(r.padded_evaluate(input)),
-            (Node::Reshape(r), NIOTensor::S(input)) => NIOTensor::S(r.padded_evaluate(input)),
-            _ => panic!("Invalid input type for node"),
-        }
-    }
 }

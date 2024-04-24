@@ -1,8 +1,10 @@
+use std::any::Any;
+
 use ark_std::log2;
 
 use crate::model::tensor::{SmallNIO, Tensor};
 use crate::quantization::{quantize_multiplier, requantize_ref};
-use crate::{Commitment, CommitmentState};
+use crate::{Commitment, CommitmentState, NIOTensor};
 
 use super::{NodeOpsNative, NodeOpsPadded};
 
@@ -39,7 +41,7 @@ pub struct RequantizeBMMRefNodeProof {
     // this will be the sumcheck proof
 }
 
-impl<ST> NodeOpsNative<ST::LT, ST> for RequantizeBMMRefNode<ST>
+impl<ST> NodeOpsNative<ST> for RequantizeBMMRefNode<ST>
 where
     ST: SmallNIO,
 {
@@ -47,7 +49,9 @@ where
         vec![self.size]
     }
 
-    fn evaluate(&self, input: &Tensor<ST::LT>) -> Tensor<ST> {
+    fn evaluate(&self, input: &NIOTensor<ST>) -> NIOTensor<ST> {
+        let input = input.ref_large();
+
         // Sanity checks
         // TODO systematise
         assert_eq!(
@@ -71,11 +75,19 @@ where
         )
         .into();
 
-        output
+        NIOTensor::S(output)
+    }
+
+    fn type_name(&self) -> &'static str {
+        "RequantizeBMMRef"
+    }
+
+    fn com_num_vars(&self) -> usize {
+        self.padded_size_log
     }
 }
 
-impl<ST> NodeOpsPadded<ST::LT, ST> for RequantizeBMMRefNode<ST>
+impl<ST> NodeOpsPadded<ST> for RequantizeBMMRefNode<ST>
 where
     ST: SmallNIO,
 {
@@ -83,12 +95,9 @@ where
         vec![self.padded_size_log]
     }
 
-    fn com_num_vars(&self) -> usize {
-        self.padded_size_log
-    }
-
-    fn padded_evaluate(&self, input: &Tensor<ST::LT>) -> Tensor<ST> {
+    fn padded_evaluate(&self, input: &NIOTensor<ST>) -> NIOTensor<ST> {
         let padded_size = 1 << self.padded_size_log;
+        let input = input.ref_large();
 
         // Sanity checks
         // TODO systematise
@@ -113,7 +122,8 @@ where
             self.output_zero_point,
         )
         .into();
-        output
+
+        NIOTensor::S(output)
     }
 }
 

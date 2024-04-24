@@ -51,6 +51,7 @@ fn main() {
         &format!(PATH!(), "data/input_test_150.json"),
         &format!(PATH!(), "data/output_test_150.json"),
         &two_layer_perceptron,
+        &two_layer_perceptron,
         qinfo,
         sponge,
         output_shape,
