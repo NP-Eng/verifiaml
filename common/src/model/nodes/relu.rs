@@ -1,5 +1,3 @@
-use std::any::Any;
-
 use ark_std::log2;
 
 use crate::{model::tensor::SmallNIO, NIOTensor};

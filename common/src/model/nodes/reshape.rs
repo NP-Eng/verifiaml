@@ -1,5 +1,3 @@
-use std::any::Any;
-
 use ark_std::log2;
 
 use crate::{model::tensor::SmallNIO, NIOTensor};
@@ -18,7 +16,6 @@ impl<ST> NodeOpsNative<ST> for ReshapeNode
 where
     ST: SmallNIO,
 {
-
     fn shape(&self) -> Vec<usize> {
         self.output_shape.clone()
     }

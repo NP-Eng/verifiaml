@@ -1,5 +1,3 @@
-use std::any::Any;
-
 use ark_std::log2;
 
 use crate::model::tensor::{SmallNIO, Tensor};
@@ -46,7 +44,6 @@ impl<ST> NodeOpsNative<ST> for RequantizeBMMRefNode<ST>
 where
     ST: SmallNIO,
 {
-
     fn shape(&self) -> Vec<usize> {
         vec![self.size]
     }

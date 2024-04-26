@@ -1,5 +1,3 @@
-use std::any::Any;
-
 use ark_std::log2;
 
 use crate::model::tensor::{SmallNIO, Tensor};
@@ -31,7 +29,6 @@ pub struct RequantizeBMMNodeCommitmentState();
 
 impl CommitmentState for RequantizeBMMNodeCommitmentState {}
 
-
 pub struct RequantizeBMMNodeProof {
     // this will be the sumcheck proof
 }
@@ -40,7 +37,6 @@ impl<ST> NodeOpsNative<ST> for RequantizeBMMFloatNode<ST>
 where
     ST: SmallNIO,
 {
-
     fn shape(&self) -> Vec<usize> {
         vec![self.size]
     }
@@ -84,7 +80,7 @@ where
 
 impl<ST> NodeOpsPadded<ST> for RequantizeBMMFloatNode<ST>
 where
-ST: SmallNIO + 'static,
+    ST: SmallNIO,
 {
     fn padded_shape_log(&self) -> Vec<usize> {
         vec![self.padded_size_log]

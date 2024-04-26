@@ -4,7 +4,7 @@ use ark_poly_commit::{LabeledCommitment, PolynomialCommitment};
 use ark_std::rand::RngCore;
 
 use hcs_common::{
-    LabeledPoly, NodeCommitment, NodeCommitmentState, NodeOpsPadded, NodeProof, Poly, SmallNIO
+    LabeledPoly, NodeCommitment, NodeCommitmentState, NodeOpsPadded, NodeProof, Poly, SmallNIO,
 };
 
 mod model;
@@ -12,7 +12,7 @@ mod nodes;
 pub use model::ProvableModel;
 
 /// SNARK-specific operations that each node must implement.
-pub trait NodeOpsProve<F, S, PCS, ST>: NodeOpsPadded<ST> 
+pub trait NodeOpsProve<F, S, PCS, ST>: NodeOpsPadded<ST>
 where
     F: PrimeField + Absorb,
     S: CryptographicSponge,

@@ -102,7 +102,12 @@ pub fn verify_inference<F, S, PCS>(
 
     let output_qtypearray = inference_proof.outputs[0].clone();
 
-    assert!(verifiable_model.verify_inference(&vk, &mut verification_sponge, &node_coms, inference_proof));
+    assert!(verifiable_model.verify_inference(
+        &vk,
+        &mut verification_sponge,
+        &node_coms,
+        inference_proof
+    ));
 
     let output_i8 = output_qtypearray.unwrap_small();
 

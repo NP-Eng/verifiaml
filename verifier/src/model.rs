@@ -5,7 +5,7 @@ use ark_poly::Polynomial;
 use ark_poly_commit::PolynomialCommitment;
 use ark_std::log2;
 
-use hcs_common::{InferenceProof, Model, NodeCommitment, Poly, SmallNIO};
+use hcs_common::{InferenceProof, NodeCommitment, Poly, SmallNIO};
 pub struct VerifiableModel<F, S, PCS, ST>
 where
     F: PrimeField + Absorb,
@@ -17,7 +17,6 @@ where
     pub input_shape: Vec<usize>,
     pub output_shape: Vec<usize>,
 }
-
 
 impl<F, S, PCS, ST> VerifiableModel<F, S, PCS, ST>
 where

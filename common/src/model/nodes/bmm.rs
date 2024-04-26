@@ -1,5 +1,3 @@
-use std::any::Any;
-
 use ark_crypto_primitives::sponge::{Absorb, CryptographicSponge};
 use ark_ff::PrimeField;
 use ark_poly_commit::{LabeledCommitment, PolynomialCommitment};
@@ -110,7 +108,6 @@ impl<ST> NodeOpsNative<ST> for BMMNode<ST>
 where
     ST: SmallNIO,
 {
-
     fn shape(&self) -> Vec<usize> {
         vec![self.dims.1]
     }

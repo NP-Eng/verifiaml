@@ -71,14 +71,14 @@ pub trait AsAny<ST> {
 
 impl<ST: SmallNIO, T> AsAny<ST> for T
 where
-    T: NodeOpsNative<ST> + 'static, {
+    T: NodeOpsNative<ST> + 'static,
+{
     fn as_any(&self) -> &dyn Any {
         self
     }
 }
 
-
-pub trait NodeOpsPadded<ST>: NodeOpsNative<ST> 
+pub trait NodeOpsPadded<ST>: NodeOpsNative<ST>
 where
     ST: SmallNIO,
 {
