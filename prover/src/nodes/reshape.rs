@@ -9,7 +9,7 @@ use hcs_common::{
 
 use crate::NodeOpsProve;
 
-impl<F, S, PCS, ST> NodeOpsProve<F, S, PCS, ST> for ReshapeNode
+impl<F, S, PCS, ST> NodeOpsProve<F, S, PCS, ST> for ReshapeNode<ST>
 where
     F: PrimeField + Absorb,
     S: CryptographicSponge,

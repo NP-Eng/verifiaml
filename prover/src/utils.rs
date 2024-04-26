@@ -31,7 +31,7 @@ macro_rules! node_downcast {
             $node_subtype,
             // ADD NEW NODE TYPES HERE
             ReLUNode<$small_type>,
-            ReshapeNode,
+            ReshapeNode<$small_type>,
             BMMNode<$small_type>,
             RequantizeBMMFloatNode<$small_type>
         )

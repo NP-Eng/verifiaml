@@ -108,27 +108,15 @@ impl<ST> NodeOpsNative<ST> for BMMNode<ST>
 where
     ST: SmallNIO,
 {
-    fn shape(&self) -> Vec<usize> {
-        vec![self.dims.1]
+    fn shape(&self) -> (Vec<usize>, Vec<usize>) {
+        (vec![self.dims.0], vec![self.dims.1])
     }
 
     fn evaluate(&self, input: &NIOTensor<ST>) -> NIOTensor<ST> {
-        // Sanity checks
-        // TODO systematise
         let input = input.ref_small();
 
-        assert_eq!(
-            input.num_dims(),
-            1,
-            "Incorrect shape: BMM node expects a 1-dimensional input array"
-        );
-        assert_eq!(
-            self.dims.0,
-            input.len(),
-            "Length mismatch: BMM node expects input with {} elements, got {} elements instead",
-            self.dims.0,
-            input.len()
-        );
+        // Sanity checks
+        self.assert_valid_input(input.shape());
 
         let input: Tensor<ST::LT> = input.cast();
 
@@ -169,6 +157,13 @@ where
         vec![self.padded_dims_log.1]
     }
 
+    fn padded_shape(&self) -> (Vec<usize>, Vec<usize>) {
+        (
+            vec![1 << self.padded_dims_log.0],
+            vec![1 << self.padded_dims_log.1],
+        )
+    }
+
     // This function naively computes entries which are known to be zero. It is
     // meant to exactly mirror the proof-system multiplication proved by the
     // sumcheck argument. Requantization and shifting are also applied to these
@@ -178,20 +173,7 @@ where
         let input = input.ref_small();
 
         // Sanity checks
-        // TODO systematise
-        assert_eq!(
-            input.num_dims(),
-            1,
-            "Incorrect shape: BMM node expects a 1-dimensional input array"
-        );
-
-        assert_eq!(
-            padded_dims.0,
-            input.len(),
-            "Length mismatch: Padded fully connected node expected input with {} elements, got {} elements instead",
-            padded_dims.0,
-            input.len()
-        );
+        self.assert_valid_input(input.shape());
 
         let input: Tensor<ST::LT> = input.cast();
 

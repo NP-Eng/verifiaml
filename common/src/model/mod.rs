@@ -57,7 +57,7 @@ impl<ST: SmallNIO> Model<ST> {
 
         Self {
             input_shape,
-            output_shape: nodes.last().unwrap().shape(),
+            output_shape: nodes.last().unwrap().shape().1.clone(),
             nodes,
         }
     }

@@ -44,23 +44,42 @@ pub trait NodeOpsNative<ST>: AsAny<ST>
 where
     ST: SmallNIO,
 {
+    fn assert_valid_input(&self, input_shape: &Vec<usize>) {
+        assert_eq!(
+            input_shape.len(),
+            self.shape().0.len(),
+            "Incorrect shape: {} expects a {}-dimensional input array",
+            self.shape().0.len(),
+            self.type_name()
+        );
+
+        assert_eq!(
+            self.shape().0[0],
+            input_shape[0],
+            "Length mismatch: {} expects input with {} elements, got {} elements instead",
+            self.type_name(),
+            self.shape().0[0],
+            input_shape[0]
+        );
+    }
+
+    /// The number of output units of the node
+    fn num_units(&self) -> usize {
+        self.shape().1.iter().product()
+    }
+
+    /// Returns the shapes of the node's input and output tensors
+    fn shape(&self) -> (Vec<usize>, Vec<usize>);
+
+    /// Evaluate the node natively (without padding)
+    /// TODO decide whether this method should stay on `NodeOps`, or maybe go to `NodeOpsSNARKVerify`
+    fn evaluate(&self, input: &NIOTensor<ST>) -> NIOTensor<ST>;
+
     /// Returns the maximum number of variables of the MLEs committed to as part of
     /// this nodes's commitment.
     fn com_num_vars(&self) -> usize {
         0
     }
-
-    /// Returns the shape of the node's output tensor
-    fn shape(&self) -> Vec<usize>;
-
-    /// The number of output units of the node
-    fn num_units(&self) -> usize {
-        self.shape().iter().product()
-    }
-
-    /// Evaluate the node natively (without padding)
-    /// TODO decide whether this method should stay on `NodeOps`, or maybe go to `NodeOpsSNARKVerify`
-    fn evaluate(&self, input: &NIOTensor<ST>) -> NIOTensor<ST>;
 
     fn type_name(&self) -> &'static str;
 }
@@ -82,6 +101,25 @@ pub trait NodeOpsPadded<ST>: NodeOpsNative<ST>
 where
     ST: SmallNIO,
 {
+    fn assert_valid_padded_input(&self, input_shape: &Vec<usize>) {
+        assert_eq!(
+            input_shape.len(),
+            self.padded_shape().0.len(),
+            "Incorrect shape: {} expects a {}-dimensional input array",
+            self.padded_shape().0.len(),
+            self.type_name()
+        );
+
+        assert_eq!(
+            self.padded_shape().0[0],
+            input_shape[0],
+            "Length mismatch: {} expects input with {} elements, got {} elements instead",
+            self.type_name(),
+            self.padded_shape().0[0],
+            input_shape[0]
+        );
+    }
+
     /// Returns the element-wise base-two logarithm of the padded node's
     /// output shape, i.e. the list of numbers of variables of the associated
     /// MLE
@@ -91,12 +129,7 @@ where
     fn padded_shape_log(&self) -> Vec<usize>;
 
     /// Returns the element-wise padded node's output shape
-    fn padded_shape(&self) -> Vec<usize> {
-        self.padded_shape_log()
-            .into_iter()
-            .map(|x| 1 << x)
-            .collect()
-    }
+    fn padded_shape(&self) -> (Vec<usize>, Vec<usize>);
 
     /// The log of the number of output units of the padded node
     fn padded_num_units_log(&self) -> usize {
@@ -105,7 +138,7 @@ where
 
     /// The number of output units of the padded node
     fn padded_num_units(&self) -> usize {
-        self.padded_shape().iter().product()
+        self.padded_shape().0.iter().product()
     }
 
     /// Evaluate the padded node natively

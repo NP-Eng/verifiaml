@@ -43,27 +43,15 @@ impl<ST> NodeOpsNative<ST> for RequantizeBMMSingleNode<ST>
 where
     ST: SmallNIO,
 {
-    fn shape(&self) -> Vec<usize> {
-        vec![self.size]
+    fn shape(&self) -> (Vec<usize>, Vec<usize>) {
+        (vec![self.size], vec![self.size])
     }
 
     fn evaluate(&self, input: &NIOTensor<ST>) -> NIOTensor<ST> {
         let input = input.ref_large();
 
         // Sanity checks
-        // TODO systematise
-        assert_eq!(
-            input.num_dims(),
-            1,
-            "Incorrect shape: RequantizeBMMSingle node expects a 1-dimensional input array"
-        );
-        assert_eq!(
-            self.size,
-            input.len(),
-            "Length mismatch: RequantizeBMMSingle node expects input with {} elements, got {} elements instead",
-            self.size,
-            input.len()
-        );
+        self.assert_valid_input(&input.shape());
 
         let output = requantize_single_round::<ST, ST::LT>(
             input.values(),
@@ -93,25 +81,16 @@ where
         vec![self.padded_size_log]
     }
 
-    fn padded_evaluate(&self, input: &NIOTensor<ST>) -> NIOTensor<ST> {
+    fn padded_shape(&self) -> (Vec<usize>, Vec<usize>) {
         let padded_size = 1 << self.padded_size_log;
+        (vec![padded_size], vec![padded_size])
+    }
+
+    fn padded_evaluate(&self, input: &NIOTensor<ST>) -> NIOTensor<ST> {
         let input = input.ref_large();
 
         // Sanity checks
-        // TODO systematise
-        assert_eq!(
-            input.num_dims(),
-            1,
-            "Incorrect shape: RequantizeBMMSingle node expects a 1-dimensional input array"
-        );
-
-        assert_eq!(
-            padded_size,
-            input.len(),
-            "Length mismatch: Padded fully connected node expected input with {} elements, got {} elements instead",
-            padded_size,
-            input.len()
-        );
+        self.assert_valid_input(input.shape());
 
         let output = requantize_single_round::<ST, ST::LT>(
             input.values(),

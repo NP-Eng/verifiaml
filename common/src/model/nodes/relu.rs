@@ -16,13 +16,17 @@ impl<ST> NodeOpsNative<ST> for ReLUNode<ST>
 where
     ST: SmallNIO,
 {
-    fn shape(&self) -> Vec<usize> {
-        vec![self.num_units]
+    fn shape(&self) -> (Vec<usize>, Vec<usize>) {
+        (vec![self.num_units], vec![self.num_units])
     }
 
     fn evaluate(&self, input: &NIOTensor<ST>) -> NIOTensor<ST> {
-        // TODO sanity checks (cf. BMM); systematise
-        NIOTensor::S(input.ref_small().maximum(self.zero_point))
+        let input = input.ref_small();
+
+        // Sanity checks
+        self.assert_valid_input(input.shape());
+
+        NIOTensor::S(input.maximum(self.zero_point))
     }
 
     fn type_name(&self) -> &'static str {
@@ -37,6 +41,10 @@ where
 {
     fn padded_shape_log(&self) -> Vec<usize> {
         vec![self.log_num_units]
+    }
+
+    fn padded_shape(&self) -> (Vec<usize>, Vec<usize>) {
+        (vec![1 << self.log_num_units], vec![1 << self.log_num_units])
     }
 
     // TODO this is the same as evaluate() for now; the two will likely differ

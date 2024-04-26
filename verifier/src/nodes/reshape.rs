@@ -5,7 +5,7 @@ use hcs_common::{NodeCommitment, NodeProof, Poly, ReshapeNode, SmallNIO};
 
 use crate::NodeOpsVerify;
 
-impl<F, S, PCS, ST> NodeOpsVerify<F, S, PCS, ST> for ReshapeNode
+impl<F, S, PCS, ST> NodeOpsVerify<F, S, PCS, ST> for ReshapeNode<ST>
 where
     F: PrimeField + Absorb,
     S: CryptographicSponge,
