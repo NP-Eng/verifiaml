@@ -51,7 +51,7 @@ fn main() {
         output_shape.clone(),
     );
 
-/*     verify_inference::<Fr, PoseidonSponge<Fr>, Ligero<Fr>>(
+    /*     verify_inference::<Fr, PoseidonSponge<Fr>, Ligero<Fr>>(
         &format!(PATH!(), "data/input_test_150.json"),
         &format!(PATH!(), "data/output_test_150.json"),
         &two_layer_perceptron,

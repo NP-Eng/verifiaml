@@ -21,7 +21,7 @@ fn main() {
         BMMRequantizationStrategy::Floating,
     );
 
-    let provable_simple_perceptron = model_downcast(&simple_perceptron);    
+    let provable_simple_perceptron = model_downcast(&simple_perceptron);
 
     // Right now this can't be QInfo because the latter is always a pair
     // (f32, i8), which indeed matches in-model quantisation, but not
@@ -47,7 +47,7 @@ fn main() {
         sponge.clone(),
         output_shape.clone(),
     );
-/* 
+    /*
     verify_inference::<Fr, PoseidonSponge<Fr>, Ligero<Fr>>(
         &format!(PATH!(), "data/input_test_150.json"),
         &format!(PATH!(), "data/output_test_150.json"),
