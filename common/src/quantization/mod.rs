@@ -18,6 +18,7 @@ pub(crate) type QScaleType = f32;
 // Larger precision type to compute the requantization scale in some schemes
 pub(crate) type QScaleComputationType = f64;
 
+#[derive(Clone)]
 pub struct QInfo<ST> {
     pub scale: QScaleType,
     pub zero_point: ST,
@@ -26,6 +27,7 @@ pub struct QInfo<ST> {
 // TODO: this will probably change to inference-ready requantization info
 // Even what is being done now could be optimised by precomputing outside the
 // evaluate function
+#[derive(Clone)]
 pub struct BMMQInfo<ST> {
     pub input_info: QInfo<ST>,
     pub weight_info: QInfo<ST>,
