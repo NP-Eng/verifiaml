@@ -9,7 +9,8 @@ use ark_crypto_primitives::sponge::poseidon::PoseidonSponge;
 #[path = "../common/lib.rs"]
 mod common;
 use common::*;
-use hcs_prover::model_downcast;
+use hcs_prover::{as_provable_model, as_verifiable_model};
+
 macro_rules! PATH {
     () => {
         "prover/examples/simple_perceptron_mnist/{}"
@@ -21,7 +22,10 @@ fn main() {
         BMMRequantizationStrategy::Floating,
     );
 
-    let provable_simple_perceptron = model_downcast(&simple_perceptron);
+    let (provable_model, verifiable_model) = (
+        as_provable_model(&simple_perceptron),
+        as_verifiable_model(&simple_perceptron),
+    );
 
     // Right now this can't be QInfo because the latter is always a pair
     // (f32, i8), which indeed matches in-model quantisation, but not
@@ -42,18 +46,19 @@ fn main() {
     prove_inference::<Fr, PoseidonSponge<Fr>, Ligero<Fr>>(
         &format!(PATH!(), "data/input_test_150.json"),
         &format!(PATH!(), "data/output_test_150.json"),
-        &provable_simple_perceptron,
+        &provable_model,
         qinfo,
         sponge.clone(),
         output_shape.clone(),
     );
-    /*
+
     verify_inference::<Fr, PoseidonSponge<Fr>, Ligero<Fr>>(
         &format!(PATH!(), "data/input_test_150.json"),
         &format!(PATH!(), "data/output_test_150.json"),
-        &simple_perceptron,
+        &provable_model,
+        &verifiable_model,
         qinfo,
         sponge,
         output_shape,
-    ); */
+    );
 }
