@@ -9,7 +9,9 @@ use hcs_common::{
 
 mod model;
 mod nodes;
+mod utils;
 pub use model::ProvableModel;
+pub use utils::model_downcast;
 
 /// SNARK-specific operations that each node must implement.
 pub trait NodeOpsProve<F, S, PCS, ST>: NodeOpsPadded<ST>

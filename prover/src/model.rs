@@ -5,7 +5,7 @@ use ark_ff::PrimeField;
 use ark_poly::MultilinearExtension;
 use ark_poly_commit::{LabeledPolynomial, PolynomialCommitment};
 use hcs_common::{
-    InferenceProof, NIOTensor, NodeCommitment, NodeCommitmentState, Poly, SmallNIO, Tensor,
+    InferenceProof, NIOTensor, NodeCommitment, NodeCommitmentState, Poly, SmallNIO, Tensor
 };
 
 use crate::NodeOpsProve;

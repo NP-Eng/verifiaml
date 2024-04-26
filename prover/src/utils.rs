@@ -7,6 +7,26 @@ use ark_crypto_primitives::sponge::{Absorb, CryptographicSponge};
 use ark_ff::PrimeField;
 use ark_poly_commit::PolynomialCommitment;
 
+pub fn model_downcast<
+    F: PrimeField + Absorb,
+    S: CryptographicSponge,
+    PCS: PolynomialCommitment<F, Poly<F>, S>,
+>(
+    model: &Model<i8>,
+) -> ProvableModel<F, S, PCS, i8> {
+    let prove_nodes: Vec<Box<dyn NodeOpsProve<F, S, PCS, i8>>> = model
+        .nodes
+        .iter()
+        .map(|x| node_downcast(x.as_ref()))
+        .collect();
+
+    ProvableModel::<F, S, PCS, i8> {
+        nodes: prove_nodes,
+        input_shape: model.input_shape.clone(),
+        output_shape: model.output_shape.clone(),
+    }
+}
+
 pub fn node_downcast<
     F: PrimeField + Absorb,
     S: CryptographicSponge,
@@ -49,9 +69,8 @@ mod test {
         hcs_common::Tensor,
     };
 
-    #[test]
-    fn test_downcast() {
-        let nodes: Vec<Box<dyn NodeOpsNative<i8>>> = vec![
+    fn get_nodes() -> Vec<Box<dyn NodeOpsNative<i8>>> {
+        vec![
             Box::new(ReLUNode::<i8>::new(1, 1)),
             Box::new(ReshapeNode::new(vec![1], vec![1])),
             Box::new(BMMNode::<i8>::new(
@@ -60,7 +79,12 @@ mod test {
                 1,
             )),
             Box::new(RequantizeBMMFloatNode::<i8>::new(1, 1.0, 1, 1.0, 1, 1.0, 1)),
-        ];
+        ]
+    }
+
+    #[test]
+    fn test_downcast_nodes() {
+        let nodes = get_nodes();
 
         let nodes_proof: Vec<Box<dyn NodeOpsProve<Fr, PoseidonSponge<Fr>, Ligero<Fr>, i8>>> = nodes
             .iter()
@@ -71,5 +95,17 @@ mod test {
             .iter()
             .zip(nodes.iter())
             .all(|(x, y)| { x.type_name() == y.type_name() }));
+    }
+
+    #[test]
+    fn test_downcast_into_provable_model() {
+        let model = Model::<i8> {
+            nodes: get_nodes(),
+            input_shape: vec![1],
+            output_shape: vec![1],
+        };
+
+        let _: ProvableModel<Fr, PoseidonSponge<Fr>, Ligero<Fr>, i8> =
+            model_downcast(&model);
     }
 }
