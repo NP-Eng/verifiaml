@@ -11,6 +11,7 @@ use super::{NodeOpsNative, NodeOpsPadded};
 // TODO convention: input, bias and output are rows, the op is vec-by-mat (in that order)
 
 /// Apply requantization after a BMM argument
+#[derive(Clone)]
 pub struct RequantizeBMMFloatNode<ST> {
     // Number of units
     size: usize,
@@ -30,6 +31,7 @@ pub struct RequantizeBMMNodeCommitmentState();
 
 impl CommitmentState for RequantizeBMMNodeCommitmentState {}
 
+
 pub struct RequantizeBMMNodeProof {
     // this will be the sumcheck proof
 }
@@ -38,6 +40,7 @@ impl<ST> NodeOpsNative<ST> for RequantizeBMMFloatNode<ST>
 where
     ST: SmallNIO,
 {
+
     fn shape(&self) -> Vec<usize> {
         vec![self.size]
     }
@@ -81,7 +84,7 @@ where
 
 impl<ST> NodeOpsPadded<ST> for RequantizeBMMFloatNode<ST>
 where
-    ST: SmallNIO,
+ST: SmallNIO + 'static,
 {
     fn padded_shape_log(&self) -> Vec<usize> {
         vec![self.padded_size_log]

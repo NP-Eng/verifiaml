@@ -16,6 +16,7 @@ use super::{NodeOpsNative, NodeOpsPadded};
 // TODO convention: input, bias and output are rows, the op is vec-by-mat (in that order)
 
 /// Start with 2D matrices, and Mat-by-vector multiplication only
+#[derive(Clone)]
 pub struct BMMNode<ST: SmallNIO> {
     /// The row-major flattened unpadded vector of weights
     weights: Tensor<ST>,
@@ -109,6 +110,7 @@ impl<ST> NodeOpsNative<ST> for BMMNode<ST>
 where
     ST: SmallNIO,
 {
+
     fn shape(&self) -> Vec<usize> {
         vec![self.dims.1]
     }

@@ -7,6 +7,7 @@ use crate::{model::tensor::SmallNIO, NIOTensor};
 use super::{NodeOpsNative, NodeOpsPadded};
 
 // Rectified linear unit node performing x |-> max(0, x).
+#[derive(Clone)]
 pub struct ReLUNode<ST> {
     num_units: usize,
     log_num_units: usize,

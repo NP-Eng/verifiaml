@@ -40,9 +40,10 @@ use super::tensor::{NIOTensor, SmallNIO};
 /// It stores information about the transition (such as a matrix and bias, if
 /// applicable), but not about about the specific values of its nodes: these
 /// are handled by the methods only.
-pub trait NodeOpsNative<ST: SmallNIO> 
+pub trait NodeOpsNative<ST>: AsAny<ST>
+where
+    ST: SmallNIO,
 {
-
     /// Returns the maximum number of variables of the MLEs committed to as part of
     /// this nodes's commitment.
     fn com_num_vars(&self) -> usize {
@@ -63,6 +64,19 @@ pub trait NodeOpsNative<ST: SmallNIO>
 
     fn type_name(&self) -> &'static str;
 }
+
+pub trait AsAny<ST> {
+    fn as_any(&self) -> &dyn Any;
+}
+
+impl<ST: SmallNIO, T> AsAny<ST> for T
+where
+    T: NodeOpsNative<ST> + 'static, {
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
+}
+
 
 pub trait NodeOpsPadded<ST>: NodeOpsNative<ST> 
 where

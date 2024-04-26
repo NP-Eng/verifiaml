@@ -4,7 +4,7 @@ use ark_poly_commit::{LabeledCommitment, PolynomialCommitment};
 use ark_std::rand::RngCore;
 
 use hcs_common::{
-    LabeledPoly, NodeCommitment, NodeCommitmentState, NodeOpsNative, NodeOpsPadded, NodeProof, Poly, SmallNIO
+    LabeledPoly, NodeCommitment, NodeCommitmentState, NodeOpsPadded, NodeProof, Poly, SmallNIO
 };
 
 mod model;

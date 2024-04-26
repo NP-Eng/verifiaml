@@ -11,6 +11,7 @@ use super::{NodeOpsNative, NodeOpsPadded};
 // TODO convention: input, bias and output are rows, the op is vec-by-mat (in that order)
 
 /// Apply requantization after a BMM argument
+#[derive(Clone)]
 pub struct RequantizeBMMSingleNode<ST: SmallNIO> {
     // Number of units
     size: usize,

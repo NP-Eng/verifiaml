@@ -6,6 +6,7 @@ use crate::{model::tensor::SmallNIO, NIOTensor};
 
 use super::{NodeOpsNative, NodeOpsPadded};
 
+#[derive(Clone)]
 pub struct ReshapeNode {
     pub input_shape: Vec<usize>,
     pub output_shape: Vec<usize>,
@@ -17,6 +18,7 @@ impl<ST> NodeOpsNative<ST> for ReshapeNode
 where
     ST: SmallNIO,
 {
+
     fn shape(&self) -> Vec<usize> {
         self.output_shape.clone()
     }

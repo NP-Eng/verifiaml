@@ -1,3 +1,4 @@
+use ark_std::iterable::Iterable;
 use hcs_common::NodeOpsNative;
 
 use hcs_common::{
@@ -59,20 +60,13 @@ fn node_downcast<
     F: PrimeField + Absorb,
     S: CryptographicSponge,
     PCS: PolynomialCommitment<F, Poly<F>, S>,
->(node: impl NodeOpsNative<i8> + 'static) -> Box<dyn NodeOpsProve<F, S, PCS, i8>> {
-    let node = &node as &dyn Any;
+>(node: &dyn NodeOpsNative<i8>) -> Box<dyn NodeOpsProve<F, S, PCS, i8>> {
+    let node_as_any = node.as_any();
 
-    match node.downcast_ref::<ReLUNode<i8>>() {
-        Some(s) => return Box::new((*s).clone()),
-        _ => {}
-    }
-
-    match node.downcast_ref::<ReshapeNode>() {
-        Some(s) => return Box::new((*s).clone()),
-        _ => {}
-    }
-
-    panic!("No implementor of NodeOpsProve was received");
+    Option::None
+        .or_else(|| node_as_any.downcast_ref::<ReLUNode<i8>>().map(|x| Box::new(x.clone()) as Box<dyn NodeOpsProve<F, S, PCS, i8>>))
+        .or_else(|| node_as_any.downcast_ref::<ReshapeNode>().map(|x| Box::new(x.clone()) as Box<dyn NodeOpsProve<F, S, PCS, i8>>))
+        .expect("No implementor of NodeOpsProve was received")
 }
 
 
@@ -81,16 +75,17 @@ fn test_downcast_relu() {
     let node1 = ReLUNode::new(1, 1);
     let node2 = ReshapeNode::new(vec![1, 2], vec![1, 2]);
 
-    let node1_proof = node_downcast::<Fr, PoseidonSponge<Fr>, Ligero<Fr>>(node1);
-    let node2_proof = node_downcast::<Fr, PoseidonSponge<Fr>, Ligero<Fr>>(node2);
+    let node1_proof = node_downcast::<Fr, PoseidonSponge<Fr>, Ligero<Fr>>(&node1);
+    let node2_proof = node_downcast::<Fr, PoseidonSponge<Fr>, Ligero<Fr>>(&node2);
 
     let nodes: Vec<Box<dyn NodeOpsNative<i8>>> = vec![Box::new(node1), Box::new(node2)];
     let nodes_proof: Vec<Box<dyn NodeOpsProve<Fr, PoseidonSponge<Fr>, Ligero<Fr>, i8>>> = nodes
     .into_iter()
-    .map(|x| node_downcast::<Fr, PoseidonSponge<Fr>, Ligero<Fr>>(*(x.as_ref())))
+    .map(|x| node_downcast::<Fr, PoseidonSponge<Fr>, Ligero<Fr>>(x.as_ref()))
     .collect();
 
-    println!("Node 1: {}", node1_proof.type_name());
-    println!("Node 2: {}", node2_proof.type_name());
+    nodes_proof.iter().for_each(|x| {
+        println!("{:?}", x.type_name());
+    });
 
 }
