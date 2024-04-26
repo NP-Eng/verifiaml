@@ -1,91 +1,76 @@
-use ark_std::iterable::Iterable;
-use hcs_common::NodeOpsNative;
+use hcs_common::{BMMNode, NodeOpsNative, RequantizeBMMFloatNode, Poly, ReLUNode, ReshapeNode};
 
-use hcs_common::{
-    BMMNode, LabeledPoly, NodeCommitment, NodeCommitmentState, NodeOpsPadded, NodeProof, Poly, ReLUNode, SmallNIO, ReshapeNode, RequantizeBMMFloatNode
-
+#[cfg(feature = "test-types")]
+use {
+    hcs_common::Tensor,
+    ark_bn254::Fr,
+    hcs_common::Ligero,
+    ark_crypto_primitives::sponge::poseidon::PoseidonSponge,
 };
-use ark_bn254::Fr;
-use hcs_common::Ligero;
-use ark_crypto_primitives::sponge::poseidon::PoseidonSponge;
-use ark_std::any::Any;
 
+use crate::NodeOpsProve;
 use ark_crypto_primitives::sponge::{Absorb, CryptographicSponge};
 use ark_ff::PrimeField;
-use ark_poly_commit::{LabeledCommitment, PolynomialCommitment};
-use rayon::vec;
-use crate::NodeOpsProve;
+use ark_poly_commit::PolynomialCommitment;
 
-/* pub trait DowncastNode<F, S, PCS, N, ST> 
-where 
+pub fn node_downcast<
     F: PrimeField + Absorb,
     S: CryptographicSponge,
     PCS: PolynomialCommitment<F, Poly<F>, S>,
-    N: NodeOpsNative<ST> + 'static,
-    ST: SmallNIO,
-{
-    fn downcast_as<T: NodeOpsProve<F, S, PCS, i8> + 'static>(&self) -> Option<&dyn NodeOpsProve<F, S, PCS, ST>>;
-    fn downcast(&self) -> &dyn NodeOpsProve<F, S, PCS, ST>;
-}
-
-macro_rules! downcast_node_impl {
-    ($st:ty) => {
-        impl<F, S, PCS, N> DowncastNode<F, S, PCS, N, $st> for N
-        where
-            F: PrimeField + Absorb,
-            S: CryptographicSponge,
-            PCS: PolynomialCommitment<F, Poly<F>, S>,
-            N: NodeOpsNative<$st> + 'static
-        { 
-            fn downcast_as<T: NodeOpsProve<F, S, PCS, $st> + 'static>(&self) -> Option<&dyn NodeOpsProve<F, S, PCS, $st>> {
-                (self as &dyn Any).downcast_ref::<T>().map(|x| x as &dyn NodeOpsProve<F, S, PCS, $st>)
-            }
-
-            // Downcast to any node type in the model
-            fn downcast(&self) -> &dyn NodeOpsProve<F, S, PCS, $st> { 
-                self.downcast_as::<ReLUNode<$st>>() 
-                    .or_else(|| self.downcast_as::<BMMNode<$st>>())
-                    .or_else(|| self.downcast_as::<RequantizeBMMFloatNode<$st>>())
-                    .or_else(|| self.downcast_as::<ReshapeNode>())
-                    .unwrap()
-            }
-        }
-    };
-}
-
-downcast_node_impl!(i8); */
-
-// error[E0605]: non-primitive cast: `&dyn NodeOpsNative<i8>` as `&(dyn Any + 'static)`
-fn node_downcast<
-    F: PrimeField + Absorb,
-    S: CryptographicSponge,
-    PCS: PolynomialCommitment<F, Poly<F>, S>,
->(node: &dyn NodeOpsNative<i8>) -> Box<dyn NodeOpsProve<F, S, PCS, i8>> {
+>(
+    node: &dyn NodeOpsNative<i8>,
+) -> &dyn NodeOpsProve<F, S, PCS, i8> {
     let node_as_any = node.as_any();
 
     Option::None
-        .or_else(|| node_as_any.downcast_ref::<ReLUNode<i8>>().map(|x| Box::new(x.clone()) as Box<dyn NodeOpsProve<F, S, PCS, i8>>))
-        .or_else(|| node_as_any.downcast_ref::<ReshapeNode>().map(|x| Box::new(x.clone()) as Box<dyn NodeOpsProve<F, S, PCS, i8>>))
+        .or_else(|| {
+            node_as_any
+                .downcast_ref::<ReLUNode<i8>>()
+                .clone()
+                .map(|x| x as &dyn NodeOpsProve<F, S, PCS, i8>)
+        })
+        .or_else(|| {
+            node_as_any
+                .downcast_ref::<ReshapeNode>()
+                .clone()
+                .map(|x| x as &dyn NodeOpsProve<F, S, PCS, i8>)
+        })
+        .or_else(|| {
+            node_as_any
+                .downcast_ref::<BMMNode<i8>>()
+                .clone()
+                .map(|x| x as &dyn NodeOpsProve<F, S, PCS, i8>)
+        })
+        .or_else(|| {
+            node_as_any
+                .downcast_ref::<RequantizeBMMFloatNode<i8>>()
+                .clone()
+                .map(|x| x as &dyn NodeOpsProve<F, S, PCS, i8>)
+        })
         .expect("No implementor of NodeOpsProve was received")
 }
 
-
 #[test]
-fn test_downcast_relu() {
-    let node1 = ReLUNode::new(1, 1);
-    let node2 = ReshapeNode::new(vec![1, 2], vec![1, 2]);
 
-    let node1_proof = node_downcast::<Fr, PoseidonSponge<Fr>, Ligero<Fr>>(&node1);
-    let node2_proof = node_downcast::<Fr, PoseidonSponge<Fr>, Ligero<Fr>>(&node2);
+fn test_downcast() {
+    let nodes: Vec<Box<dyn NodeOpsNative<i8>>> = vec![
+        Box::new(ReLUNode::<i8>::new(1, 1)),
+        Box::new(ReshapeNode::new(vec![1], vec![1])),
+        Box::new(BMMNode::<i8>::new(
+            Tensor::new(vec![1], vec![1, 1]),
+            Tensor::new(vec![1], vec![1]),
+            1,
+        )),
+        Box::new(RequantizeBMMFloatNode::<i8>::new(1, 1.0, 1, 1.0, 1, 1.0, 1)),
+    ];
 
-    let nodes: Vec<Box<dyn NodeOpsNative<i8>>> = vec![Box::new(node1), Box::new(node2)];
-    let nodes_proof: Vec<Box<dyn NodeOpsProve<Fr, PoseidonSponge<Fr>, Ligero<Fr>, i8>>> = nodes
-    .into_iter()
-    .map(|x| node_downcast::<Fr, PoseidonSponge<Fr>, Ligero<Fr>>(x.as_ref()))
-    .collect();
+    let nodes_proof: Vec<&dyn NodeOpsProve<Fr, PoseidonSponge<Fr>, Ligero<Fr>, i8>> = nodes
+        .iter()
+        .map(|x| node_downcast::<Fr, PoseidonSponge<Fr>, Ligero<Fr>>(x.as_ref()))
+        .collect();
 
-    nodes_proof.iter().for_each(|x| {
-        println!("{:?}", x.type_name());
-    });
-
+    assert!(nodes_proof
+        .iter()
+        .zip(nodes.iter())
+        .all(|(x, y)| { x.type_name() == y.type_name() }));
 }
