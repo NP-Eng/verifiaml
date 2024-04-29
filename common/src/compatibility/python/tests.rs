@@ -23,7 +23,7 @@ use ark_bn254::Fr;
 use ark_crypto_primitives::sponge::poseidon::PoseidonSponge;
 use more_asserts::*;
 
-const NB_OUTPUTS: usize = 1000;
+const NB_OUTPUTS: usize = 10000;
 
 // TODO: We allow incorrect outputs because the quantisation from tf lite
 // is inexact. We should fix this in the future. Currently, the outputs are
