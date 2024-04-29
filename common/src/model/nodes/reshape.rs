@@ -48,7 +48,10 @@ where
     fn padded_shape(&self) -> (Vec<usize>, Vec<usize>) {
         (
             self.padded_input_shape_log.iter().map(|x| 1 << x).collect(),
-            self.padded_output_shape_log.iter().map(|x| 1 << x).collect(),
+            self.padded_output_shape_log
+                .iter()
+                .map(|x| 1 << x)
+                .collect(),
         )
     }
 

@@ -1,10 +1,10 @@
 use hcs_common::{BMMNode, Model, Poly, ReLUNode, RequantizeBMMFloatNode, ReshapeNode, SmallNIO};
 use hcs_verifier::{NodeOpsVerify, VerifiableModel};
 
-use hcs_prover::{NodeOpsProve, ProvableModel};
 use ark_crypto_primitives::sponge::{Absorb, CryptographicSponge};
 use ark_ff::PrimeField;
 use ark_poly_commit::PolynomialCommitment;
+use hcs_prover::{NodeOpsProve, ProvableModel};
 
 macro_rules! downcast_as {
     ($node:ident, $node_subtype:ty, $node_type:ty) => {
