@@ -37,12 +37,12 @@ pub fn save_model_parameters_as_qarray(py: Python, model: &Py<PyAny>, path: &str
 pub fn get_model_input<'py, T>(
     python: Python<'py>,
     model: &Py<PyAny>,
-    index: Option<usize>,
+    index: usize,
 ) -> QArray<f32>
 where
     T: Into<QArray<f32>> + FromPyObject<'py> + Clone,
 {
-    let result = model.call_method1(python, "get_input", (index.unwrap_or(150),));
+    let result = model.call_method1(python, "get_input", (index,));
 
     // Downcast the result to the expected type
     let model_input = result.unwrap().extract::<T>(python).unwrap();
@@ -50,9 +50,8 @@ where
     model_input.into()
 }
 
-pub fn get_model_output(py: Python, model: &Py<PyAny>, index: Option<usize>) -> QArray<u8> {
-    let result = model.call_method1(py, "get_output", (index.unwrap_or(150),));
-
+pub fn get_model_output(py: Python, model: &Py<PyAny>, index: usize) -> QArray<u8> {
+    let result = model.call_method1(py, "get_output", (index,));
     // Downcast the result to the expected type
     let model_output = result.unwrap().extract::<Vec<u8>>(py).unwrap();
 

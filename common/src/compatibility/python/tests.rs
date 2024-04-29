@@ -54,7 +54,7 @@ fn test_simple_perceptron_mnist_single_input() {
         Python::with_gil(|py| get_model_input::<Vec<Vec<f32>>>(
             py,
             &get_model(py, "QSimplePerceptron", None),
-            None
+            150
         )),
         expected_input
     );
@@ -68,7 +68,7 @@ fn test_two_layer_perceptron_mnist_single_input() {
         Python::with_gil(|py| get_model_input::<Vec<Vec<f32>>>(
             py,
             &get_model(py, "QTwoLayerPerceptron", None),
-            None
+            150
         )),
         expected_input
     );
@@ -82,7 +82,7 @@ fn test_simple_perceptron_mnist_single_output() {
         Python::with_gil(|py| get_model_output(
             py,
             &get_model(py, "QSimplePerceptron", None),
-            None
+            150
         )),
         expected_output
     );
@@ -96,7 +96,7 @@ fn test_two_layer_perceptron_mnist_single_output() {
         Python::with_gil(|py| get_model_output(
             py,
             &get_model(py, "QTwoLayerPerceptron", None),
-            None
+            150
         )),
         expected_output
     );
@@ -112,8 +112,8 @@ fn test_two_layer_perceptron_mnist_all_outputs() {
         (0..NB_OUTPUTS)
             .into_iter()
             .map(|i| {
-                let raw_input = get_model_input::<Vec<Vec<f32>>>(py, &tf_lite_model, Some(i));
-                let expected_output = get_model_output(py, &tf_lite_model, Some(i));
+                let raw_input = get_model_input::<Vec<Vec<f32>>>(py, &tf_lite_model, i);
+                let expected_output = get_model_output(py, &tf_lite_model, i);
 
                 let output = unpadded_inference(
                     raw_input,
@@ -151,8 +151,8 @@ fn test_simple_perceptron_mnist_all_outputs() {
         (0..NB_OUTPUTS)
             .into_iter()
             .map(|i| {
-                let raw_input = get_model_input::<Vec<Vec<f32>>>(py, &tf_lite_model, Some(i));
-                let expected_output = get_model_output(py, &tf_lite_model, Some(i));
+                let raw_input = get_model_input::<Vec<Vec<f32>>>(py, &tf_lite_model, i);
+                let expected_output = get_model_output(py, &tf_lite_model, i);
 
                 let output = unpadded_inference(
                     raw_input,

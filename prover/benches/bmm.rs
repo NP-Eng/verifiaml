@@ -79,7 +79,7 @@ fn bench_fully_connected_layer(c: &mut Criterion) {
             get_model_input::<Vec<f32>>(
                 py,
                 &get_model(py, "QFullyConnectedLayer", Some(args[..1].to_vec())),
-                None,
+                150,
             )
         });
 
