@@ -48,26 +48,12 @@ fn unpadded_inference(
 }
 
 #[test]
-fn test_simple_perceptron_mnist_single_input() {
+fn test_get_model_input() {
     let expected_input = QArray::read("examples/simple_perceptron_mnist/data/input_test_150.json");
     assert_eq!(
         Python::with_gil(|py| get_model_input::<Vec<Vec<f32>>>(
             py,
             &get_model(py, "QSimplePerceptron", None),
-            150
-        )),
-        expected_input
-    );
-}
-
-#[test]
-fn test_two_layer_perceptron_mnist_single_input() {
-    let expected_input =
-        QArray::read("examples/two_layer_perceptron_mnist/data/input_test_150.json");
-    assert_eq!(
-        Python::with_gil(|py| get_model_input::<Vec<Vec<f32>>>(
-            py,
-            &get_model(py, "QTwoLayerPerceptron", None),
             150
         )),
         expected_input
