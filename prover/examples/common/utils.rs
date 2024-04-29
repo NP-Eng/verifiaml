@@ -1,7 +1,7 @@
 use hcs_common::{BMMNode, Model, Poly, ReLUNode, RequantizeBMMFloatNode, ReshapeNode, SmallNIO};
 use hcs_verifier::{NodeOpsVerify, VerifiableModel};
 
-use crate::{NodeOpsProve, ProvableModel};
+use hcs_prover::{NodeOpsProve, ProvableModel};
 use ark_crypto_primitives::sponge::{Absorb, CryptographicSponge};
 use ark_ff::PrimeField;
 use ark_poly_commit::PolynomialCommitment;
@@ -55,7 +55,7 @@ macro_rules! model_downcast {
     }};
 }
 
-pub fn as_provable_model<
+pub(crate) fn as_provable_model<
     F: PrimeField + Absorb + From<ST> + From<ST::LT>,
     S: CryptographicSponge,
     PCS: PolynomialCommitment<F, Poly<F>, S>,
@@ -71,7 +71,7 @@ pub fn as_provable_model<
     )
 }
 
-pub fn as_verifiable_model<
+pub(crate) fn as_verifiable_model<
     F: PrimeField + Absorb + From<ST> + From<ST::LT>,
     S: CryptographicSponge,
     PCS: PolynomialCommitment<F, Poly<F>, S>,

@@ -90,7 +90,7 @@ where
         let input = input.ref_large();
 
         // Sanity checks
-        self.assert_valid_input(input.shape());
+        self.assert_valid_padded_input(input.shape());
 
         let output = requantize_single_round::<ST, ST::LT>(
             input.values(),

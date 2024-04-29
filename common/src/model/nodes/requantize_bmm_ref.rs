@@ -91,7 +91,7 @@ where
         let input = input.ref_large();
 
         // Sanity checks
-        self.assert_valid_input(input.shape());
+        self.assert_valid_padded_input(input.shape());
 
         let output: Tensor<ST> = requantize_ref::<ST, ST::LT>(
             input.values(),

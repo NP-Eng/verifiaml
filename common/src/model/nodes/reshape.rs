@@ -47,8 +47,8 @@ where
 
     fn padded_shape(&self) -> (Vec<usize>, Vec<usize>) {
         (
-            self.padded_input_shape_log.clone(),
-            self.padded_output_shape_log.clone(),
+            self.padded_input_shape_log.iter().map(|x| 1 << x).collect(),
+            self.padded_output_shape_log.iter().map(|x| 1 << x).collect(),
         )
     }
 
@@ -58,7 +58,7 @@ where
         let input = input.ref_small();
 
         // Sanity checks
-        self.assert_valid_input(input.shape());
+        self.assert_valid_padded_input(input.shape());
 
         let mut unpadded_input = input.compact_resize(self.input_shape.clone(), ST::ZERO);
 

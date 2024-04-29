@@ -173,7 +173,7 @@ where
         let input = input.ref_small();
 
         // Sanity checks
-        self.assert_valid_input(input.shape());
+        self.assert_valid_padded_input(input.shape());
 
         let input: Tensor<ST::LT> = input.cast();
 
