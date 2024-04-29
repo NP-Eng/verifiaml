@@ -17,7 +17,7 @@ macro_rules! PATH {
 }
 
 fn main() {
-    let simple_perceptron = build_simple_perceptron_mnist::<Fr, PoseidonSponge<Fr>, Ligero<Fr>>(
+    let model = build_simple_perceptron_mnist::<Fr, PoseidonSponge<Fr>, Ligero<Fr>>(
         BMMRequantizationStrategy::Floating,
     );
 
@@ -40,7 +40,7 @@ fn main() {
     prove_inference::<Fr, PoseidonSponge<Fr>, Ligero<Fr>>(
         &format!(PATH!(), "data/input_test_150.json"),
         &format!(PATH!(), "data/output_test_150.json"),
-        &simple_perceptron,
+        &model,
         qinfo,
         sponge.clone(),
         output_shape.clone(),
@@ -49,7 +49,7 @@ fn main() {
     verify_inference::<Fr, PoseidonSponge<Fr>, Ligero<Fr>>(
         &format!(PATH!(), "data/input_test_150.json"),
         &format!(PATH!(), "data/output_test_150.json"),
-        &simple_perceptron,
+        &model,
         qinfo,
         sponge,
         output_shape,

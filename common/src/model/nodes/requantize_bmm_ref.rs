@@ -2,13 +2,14 @@ use ark_std::log2;
 
 use crate::model::tensor::{SmallNIO, Tensor};
 use crate::quantization::{quantize_multiplier, requantize_ref};
-use crate::{Commitment, CommitmentState};
+use crate::{Commitment, CommitmentState, NIOTensor};
 
 use super::{NodeOpsNative, NodeOpsPadded};
 
 // TODO convention: input, bias and output are rows, the op is vec-by-mat (in that order)
 
 /// Apply requantization after a BMM argument
+#[derive(Clone)]
 pub struct RequantizeBMMRefNode<ST: SmallNIO> {
     // Number of units
     size: usize,
@@ -39,29 +40,19 @@ pub struct RequantizeBMMRefNodeProof {
     // this will be the sumcheck proof
 }
 
-impl<ST> NodeOpsNative<ST::LT, ST> for RequantizeBMMRefNode<ST>
+impl<ST> NodeOpsNative<ST> for RequantizeBMMRefNode<ST>
 where
     ST: SmallNIO,
 {
-    fn shape(&self) -> Vec<usize> {
-        vec![self.size]
+    fn shape(&self) -> (Vec<usize>, Vec<usize>) {
+        (vec![self.size], vec![self.size])
     }
 
-    fn evaluate(&self, input: &Tensor<ST::LT>) -> Tensor<ST> {
+    fn evaluate(&self, input: &NIOTensor<ST>) -> NIOTensor<ST> {
+        let input = input.ref_large();
+
         // Sanity checks
-        // TODO systematise
-        assert_eq!(
-            input.num_dims(),
-            1,
-            "Incorrect shape: RequantizeBMMRef node expects a 1-dimensional input array"
-        );
-        assert_eq!(
-            self.size,
-            input.len(),
-            "Length mismatch: RequantizeBMMRef node expects input with {} elements, got {} elements instead",
-            self.size,
-            input.len()
-        );
+        self.assert_valid_input(input.shape());
 
         let output: Tensor<ST> = requantize_ref::<ST, ST::LT>(
             input.values(),
@@ -71,11 +62,19 @@ where
         )
         .into();
 
-        output
+        NIOTensor::S(output)
+    }
+
+    fn type_name(&self) -> &'static str {
+        "RequantizeBMMRef"
+    }
+
+    fn com_num_vars(&self) -> usize {
+        self.padded_size_log
     }
 }
 
-impl<ST> NodeOpsPadded<ST::LT, ST> for RequantizeBMMRefNode<ST>
+impl<ST> NodeOpsPadded<ST> for RequantizeBMMRefNode<ST>
 where
     ST: SmallNIO,
 {
@@ -83,28 +82,16 @@ where
         vec![self.padded_size_log]
     }
 
-    fn com_num_vars(&self) -> usize {
-        self.padded_size_log
+    fn padded_shape(&self) -> (Vec<usize>, Vec<usize>) {
+        let padded_size = 1 << self.padded_size_log;
+        (vec![padded_size], vec![padded_size])
     }
 
-    fn padded_evaluate(&self, input: &Tensor<ST::LT>) -> Tensor<ST> {
-        let padded_size = 1 << self.padded_size_log;
+    fn padded_evaluate(&self, input: &NIOTensor<ST>) -> NIOTensor<ST> {
+        let input = input.ref_large();
 
         // Sanity checks
-        // TODO systematise
-        assert_eq!(
-            input.num_dims(),
-            1,
-            "Incorrect shape: RequantizeBMMRef node expects a 1-dimensional input array"
-        );
-
-        assert_eq!(
-            padded_size,
-            input.len(),
-            "Length mismatch: Padded fully connected node expected input with {} elements, got {} elements instead",
-            padded_size,
-            input.len()
-        );
+        self.assert_valid_padded_input(input.shape());
 
         let output: Tensor<ST> = requantize_ref::<ST, ST::LT>(
             input.values(),
@@ -113,7 +100,8 @@ where
             self.output_zero_point,
         )
         .into();
-        output
+
+        NIOTensor::S(output)
     }
 }
 

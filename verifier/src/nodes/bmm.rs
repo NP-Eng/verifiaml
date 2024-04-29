@@ -11,7 +11,7 @@ use hcs_common::{
 
 use crate::NodeOpsVerify;
 
-impl<F, S, PCS, ST> NodeOpsVerify<F, S, PCS> for BMMNode<ST>
+impl<F, S, PCS, ST> NodeOpsVerify<F, S, PCS, ST> for BMMNode<ST>
 where
     F: PrimeField + Absorb + From<ST>,
     S: CryptographicSponge,

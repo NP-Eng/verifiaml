@@ -7,13 +7,14 @@ use ark_sumcheck::ml_sumcheck::Proof;
 
 use crate::model::tensor::{Integral, SmallNIO, Tensor};
 use crate::model::Poly;
-use crate::{Commitment, CommitmentState};
+use crate::{Commitment, CommitmentState, NIOTensor};
 
 use super::{NodeOpsNative, NodeOpsPadded};
 
 // TODO convention: input, bias and output are rows, the op is vec-by-mat (in that order)
 
 /// Start with 2D matrices, and Mat-by-vector multiplication only
+#[derive(Clone)]
 pub struct BMMNode<ST: SmallNIO> {
     /// The row-major flattened unpadded vector of weights
     weights: Tensor<ST>,
@@ -103,29 +104,19 @@ pub struct BMMNodeProof<
     pub bias_opening_value: F,
 }
 
-impl<ST> NodeOpsNative<ST, ST::LT> for BMMNode<ST>
+impl<ST> NodeOpsNative<ST> for BMMNode<ST>
 where
     ST: SmallNIO,
 {
-    fn shape(&self) -> Vec<usize> {
-        vec![self.dims.1]
+    fn shape(&self) -> (Vec<usize>, Vec<usize>) {
+        (vec![self.dims.0], vec![self.dims.1])
     }
 
-    fn evaluate(&self, input: &Tensor<ST>) -> Tensor<ST::LT> {
+    fn evaluate(&self, input: &NIOTensor<ST>) -> NIOTensor<ST> {
+        let input = input.ref_small();
+
         // Sanity checks
-        // TODO systematise
-        assert_eq!(
-            input.num_dims(),
-            1,
-            "Incorrect shape: BMM node expects a 1-dimensional input array"
-        );
-        assert_eq!(
-            self.dims.0,
-            input.len(),
-            "Length mismatch: BMM node expects input with {} elements, got {} elements instead",
-            self.dims.0,
-            input.len()
-        );
+        self.assert_valid_input(input.shape());
 
         let input: Tensor<ST::LT> = input.cast();
 
@@ -146,11 +137,19 @@ where
             }
         }
 
-        Tensor::new(accumulators, vec![self.dims.1])
+        NIOTensor::L(Tensor::new(accumulators, vec![self.dims.1]))
+    }
+
+    fn com_num_vars(&self) -> usize {
+        self.padded_dims_log.0 + self.padded_dims_log.1
+    }
+
+    fn type_name(&self) -> &'static str {
+        "BMM"
     }
 }
 
-impl<ST> NodeOpsPadded<ST, ST::LT> for BMMNode<ST>
+impl<ST> NodeOpsPadded<ST> for BMMNode<ST>
 where
     ST: SmallNIO,
 {
@@ -158,32 +157,23 @@ where
         vec![self.padded_dims_log.1]
     }
 
-    fn com_num_vars(&self) -> usize {
-        self.padded_dims_log.0 + self.padded_dims_log.1
+    fn padded_shape(&self) -> (Vec<usize>, Vec<usize>) {
+        (
+            vec![1 << self.padded_dims_log.0],
+            vec![1 << self.padded_dims_log.1],
+        )
     }
 
     // This function naively computes entries which are known to be zero. It is
     // meant to exactly mirror the proof-system multiplication proved by the
     // sumcheck argument. Requantization and shifting are also applied to these
     // trivial entries, as the proof system does.
-    fn padded_evaluate(&self, input: &Tensor<ST>) -> Tensor<ST::LT> {
+    fn padded_evaluate(&self, input: &NIOTensor<ST>) -> NIOTensor<ST> {
         let padded_dims = (1 << self.padded_dims_log.0, 1 << self.padded_dims_log.1);
+        let input = input.ref_small();
 
         // Sanity checks
-        // TODO systematise
-        assert_eq!(
-            input.num_dims(),
-            1,
-            "Incorrect shape: BMM node expects a 1-dimensional input array"
-        );
-
-        assert_eq!(
-            padded_dims.0,
-            input.len(),
-            "Length mismatch: Padded fully connected node expected input with {} elements, got {} elements instead",
-            padded_dims.0,
-            input.len()
-        );
+        self.assert_valid_padded_input(input.shape());
 
         let input: Tensor<ST::LT> = input.cast();
 
@@ -204,7 +194,7 @@ where
             }
         }
 
-        Tensor::new(accumulators, vec![padded_dims.1])
+        NIOTensor::L(Tensor::new(accumulators, vec![padded_dims.1]))
     }
 }
 

@@ -3,7 +3,7 @@ use crate::{
         requantize_bmm_ref::RequantizeBMMRefNode, requantize_bmm_single::RequantizeBMMSingleNode,
     },
     quantization::BMMRequantizationStrategy,
-    BMMNode, Model, Node, Poly, RequantizeBMMFloatNode, ReshapeNode, Tensor,
+    BMMNode, Model, NodeOpsNative, Poly, RequantizeBMMFloatNode, ReshapeNode, Tensor,
 };
 
 use ark_crypto_primitives::sponge::{Absorb, CryptographicSponge};
@@ -38,27 +38,27 @@ where
 {
     let flat_dim = INPUT_DIMS.iter().product();
 
-    let reshape: ReshapeNode = ReshapeNode::new(INPUT_DIMS.to_vec(), vec![flat_dim]);
+    let reshape = ReshapeNode::new(INPUT_DIMS.to_vec(), vec![flat_dim]);
 
     let w_array: Tensor<i8> = Tensor::read(&format!(PATH!(), "weights.json"));
     let b_array: Tensor<i32> = Tensor::read(&format!(PATH!(), "bias.json"));
 
     let bmm: BMMNode<i8> = BMMNode::new(w_array, b_array, Z_I);
 
-    let req_bmm = match req_strategy {
-        BMMRequantizationStrategy::Floating => Node::RequantizeBMMFloat(
-            RequantizeBMMFloatNode::new(OUTPUT_DIM, S_I, Z_I, S_W, Z_W, S_O, Z_O),
-        ),
+    let boxed_req_bmm: Box<dyn NodeOpsNative<i8>> = match req_strategy {
+        BMMRequantizationStrategy::Floating => Box::new(RequantizeBMMFloatNode::new(
+            OUTPUT_DIM, S_I, Z_I, S_W, Z_W, S_O, Z_O,
+        )),
         BMMRequantizationStrategy::Reference => {
-            Node::RequantizeBMMRef(RequantizeBMMRefNode::new(OUTPUT_DIM, S_I, S_W, S_O, Z_O))
+            Box::new(RequantizeBMMRefNode::new(OUTPUT_DIM, S_I, S_W, S_O, Z_O))
         }
         BMMRequantizationStrategy::SingleRound => {
-            Node::RequantizeBMMSingle(RequantizeBMMSingleNode::new(OUTPUT_DIM, S_I, S_W, S_O, Z_O))
+            Box::new(RequantizeBMMSingleNode::new(OUTPUT_DIM, S_I, S_W, S_O, Z_O))
         }
     };
 
     Model::new(
         INPUT_DIMS.to_vec(),
-        vec![Node::Reshape(reshape), Node::BMM(bmm), req_bmm],
+        vec![Box::new(reshape), Box::new(bmm), boxed_req_bmm],
     )
 }

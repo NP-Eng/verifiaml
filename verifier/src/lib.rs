@@ -2,18 +2,19 @@ use ark_crypto_primitives::sponge::{Absorb, CryptographicSponge};
 use ark_ff::PrimeField;
 use ark_poly_commit::{LabeledCommitment, PolynomialCommitment};
 
-use hcs_common::{Node, NodeCommitment, NodeProof, Poly, SmallNIO};
+use hcs_common::{NodeCommitment, NodeOpsPadded, NodeProof, Poly, SmallNIO};
 
 mod model;
 mod nodes;
 
-pub use model::VerifyModel;
+pub use model::VerifiableModel;
 
-pub trait NodeOpsVerify<F, S, PCS>
+pub trait NodeOpsVerify<F, S, PCS, ST>: NodeOpsPadded<ST>
 where
     F: PrimeField + Absorb,
     S: CryptographicSponge,
     PCS: PolynomialCommitment<F, Poly<F>, S>,
+    ST: SmallNIO,
 {
     fn verify(
         &self,
@@ -24,42 +25,4 @@ where
         output_com: &LabeledCommitment<PCS::Commitment>,
         proof: NodeProof<F, S, PCS>,
     ) -> bool;
-}
-
-impl<F, S, PCS, ST> NodeOpsVerify<F, S, PCS> for Node<ST>
-where
-    F: PrimeField + Absorb + From<ST>,
-    S: CryptographicSponge,
-    PCS: PolynomialCommitment<F, Poly<F>, S>,
-    ST: SmallNIO,
-{
-    fn verify(
-        &self,
-        vk: &PCS::VerifierKey,
-        s: &mut S,
-        node_com: &NodeCommitment<F, S, PCS>,
-        input_com: &LabeledCommitment<PCS::Commitment>,
-        output_com: &LabeledCommitment<PCS::Commitment>,
-        proof: NodeProof<F, S, PCS>,
-    ) -> bool {
-        node_as_node_ops_snark(self).verify(vk, s, node_com, input_com, output_com, proof)
-    }
-}
-
-fn node_as_node_ops_snark<F, S, PCS, ST>(node: &Node<ST>) -> &dyn NodeOpsVerify<F, S, PCS>
-where
-    F: PrimeField + Absorb + From<ST>,
-    S: CryptographicSponge,
-    PCS: PolynomialCommitment<F, Poly<F>, S>,
-    ST: SmallNIO,
-{
-    match node {
-        Node::BMM(fc) => fc,
-        Node::RequantizeBMMFloat(r) => r,
-        Node::ReLU(r) => r,
-        Node::Reshape(r) => r,
-        // TODO add Node::RequantizeBMMRef(r) => r, once the latter implements NodeOpsVerify
-        Node::RequantizeBMMRef(_) => unimplemented!(),
-        Node::RequantizeBMMSingle(_) => unimplemented!(),
-    }
 }

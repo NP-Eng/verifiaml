@@ -91,7 +91,7 @@ macro_rules! impl_integral {
 impl_integral!(i8, i16);
 impl_integral!(i32, i64);
 
-pub trait SmallNIO: Integral + Into<Self::LT> {
+pub trait SmallNIO: Integral + Into<Self::LT> + 'static {
     type LT: Integral + TryInto<Self>;
 }
 

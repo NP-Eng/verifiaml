@@ -1,41 +1,43 @@
 use ark_std::log2;
 
-use crate::{model::tensor::SmallNIO, Tensor};
+use crate::{model::tensor::SmallNIO, NIOTensor};
 
 use super::{NodeOpsNative, NodeOpsPadded};
 
-pub struct ReshapeNode {
+#[derive(Clone)]
+pub struct ReshapeNode<ST: SmallNIO> {
     pub input_shape: Vec<usize>,
     pub output_shape: Vec<usize>,
     pub padded_input_shape_log: Vec<usize>,
     pub padded_output_shape_log: Vec<usize>,
+    phantom: std::marker::PhantomData<ST>,
 }
 
-impl<ST> NodeOpsNative<ST, ST> for ReshapeNode
+impl<ST> NodeOpsNative<ST> for ReshapeNode<ST>
 where
     ST: SmallNIO,
 {
-    fn shape(&self) -> Vec<usize> {
-        self.output_shape.clone()
+    fn shape(&self) -> (Vec<usize>, Vec<usize>) {
+        (self.input_shape.clone(), self.output_shape.clone())
     }
 
-    fn evaluate(&self, input: &Tensor<ST>) -> Tensor<ST> {
-        // Sanity checks
-        // TODO systematise
+    fn evaluate(&self, input: &NIOTensor<ST>) -> NIOTensor<ST> {
+        let input = input.ref_small();
 
-        assert_eq!(
-            *input.shape(),
-            self.input_shape,
-            "Received input shape does not match node input shape"
-        );
+        // Sanity checks
+        self.assert_valid_input(input.shape());
 
         let mut output = input.clone();
         output.reshape(self.output_shape.clone());
-        output
+        NIOTensor::S(output)
+    }
+
+    fn type_name(&self) -> &'static str {
+        "Reshape"
     }
 }
 
-impl<ST> NodeOpsPadded<ST, ST> for ReshapeNode
+impl<ST> NodeOpsPadded<ST> for ReshapeNode<ST>
 where
     ST: SmallNIO,
 {
@@ -43,43 +45,37 @@ where
         self.padded_output_shape_log.clone()
     }
 
-    fn com_num_vars(&self) -> usize {
-        0
+    fn padded_shape(&self) -> (Vec<usize>, Vec<usize>) {
+        (
+            self.padded_input_shape_log.iter().map(|x| 1 << x).collect(),
+            self.padded_output_shape_log
+                .iter()
+                .map(|x| 1 << x)
+                .collect(),
+        )
     }
 
     // TODO I think this might be broken due to the failure of commutativity
     // between product and and nearest-geq-power-of-two
-    fn padded_evaluate(&self, input: &Tensor<ST>) -> Tensor<ST> {
-        let padded_input_shape: Vec<usize> = self
-            .padded_input_shape_log
-            .iter()
-            .map(|x| (1 << x) as usize)
-            .collect();
-
-        let padded_output_shape: Vec<usize> = self
-            .padded_output_shape_log
-            .iter()
-            .map(|x| (1 << x) as usize)
-            .collect();
+    fn padded_evaluate(&self, input: &NIOTensor<ST>) -> NIOTensor<ST> {
+        let input = input.ref_small();
 
         // Sanity checks
-        // TODO systematise
-        assert_eq!(
-            *input.shape(),
-            padded_input_shape,
-            "Received padded input shape does not match node's padded input shape"
-        );
+        self.assert_valid_padded_input(input.shape());
 
         let mut unpadded_input = input.compact_resize(self.input_shape.clone(), ST::ZERO);
 
         // TODO only handles 2-to-1 reshapes, I think
         unpadded_input.reshape(self.output_shape.clone());
 
-        unpadded_input.compact_resize(padded_output_shape, ST::ZERO)
+        NIOTensor::S(unpadded_input.compact_resize(self.padded_shape().1, ST::ZERO))
     }
 }
 
-impl ReshapeNode {
+impl<ST> ReshapeNode<ST>
+where
+    ST: SmallNIO,
+{
     pub fn new(input_shape: Vec<usize>, output_shape: Vec<usize>) -> Self {
         assert_eq!(
             input_shape.iter().product::<usize>(),
@@ -102,6 +98,7 @@ impl ReshapeNode {
             output_shape,
             padded_input_shape_log,
             padded_output_shape_log,
+            phantom: std::marker::PhantomData,
         }
     }
 }

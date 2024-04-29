@@ -1,12 +1,12 @@
 use hcs_common::{quantise_f32_u8_nne, InferenceProof, Model, Poly, Tensor};
-use hcs_prover::ProveModel;
-
-use hcs_verifier::VerifyModel;
 
 use ark_crypto_primitives::sponge::{Absorb, CryptographicSponge};
 use ark_ff::PrimeField;
 use ark_poly_commit::PolynomialCommitment;
 use ark_std::test_rng;
+
+mod utils;
+use utils::{as_provable_model, as_verifiable_model};
 
 pub fn prove_inference<F, S, PCS>(
     input_path: &str,
@@ -20,6 +20,8 @@ pub fn prove_inference<F, S, PCS>(
     S: CryptographicSponge,
     PCS: PolynomialCommitment<F, Poly<F>, S>,
 {
+    let provable_model = as_provable_model(model);
+
     let input: Tensor<f32> = Tensor::read(input_path);
     let expected_output: Tensor<u8> = Tensor::read(expected_output_path);
 
@@ -33,12 +35,12 @@ pub fn prove_inference<F, S, PCS>(
     let mut sponge = sponge;
 
     let mut rng = test_rng();
-    let (ck, _) = model.setup_keys::<F, S, PCS, _>(&mut rng).unwrap();
+    let (ck, _) = provable_model.setup_keys(&mut rng).unwrap();
 
     let (node_coms, node_com_states): (Vec<_>, Vec<_>) =
-        model.commit(&ck, None).into_iter().unzip();
+        provable_model.commit(&ck, None).into_iter().unzip();
 
-    let inference_proof: InferenceProof<F, S, PCS, i8> = model.prove_inference(
+    let inference_proof: InferenceProof<F, S, PCS, i8> = provable_model.prove_inference(
         &ck,
         Some(&mut rng),
         &mut sponge,
@@ -70,6 +72,9 @@ pub fn verify_inference<F, S, PCS>(
     S: CryptographicSponge,
     PCS: PolynomialCommitment<F, Poly<F>, S>,
 {
+    let provable_model = as_provable_model(model);
+    let verifiable_model = as_verifiable_model(model);
+
     let input: Tensor<f32> = Tensor::read(input_path);
     let expected_output: Tensor<u8> = Tensor::read(expected_output_path);
 
@@ -86,12 +91,12 @@ pub fn verify_inference<F, S, PCS>(
     let mut verification_sponge = sponge;
 
     let mut rng = test_rng();
-    let (ck, vk) = model.setup_keys::<F, S, PCS, _>(&mut rng).unwrap();
+    let (ck, vk) = provable_model.setup_keys(&mut rng).unwrap();
 
     let (node_coms, node_com_states): (Vec<_>, Vec<_>) =
-        model.commit(&ck, None).into_iter().unzip();
+        provable_model.commit(&ck, None).into_iter().unzip();
 
-    let inference_proof: InferenceProof<F, S, PCS, i8> = model.prove_inference(
+    let inference_proof: InferenceProof<F, S, PCS, i8> = provable_model.prove_inference(
         &ck,
         Some(&mut rng),
         &mut proving_sponge,
@@ -102,7 +107,12 @@ pub fn verify_inference<F, S, PCS>(
 
     let output_qtypearray = inference_proof.outputs[0].clone();
 
-    assert!(model.verify_inference(&vk, &mut verification_sponge, &node_coms, inference_proof));
+    assert!(verifiable_model.verify_inference(
+        &vk,
+        &mut verification_sponge,
+        &node_coms,
+        inference_proof
+    ));
 
     let output_i8 = output_qtypearray.unwrap_small();
 
