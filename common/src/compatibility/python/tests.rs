@@ -89,45 +89,6 @@ fn test_two_layer_perceptron_mnist_single_output() {
 }
 
 #[test]
-fn test_two_layer_perceptron_mnist_all_outputs() {
-    let two_layer_perceptron_mnist =
-        build_two_layer_perceptron_mnist::<Fr, PoseidonSponge<Fr>, Ligero<Fr>>();
-
-    let correct_samples: usize = Python::with_gil(|py| {
-        let tf_lite_model = get_model(py, "QTwoLayerPerceptron", None);
-        (0..NB_OUTPUTS)
-            .into_iter()
-            .map(|i| {
-                let raw_input = get_model_input::<Vec<Vec<f32>>>(py, &tf_lite_model, i);
-                let expected_output = get_model_output(py, &tf_lite_model, i);
-
-                let output = unpadded_inference(
-                    raw_input,
-                    &two_layer_perceptron_mnist,
-                    (
-                        S_INPUT_TWO_LAYER_PERCEPTRON_MNIST,
-                        Z_INPUT_TWO_LAYER_PERCEPTRON_MNIST,
-                    ),
-                );
-
-                (output == expected_output) as usize
-            })
-            .sum()
-    });
-
-    println!(
-        "Two-layer perceptron discrepancies: {} out of {}",
-        NB_OUTPUTS - correct_samples,
-        NB_OUTPUTS
-    );
-
-    assert_ge!(
-        correct_samples as f32 / NB_OUTPUTS as f32,
-        1.0 - ALLOWED_ERROR_MARGIN
-    );
-}
-
-#[test]
 fn test_simple_perceptron_mnist_all_outputs() {
     let simple_perceptron_mnist =
         build_simple_perceptron_mnist::<Fr, PoseidonSponge<Fr>, Ligero<Fr>>();
@@ -156,6 +117,45 @@ fn test_simple_perceptron_mnist_all_outputs() {
 
     println!(
         "Simple perceptron discrepancies: {} out of {}",
+        NB_OUTPUTS - correct_samples,
+        NB_OUTPUTS
+    );
+
+    assert_ge!(
+        correct_samples as f32 / NB_OUTPUTS as f32,
+        1.0 - ALLOWED_ERROR_MARGIN
+    );
+}
+
+#[test]
+fn test_two_layer_perceptron_mnist_all_outputs() {
+    let two_layer_perceptron_mnist =
+        build_two_layer_perceptron_mnist::<Fr, PoseidonSponge<Fr>, Ligero<Fr>>();
+
+    let correct_samples: usize = Python::with_gil(|py| {
+        let tf_lite_model = get_model(py, "QTwoLayerPerceptron", None);
+        (0..NB_OUTPUTS)
+            .into_iter()
+            .map(|i| {
+                let raw_input = get_model_input::<Vec<Vec<f32>>>(py, &tf_lite_model, i);
+                let expected_output = get_model_output(py, &tf_lite_model, i);
+
+                let output = unpadded_inference(
+                    raw_input,
+                    &two_layer_perceptron_mnist,
+                    (
+                        S_INPUT_TWO_LAYER_PERCEPTRON_MNIST,
+                        Z_INPUT_TWO_LAYER_PERCEPTRON_MNIST,
+                    ),
+                );
+
+                (output == expected_output) as usize
+            })
+            .sum()
+    });
+
+    println!(
+        "Two-layer perceptron discrepancies: {} out of {}",
         NB_OUTPUTS - correct_samples,
         NB_OUTPUTS
     );
