@@ -94,7 +94,7 @@ fn test_quantize_multiplier_negative_expon() {
 }
 
 #[test]
-#[should_panic]
+#[should_panic(expected = "expon should be non-positive.")]
 fn test_ref_noop() {
     let (s_i, s_w, s_o) = (1.0, 1.0, 1.0);
     let double_mul = s_i * s_w / s_o;
