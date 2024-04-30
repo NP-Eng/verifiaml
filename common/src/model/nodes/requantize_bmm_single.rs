@@ -100,7 +100,7 @@ where
         assert_eq!(
             padded_size,
             input.len(),
-            "Length mismatch: Padded fully connected node expected input with {} elements, got {} elements instead",
+            "Length mismatch: Padded single node expected input with {} elements, got {} elements instead",
             padded_size,
             input.len()
         );

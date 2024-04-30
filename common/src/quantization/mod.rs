@@ -6,7 +6,7 @@ use ark_std::Zero;
 use crate::model::tensor::Integral;
 
 const F64_EXPONENT_SHIFT: u64 = 52;
-const F64_EXPONENT_BIAS: u64 = 1023;
+const F64_EXPONENT_BIAS: i32 = 1023;
 const F64_EXPONENT_MASK: u64 = 0x7ff0000000000000;
 const F64_FRACTION_MASK: u64 = 0x000fffffffffffff;
 
@@ -338,10 +338,10 @@ fn frexp(x: f64) -> (f64, isize) {
     let mut expon = ((x_bits & F64_EXPONENT_MASK) / (1 << F64_EXPONENT_SHIFT)) as i32;
 
     // assert 0 < expon < 1023<<1
-    assert!(expon > 0 && expon < ((F64_EXPONENT_BIAS as i32) << 1));
+    assert!(expon > 0 && expon < (F64_EXPONENT_BIAS << 1));
 
     // unbias exponent
-    expon = expon - (F64_EXPONENT_BIAS as i32) + 1;
+    expon = expon - F64_EXPONENT_BIAS + 1;
 
     let mantissa = x_bits & F64_FRACTION_MASK;
 

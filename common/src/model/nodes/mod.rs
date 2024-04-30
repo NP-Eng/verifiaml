@@ -19,18 +19,9 @@ use crate::{
 
 use self::{
     bmm::{BMMNodeCommitment, BMMNodeCommitmentState, BMMNodeProof},
-    requantize_bmm_float::{
-        RequantizeBMMFloatNode, RequantizeBMMNodeCommitment, RequantizeBMMNodeCommitmentState,
-        RequantizeBMMNodeProof,
-    },
-    requantize_bmm_ref::{
-        RequantizeBMMRefNode, RequantizeBMMRefNodeCommitment, RequantizeBMMRefNodeCommitmentState,
-        RequantizeBMMRefNodeProof,
-    },
-    requantize_bmm_single::{
-        RequantizeBMMSingleNode, RequantizeBMMSingleNodeCommitment,
-        RequantizeBMMSingleNodeCommitmentState, RequantizeBMMSingleNodeProof,
-    },
+    requantize_bmm_float::*,
+    requantize_bmm_ref::*,
+    requantize_bmm_single::*,
     reshape::ReshapeNode,
 };
 
