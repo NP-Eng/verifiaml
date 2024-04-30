@@ -101,7 +101,7 @@ where
         assert_eq!(
             padded_size,
             input.len(),
-            "Length mismatch: Padded reference implementation node expected input with {} elements, got {} elements instead",
+            "Length mismatch: Padded RequantizeBMMRef node expected input with {} elements, got {} elements instead",
             padded_size,
             input.len()
         );
