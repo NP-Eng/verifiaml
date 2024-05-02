@@ -148,7 +148,7 @@ where
     pub fn type_name(&self) -> &'static str {
         match self {
             Node::BMM(_) => "BMM",
-            Node::RequantizeBMMFloat(_r) => "RequantizeBMM",
+            Node::RequantizeBMMFloat(_r) => "RequantizeBMMFloat",
             Node::RequantizeBMMRef(_r) => "RequantizeBMMRef",
             Node::RequantizeBMMSingle(_r) => "RequantizeBMMSingle",
             Node::ReLU(_) => "ReLU",

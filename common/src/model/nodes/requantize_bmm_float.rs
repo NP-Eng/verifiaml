@@ -87,13 +87,13 @@ where
         assert_eq!(
             input.num_dims(),
             1,
-            "Incorrect shape: RequantizeBMM node expects a 1-dimensional input array"
+            "Incorrect shape: RequantizeBMMFloat node expects a 1-dimensional input array"
         );
 
         assert_eq!(
             padded_size,
             input.len(),
-            "Length mismatch: Padded fully connected node expected input with {} elements, got {} elements instead",
+            "Length mismatch: Padded RequantizeBMMFloat node expected input with {} elements, got {} elements instead",
             padded_size,
             input.len()
         );
