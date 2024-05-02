@@ -65,11 +65,7 @@ fn test_simple_perceptron_mnist_single_output() {
     let expected_output =
         QArray::read("examples/simple_perceptron_mnist/data/output_test_150.json");
     assert_eq!(
-        Python::with_gil(|py| get_model_output(
-            py,
-            &get_model(py, "QSimplePerceptron", None),
-            150
-        )),
+        Python::with_gil(|py| get_model_output(py, &get_model(py, "QSimplePerceptron", None), 150)),
         expected_output
     );
 }

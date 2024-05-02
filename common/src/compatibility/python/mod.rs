@@ -34,11 +34,7 @@ pub fn save_model_parameters_as_qarray(py: Python, model: &Py<PyAny>, path: &str
         .unwrap();
 }
 
-pub fn get_model_input<'py, T>(
-    python: Python<'py>,
-    model: &Py<PyAny>,
-    index: usize,
-) -> QArray<f32>
+pub fn get_model_input<'py, T>(python: Python<'py>, model: &Py<PyAny>, index: usize) -> QArray<f32>
 where
     T: Into<QArray<f32>> + FromPyObject<'py> + Clone,
 {

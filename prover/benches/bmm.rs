@@ -120,7 +120,7 @@ fn bench_tf_inference(c: &mut Criterion, resize_factor: usize, args: Vec<(&str, 
                 "inference",
                 format!("{} params", resize_factor * resize_factor * 28 * 28 * 10),
             ),
-            |b| b.iter(|| get_model_output(py, &model, None)),
+            |b| b.iter(|| get_model_output(py, &model, 150)),
         );
     });
 }
