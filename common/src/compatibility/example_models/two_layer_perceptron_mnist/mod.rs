@@ -6,11 +6,8 @@ pub mod parameters;
 use parameters::*;
 
 use crate::{
-    model::nodes::{
-        requantize_bmm_ref::RequantizeBMMRefNode, requantize_bmm_single::RequantizeBMMSingleNode,
-    },
-    quantization::BMMRequantizationStrategy,
-    BMMNode, Model, Node, Poly, ReLUNode, RequantizeBMMFloatNode, ReshapeNode, Tensor,
+    quantization::BMMRequantizationStrategy, utils::req_bmm_from_strategy, BMMNode, Model, Node,
+    Poly, ReLUNode, ReshapeNode, Tensor,
 };
 
 pub const INPUT_DIMS: &[usize] = &[28, 28];
@@ -47,33 +44,31 @@ where
 
     let bmm_1: BMMNode<i8> = BMMNode::new(w1_array, b1_array, Z_1_I);
 
-    let req_bmm_1 = match req_strategy {
-        BMMRequantizationStrategy::Floating => Node::RequantizeBMMFloat(
-            RequantizeBMMFloatNode::new(INTER_DIM, S_1_I, Z_1_I, S_1_W, Z_1_W, S_1_O, Z_1_O),
-        ),
-        BMMRequantizationStrategy::Reference => Node::RequantizeBMMRef(RequantizeBMMRefNode::new(
-            INTER_DIM, S_1_I, S_1_W, S_1_O, Z_1_O,
-        )),
-        BMMRequantizationStrategy::SingleRound => Node::RequantizeBMMSingle(
-            RequantizeBMMSingleNode::new(INTER_DIM, S_1_I, S_1_W, S_1_O, Z_1_O),
-        ),
-    };
+    let req_bmm_1 = req_bmm_from_strategy(
+        req_strategy,
+        INTER_DIM,
+        S_1_I,
+        Z_1_I,
+        S_1_W,
+        Z_1_W,
+        S_1_O,
+        Z_1_O,
+    );
 
     let relu: ReLUNode<i8> = ReLUNode::new(28, Z_1_O);
 
     let bmm_2: BMMNode<i8> = BMMNode::new(w2_array, b2_array, Z_2_I);
 
-    let req_bmm_2 = match req_strategy {
-        BMMRequantizationStrategy::Floating => Node::RequantizeBMMFloat(
-            RequantizeBMMFloatNode::new(OUTPUT_DIM, S_2_I, Z_2_I, S_2_W, Z_2_W, S_2_O, Z_2_O),
-        ),
-        BMMRequantizationStrategy::Reference => Node::RequantizeBMMRef(RequantizeBMMRefNode::new(
-            OUTPUT_DIM, S_2_I, S_2_W, S_2_O, Z_2_O,
-        )),
-        BMMRequantizationStrategy::SingleRound => Node::RequantizeBMMSingle(
-            RequantizeBMMSingleNode::new(OUTPUT_DIM, S_2_I, S_2_W, S_2_O, Z_2_O),
-        ),
-    };
+    let req_bmm_2 = req_bmm_from_strategy(
+        req_strategy,
+        OUTPUT_DIM,
+        S_2_I,
+        Z_2_I,
+        S_2_W,
+        Z_2_W,
+        S_2_O,
+        Z_2_O,
+    );
 
     Model::new(
         INPUT_DIMS.to_vec(),

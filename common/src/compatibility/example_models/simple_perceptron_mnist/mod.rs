@@ -1,9 +1,6 @@
 use crate::{
-    model::nodes::{
-        requantize_bmm_ref::RequantizeBMMRefNode, requantize_bmm_single::RequantizeBMMSingleNode,
-    },
-    quantization::BMMRequantizationStrategy,
-    BMMNode, Model, Node, Poly, RequantizeBMMFloatNode, ReshapeNode, Tensor,
+    quantization::BMMRequantizationStrategy, utils::req_bmm_from_strategy, BMMNode, Model, Node,
+    Poly, ReshapeNode, Tensor,
 };
 
 use ark_crypto_primitives::sponge::{Absorb, CryptographicSponge};
@@ -45,17 +42,7 @@ where
 
     let bmm: BMMNode<i8> = BMMNode::new(w_array, b_array, Z_I);
 
-    let req_bmm = match req_strategy {
-        BMMRequantizationStrategy::Floating => Node::RequantizeBMMFloat(
-            RequantizeBMMFloatNode::new(OUTPUT_DIM, S_I, Z_I, S_W, Z_W, S_O, Z_O),
-        ),
-        BMMRequantizationStrategy::Reference => {
-            Node::RequantizeBMMRef(RequantizeBMMRefNode::new(OUTPUT_DIM, S_I, S_W, S_O, Z_O))
-        }
-        BMMRequantizationStrategy::SingleRound => {
-            Node::RequantizeBMMSingle(RequantizeBMMSingleNode::new(OUTPUT_DIM, S_I, S_W, S_O, Z_O))
-        }
-    };
+    let req_bmm = req_bmm_from_strategy(req_strategy, OUTPUT_DIM, S_I, Z_I, S_W, Z_W, S_O, Z_O);
 
     Model::new(
         INPUT_DIMS.to_vec(),
