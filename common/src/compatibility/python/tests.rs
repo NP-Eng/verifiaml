@@ -1,3 +1,5 @@
+use super::*;
+
 use crate::{
     compatibility::example_models::{
         simple_perceptron_mnist::{
@@ -15,7 +17,7 @@ use crate::{
             },
         },
     },
-    quantise_f32_u8_nne, Ligero, Model, QArray,
+    quantise_f32_u8_nne, BMMRequantizationStrategy, Ligero, Model, Tensor,
 };
 use ark_bn254::Fr;
 use ark_crypto_primitives::sponge::poseidon::PoseidonSponge;
@@ -28,11 +30,7 @@ const NB_OUTPUTS: usize = 10000;
 // within the allowed error.
 const ALLOWED_ERROR_MARGIN: f32 = 0.1;
 
-fn unpadded_inference(
-    raw_input: Tensor<f32>,
-    model: &Model<i8>,
-    qinfo: (f32, u8),
-) -> Tensor<u8> {
+fn unpadded_inference(raw_input: Tensor<f32>, model: &Model<i8>, qinfo: (f32, u8)) -> Tensor<u8> {
     let quantised_input: Tensor<u8> = Tensor::new(
         quantise_f32_u8_nne(raw_input.values(), qinfo.0, qinfo.1),
         raw_input.shape().clone(),
@@ -51,9 +49,7 @@ fn run_model_all_outputs(model_name: &str, req_strategy: BMMRequantizationStrate
             "QSimplePerceptron" => (
                 S_INPUT_SIMPLE_PERCEPTRON_MNIST,
                 Z_INPUT_SIMPLE_PERCEPTRON_MNIST,
-                build_simple_perceptron_mnist::<Fr, PoseidonSponge<Fr>, Ligero<Fr>>(
-                    req_strategy,
-                ),
+                build_simple_perceptron_mnist::<Fr, PoseidonSponge<Fr>, Ligero<Fr>>(req_strategy),
             ),
             "QTwoLayerPerceptron" => (
                 S_INPUT_TWO_LAYER_PERCEPTRON_MNIST,
@@ -64,11 +60,11 @@ fn run_model_all_outputs(model_name: &str, req_strategy: BMMRequantizationStrate
             ),
             _ => panic!("Model not found"),
         };
-        let tf_lite_model = get_model(py, model_name);
+        let tf_lite_model = get_model(py, model_name, None);
         (0..NB_OUTPUTS)
             .into_iter()
             .map(|i| {
-                let raw_input = get_model_input(py, &tf_lite_model, i);
+                let raw_input = get_model_input::<Vec<Vec<f32>>>(py, &tf_lite_model, i);
                 let expected_output = get_model_output(py, &tf_lite_model, i);
                 let output = unpadded_inference(raw_input, &rust_model, (s_input, z_input));
                 (output == expected_output) as usize
@@ -92,7 +88,7 @@ fn run_model_all_outputs(model_name: &str, req_strategy: BMMRequantizationStrate
 
 #[test]
 fn test_get_model_input() {
-    let expected_input = QArray::read("examples/simple_perceptron_mnist/data/input_test_150.json");
+    let expected_input = Tensor::read("examples/simple_perceptron_mnist/data/input_test_150.json");
     assert_eq!(
         Python::with_gil(|py| get_model_input::<Vec<Vec<f32>>>(
             py,
@@ -108,7 +104,7 @@ fn test_simple_perceptron_mnist_single_output() {
     let expected_output =
         Tensor::read("examples/simple_perceptron_mnist/data/output_test_150.json");
     assert_eq!(
-        Python::with_gil(|py| get_model_output(py, &get_model(py, "QSimplePerceptron"), 150)),
+        Python::with_gil(|py| get_model_output(py, &get_model(py, "QSimplePerceptron", None), 150)),
         expected_output
     );
 }
@@ -120,7 +116,7 @@ fn test_two_layer_perceptron_mnist_single_output() {
     assert_eq!(
         Python::with_gil(|py| get_model_output(
             py,
-            &get_model(py, "QTwoLayerPerceptron"),
+            &get_model(py, "QTwoLayerPerceptron", None),
             150
         )),
         expected_output

@@ -8,7 +8,7 @@ use ark_std::test_rng;
 use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion};
 use hcs_common::{
     python::*, quantise_f32_u8_nne, test_sponge, BMMNode, Ligero, Model, Node, NodeCommitment,
-    NodeCommitmentState, Poly, QArray, RequantiseBMMNode,
+    NodeCommitmentState, Poly, RequantizeBMMFloatNode, Tensor,
 };
 use hcs_prover::ProveModel;
 use hcs_verifier::VerifyModel;
@@ -35,27 +35,28 @@ macro_rules! PATH {
     };
 }
 
-fn build_fully_connected_layer_mnist<F, S, PCS>(resize_factor: usize) -> Model<i8, i32>
+fn build_fully_connected_layer_mnist<F, S, PCS>(resize_factor: usize) -> Model<i8>
 where
     F: PrimeField + Absorb,
     S: CryptographicSponge,
     PCS: PolynomialCommitment<F, Poly<F>, S>,
 {
-    let w_array: QArray<i8> = QArray::read(&format!(PATH!(), "weights.json"));
-    let b_array: QArray<i32> = QArray::read(&format!(PATH!(), "bias.json"));
+    let w_array: Tensor<i8> = Tensor::read(&format!(PATH!(), "weights.json"));
+    let b_array: Tensor<i32> = Tensor::read(&format!(PATH!(), "bias.json"));
 
-    let bmm: BMMNode<i8, i32> = BMMNode::new(w_array, b_array, Z_I);
+    let bmm: BMMNode<i8> = BMMNode::new(w_array, b_array, Z_I);
 
-    let req_bmm: RequantiseBMMNode<i8> = RequantiseBMMNode::new(10, S_I, Z_I, S_W, Z_W, S_O, Z_O);
+    let req_bmm: RequantizeBMMFloatNode<i8> =
+        RequantizeBMMFloatNode::new(10, S_I, Z_I, S_W, Z_W, S_O, Z_O);
 
     Model::new(
         vec![resize_factor as usize * 28 * 28],
-        vec![Node::BMM(bmm), Node::RequantiseBMM(req_bmm)],
+        vec![Node::BMM(bmm), Node::RequantizeBMMFloat(req_bmm)],
     )
 }
 
-fn quantise_input(raw_input: &QArray<f32>) -> QArray<i8> {
-    let quantised_input: QArray<u8> = QArray::new(
+fn quantise_input(raw_input: &Tensor<f32>) -> Tensor<i8> {
+    let quantised_input: Tensor<u8> = Tensor::new(
         quantise_f32_u8_nne(raw_input.values(), S_INPUT, Z_INPUT),
         raw_input.shape().clone(),
     );
@@ -114,7 +115,7 @@ fn bench_tf_inference(c: &mut Criterion, resize_factor: usize, args: Vec<(&str, 
 
     Python::with_gil(|py| {
         let model = get_model(py, "QFullyConnectedLayer", Some(args.clone()));
-        save_model_parameters_as_qarray(py, &model, &format!(PATH!(), ""));
+        save_model_parameters_as_tensor(py, &model, &format!(PATH!(), ""));
         group.bench_function(
             BenchmarkId::new(
                 "inference",
@@ -127,8 +128,8 @@ fn bench_tf_inference(c: &mut Criterion, resize_factor: usize, args: Vec<(&str, 
 
 fn bench_verifiaml_inference(
     c: &mut Criterion,
-    model: &Model<i8, i32>,
-    raw_input: &QArray<f32>,
+    model: &Model<i8>,
+    raw_input: &Tensor<f32>,
     resize_factor: usize,
 ) {
     let mut group = c.benchmark_group("verifiaml");
@@ -147,8 +148,8 @@ fn bench_verifiaml_inference(
 
 fn bench_verifiaml_proof<PCS, S>(
     c: &mut Criterion,
-    model: &Model<i8, i32>,
-    raw_input: &QArray<f32>,
+    model: &Model<i8>,
+    raw_input: &Tensor<f32>,
     ck: &PCS::CommitterKey,
     sponge: &mut S,
     resize_factor: usize,
@@ -196,12 +197,12 @@ where
 
 fn bench_verifiaml_verification<PCS, S>(
     c: &mut Criterion,
-    model: &Model<i8, i32>,
+    model: &Model<i8>,
     ck: &PCS::CommitterKey,
     vk: &PCS::VerifierKey,
     node_coms: &Vec<NodeCommitment<Fr, S, PCS>>,
     node_com_states: &Vec<NodeCommitmentState<Fr, S, PCS>>,
-    raw_input: &QArray<f32>,
+    raw_input: &Tensor<f32>,
     sponge: &mut S,
     resize_factor: usize,
 ) where
