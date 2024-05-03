@@ -180,7 +180,7 @@ where
         assert_eq!(
             padded_dims.0,
             input.len(),
-            "Length mismatch: Padded fully connected node expected input with {} elements, got {} elements instead",
+            "Length mismatch: Padded BMM node expected input with {} elements, got {} elements instead",
             padded_dims.0,
             input.len()
         );
