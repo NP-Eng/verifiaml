@@ -2,7 +2,7 @@ use ark_crypto_primitives::sponge::{Absorb, CryptographicSponge};
 use ark_ff::PrimeField;
 use ark_poly_commit::{LabeledCommitment, PolynomialCommitment};
 
-use hcs_common::{InnerType, Node, NodeCommitment, NodeProof, Poly};
+use hcs_common::{Node, NodeCommitment, NodeProof, Poly, SmallNIO};
 
 mod model;
 mod nodes;
@@ -26,13 +26,12 @@ where
     ) -> bool;
 }
 
-impl<F, S, PCS, ST, LT> NodeOpsVerify<F, S, PCS> for Node<ST, LT>
+impl<F, S, PCS, ST> NodeOpsVerify<F, S, PCS> for Node<ST>
 where
     F: PrimeField + Absorb + From<ST>,
     S: CryptographicSponge,
     PCS: PolynomialCommitment<F, Poly<F>, S>,
-    ST: InnerType + TryFrom<LT>,
-    LT: InnerType + From<ST>,
+    ST: SmallNIO,
 {
     fn verify(
         &self,
@@ -47,17 +46,20 @@ where
     }
 }
 
-fn node_as_node_ops_snark<F, S, PCS, ST, LT>(node: &Node<ST, LT>) -> &dyn NodeOpsVerify<F, S, PCS>
+fn node_as_node_ops_snark<F, S, PCS, ST>(node: &Node<ST>) -> &dyn NodeOpsVerify<F, S, PCS>
 where
     F: PrimeField + Absorb + From<ST>,
     S: CryptographicSponge,
     PCS: PolynomialCommitment<F, Poly<F>, S>,
-    ST: InnerType,
+    ST: SmallNIO,
 {
     match node {
         Node::BMM(fc) => fc,
-        Node::RequantiseBMM(r) => r,
+        Node::RequantizeBMMFloat(r) => r,
         Node::ReLU(r) => r,
         Node::Reshape(r) => r,
+        // TODO add Node::RequantizeBMMRef(r) => r, once the latter implements NodeOpsVerify
+        Node::RequantizeBMMRef(_) => unimplemented!(),
+        Node::RequantizeBMMSingle(_) => unimplemented!(),
     }
 }

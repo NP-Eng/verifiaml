@@ -4,20 +4,19 @@ use ark_poly_commit::{LabeledCommitment, PolynomialCommitment};
 use ark_std::rand::RngCore;
 
 use hcs_common::{
-    InnerType, LabeledPoly, NodeCommitment, NodeCommitmentState, NodeProof, Poly,
-    RequantiseBMMNode, RequantiseBMMNodeCommitment, RequantiseBMMNodeCommitmentState,
-    RequantiseBMMNodeProof,
+    LabeledPoly, NodeCommitment, NodeCommitmentState, NodeProof, Poly, RequantizeBMMFloatNode,
+    RequantizeBMMNodeCommitment, RequantizeBMMNodeCommitmentState, RequantizeBMMNodeProof,
+    SmallNIO,
 };
 
 use crate::NodeOpsProve;
 
-impl<F, S, PCS, ST, LT> NodeOpsProve<F, S, PCS, LT, ST> for RequantiseBMMNode<ST>
+impl<F, S, PCS, ST> NodeOpsProve<F, S, PCS> for RequantizeBMMFloatNode<ST>
 where
     F: PrimeField + Absorb,
     S: CryptographicSponge,
     PCS: PolynomialCommitment<F, Poly<F>, S>,
-    ST: InnerType + TryFrom<LT>,
-    LT: InnerType + From<ST>,
+    ST: SmallNIO,
 {
     fn prove(
         &self,
@@ -32,7 +31,7 @@ where
         _output_com: &LabeledCommitment<PCS::Commitment>,
         _output_com_state: &PCS::CommitmentState,
     ) -> NodeProof<F, S, PCS> {
-        NodeProof::RequantiseBMM(RequantiseBMMNodeProof {})
+        NodeProof::RequantizeBMM(RequantizeBMMNodeProof {})
     }
 
     fn commit(
@@ -41,8 +40,8 @@ where
         _rng: Option<&mut dyn RngCore>,
     ) -> (NodeCommitment<F, S, PCS>, NodeCommitmentState<F, S, PCS>) {
         (
-            NodeCommitment::RequantiseBMM(RequantiseBMMNodeCommitment()),
-            NodeCommitmentState::RequantiseBMM(RequantiseBMMNodeCommitmentState()),
+            NodeCommitment::RequantizeBMM(RequantizeBMMNodeCommitment()),
+            NodeCommitmentState::RequantizeBMM(RequantizeBMMNodeCommitmentState()),
         )
     }
 }

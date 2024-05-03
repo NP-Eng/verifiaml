@@ -5,7 +5,10 @@ use ark_poly_commit::PolynomialCommitment;
 pub mod parameters;
 use parameters::*;
 
-use crate::{BMMNode, Model, Node, Poly, QArray, ReLUNode, RequantiseBMMNode, ReshapeNode};
+use crate::{
+    quantization::BMMRequantizationStrategy, utils::req_bmm_from_strategy, BMMNode, Model, Node,
+    Poly, ReLUNode, ReshapeNode, Tensor,
+};
 
 pub const INPUT_DIMS: &[usize] = &[28, 28];
 pub const INTER_DIM: usize = 28;
@@ -22,7 +25,9 @@ macro_rules! PATH {
     };
 }
 
-pub fn build_two_layer_perceptron_mnist<F, S, PCS>() -> Model<i8, i32>
+pub fn build_two_layer_perceptron_mnist<F, S, PCS>(
+    req_strategy: BMMRequantizationStrategy,
+) -> Model<i8>
 where
     F: PrimeField + Absorb,
     S: CryptographicSponge,
@@ -32,32 +37,48 @@ where
 
     let reshape: ReshapeNode = ReshapeNode::new(INPUT_DIMS.to_vec(), vec![flat_dim]);
 
-    let w1_array: QArray<i8> = QArray::read(&format!(PATH!(), "weights_1.json"));
-    let b1_array: QArray<i32> = QArray::read(&format!(PATH!(), "bias_1.json"));
-    let w2_array: QArray<i8> = QArray::read(&format!(PATH!(), "weights_2.json"));
-    let b2_array: QArray<i32> = QArray::read(&format!(PATH!(), "bias_2.json"));
+    let w1_array: Tensor<i8> = Tensor::read(&format!(PATH!(), "weights_1.json"));
+    let b1_array: Tensor<i32> = Tensor::read(&format!(PATH!(), "bias_1.json"));
+    let w2_array: Tensor<i8> = Tensor::read(&format!(PATH!(), "weights_2.json"));
+    let b2_array: Tensor<i32> = Tensor::read(&format!(PATH!(), "bias_2.json"));
 
-    let bmm_1: BMMNode<i8, i32> = BMMNode::new(w1_array, b1_array, Z_1_I);
+    let bmm_1: BMMNode<i8> = BMMNode::new(w1_array, b1_array, Z_1_I);
 
-    let req_bmm_1: RequantiseBMMNode<i8> =
-        RequantiseBMMNode::new(INTER_DIM, S_1_I, Z_1_I, S_1_W, Z_1_W, S_1_O, Z_1_O);
+    let req_bmm_1 = req_bmm_from_strategy(
+        req_strategy,
+        INTER_DIM,
+        S_1_I,
+        Z_1_I,
+        S_1_W,
+        Z_1_W,
+        S_1_O,
+        Z_1_O,
+    );
 
     let relu: ReLUNode<i8> = ReLUNode::new(28, Z_1_O);
 
-    let bmm_2: BMMNode<i8, i32> = BMMNode::new(w2_array, b2_array, Z_2_I);
+    let bmm_2: BMMNode<i8> = BMMNode::new(w2_array, b2_array, Z_2_I);
 
-    let req_bmm_2: RequantiseBMMNode<i8> =
-        RequantiseBMMNode::new(OUTPUT_DIM, S_2_I, Z_2_I, S_2_W, Z_2_W, S_2_O, Z_2_O);
+    let req_bmm_2 = req_bmm_from_strategy(
+        req_strategy,
+        OUTPUT_DIM,
+        S_2_I,
+        Z_2_I,
+        S_2_W,
+        Z_2_W,
+        S_2_O,
+        Z_2_O,
+    );
 
     Model::new(
         INPUT_DIMS.to_vec(),
         vec![
             Node::Reshape(reshape),
             Node::BMM(bmm_1),
-            Node::RequantiseBMM(req_bmm_1),
+            req_bmm_1,
             Node::ReLU(relu),
             Node::BMM(bmm_2),
-            Node::RequantiseBMM(req_bmm_2),
+            req_bmm_2,
         ],
     )
 }

@@ -5,7 +5,7 @@ use ark_std::log2;
 
 use ark_sumcheck::ml_sumcheck::Proof;
 
-use crate::model::qarray::{InnerType, QArray};
+use crate::model::tensor::{Integral, SmallNIO, Tensor};
 use crate::model::Poly;
 use crate::{Commitment, CommitmentState};
 
@@ -14,15 +14,15 @@ use super::{NodeOpsNative, NodeOpsPadded};
 // TODO convention: input, bias and output are rows, the op is vec-by-mat (in that order)
 
 /// Start with 2D matrices, and Mat-by-vector multiplication only
-pub struct BMMNode<ST, LT> {
+pub struct BMMNode<ST: SmallNIO> {
     /// The row-major flattened unpadded vector of weights
-    weights: QArray<ST>,
+    weights: Tensor<ST>,
     /// The padded weight vector
-    pub padded_weights: QArray<ST>,
+    pub padded_weights: Tensor<ST>,
     /// The unpadded vector of biases
-    bias: QArray<LT>,
+    bias: Tensor<ST::LT>,
     /// The padded bias vector
-    pub padded_bias: QArray<LT>,
+    pub padded_bias: Tensor<ST::LT>,
     /// Unpadded imensions (rows, columns)
     dims: (usize, usize),
     /// The logarithm of the padded dimensions (rows, columns)
@@ -103,16 +103,15 @@ pub struct BMMNodeProof<
     pub bias_opening_value: F,
 }
 
-impl<ST, LT> NodeOpsNative<ST, LT> for BMMNode<ST, LT>
+impl<ST> NodeOpsNative<ST, ST::LT> for BMMNode<ST>
 where
-    ST: InnerType,
-    LT: InnerType + From<ST>,
+    ST: SmallNIO,
 {
     fn shape(&self) -> Vec<usize> {
         vec![self.dims.1]
     }
 
-    fn evaluate(&self, input: &QArray<ST>) -> QArray<LT> {
+    fn evaluate(&self, input: &Tensor<ST>) -> Tensor<ST::LT> {
         // Sanity checks
         // TODO systematise
         assert_eq!(
@@ -128,33 +127,32 @@ where
             input.len()
         );
 
-        let input: QArray<LT> = input.cast();
+        let input: Tensor<ST::LT> = input.cast();
 
         // TODO this is a bigger question: can this overflow an i8? Supposedly the point of quantisation
         // is that input-by-weight products can be computed in i8. To be safe, let us use the large type here
-        let shifted_input = input - LT::from(self.input_zero_point);
+        let shifted_input = input - self.input_zero_point.into();
 
         let mut accumulators = self.bias.values().clone();
 
-        // TODO this can be made more elegant (efficient?) using addition of QArrays after defining suitable operators
+        // TODO this can be made more elegant (efficient?) using addition of Tensors after defining suitable operators
 
         // TODO since we have acumulators, this can be done more efficiently going row-wise to avoid re-caching the input
         for col in 0..self.dims.1 {
             // TODO does the compiler realise it doesn't need to access accumulators[col] on every iteration of the inner loop? ow change
             for row in 0..self.dims.0 {
                 accumulators[col] +=
-                    shifted_input[row] * LT::from(self.weights[row * self.dims.1 + col])
+                    shifted_input[row] * self.weights[row * self.dims.1 + col].into();
             }
         }
 
-        QArray::new(accumulators, vec![self.dims.1])
+        Tensor::new(accumulators, vec![self.dims.1])
     }
 }
 
-impl<ST, LT> NodeOpsPadded<ST, LT> for BMMNode<ST, LT>
+impl<ST> NodeOpsPadded<ST, ST::LT> for BMMNode<ST>
 where
-    ST: InnerType + TryFrom<LT>,
-    LT: InnerType + From<ST>,
+    ST: SmallNIO,
 {
     fn padded_shape_log(&self) -> Vec<usize> {
         vec![self.padded_dims_log.1]
@@ -166,9 +164,9 @@ where
 
     // This function naively computes entries which are known to be zero. It is
     // meant to exactly mirror the proof-system multiplication proved by the
-    // sumcheck argument. Requantisation and shifting are also applied to these
+    // sumcheck argument. Requantization and shifting are also applied to these
     // trivial entries, as the proof system does.
-    fn padded_evaluate(&self, input: &QArray<ST>) -> QArray<LT> {
+    fn padded_evaluate(&self, input: &Tensor<ST>) -> Tensor<ST::LT> {
         let padded_dims = (1 << self.padded_dims_log.0, 1 << self.padded_dims_log.1);
 
         // Sanity checks
@@ -182,40 +180,39 @@ where
         assert_eq!(
             padded_dims.0,
             input.len(),
-            "Length mismatch: Padded fully connected node expected input with {} elements, got {} elements instead",
+            "Length mismatch: Padded BMM node expected input with {} elements, got {} elements instead",
             padded_dims.0,
             input.len()
         );
 
-        let input: QArray<LT> = input.cast();
+        let input: Tensor<ST::LT> = input.cast();
 
         // TODO this is a bigger question: can this overflow an i8? Supposedly the point of quantisation
         // is that input-by-weight products can be computed in i8. To be safe, let us use the large type here
-        let shifted_input = input - LT::from(self.input_zero_point);
+        let shifted_input = input - self.input_zero_point.into();
 
         let mut accumulators = self.padded_bias.values().clone();
 
-        // TODO this can be made more elegant (efficient?) using addition of QArrays after defining suitable operators
+        // TODO this can be made more elegant (efficient?) using addition of Tensors after defining suitable operators
 
         // TODO since we have acumulators, this can be done more efficiently going row-wise to avoid re-caching the input
         for col in 0..padded_dims.1 {
             // TODO does the compiler realise it doesn't need to access accumulators[col] on every iteration of the inner loop? ow change
             for row in 0..padded_dims.0 {
                 accumulators[col] +=
-                    shifted_input[row] * LT::from(self.padded_weights[row * padded_dims.1 + col])
+                    shifted_input[row] * self.padded_weights[row * padded_dims.1 + col].into();
             }
         }
 
-        QArray::new(accumulators, vec![padded_dims.1])
+        Tensor::new(accumulators, vec![padded_dims.1])
     }
 }
 
-impl<ST, LT> BMMNode<ST, LT>
+impl<ST> BMMNode<ST>
 where
-    ST: InnerType,
-    LT: InnerType,
+    ST: SmallNIO,
 {
-    pub fn new(weights: QArray<ST>, bias: QArray<LT>, input_zero_point: ST) -> Self {
+    pub fn new(weights: Tensor<ST>, bias: Tensor<ST::LT>, input_zero_point: ST) -> Self {
         let dims = (weights.shape()[0], weights.shape()[1]);
 
         assert_eq!(
@@ -237,7 +234,7 @@ where
 
         let padded_bias = bias
             .clone()
-            .compact_resize(vec![dims.1.next_power_of_two()], LT::ZERO);
+            .compact_resize(vec![dims.1.next_power_of_two()], ST::LT::ZERO);
 
         Self {
             weights,

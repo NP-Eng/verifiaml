@@ -1,6 +1,6 @@
 use ark_std::log2;
 
-use crate::{model::qarray::InnerType, QArray};
+use crate::{model::tensor::SmallNIO, Tensor};
 
 use super::{NodeOpsNative, NodeOpsPadded};
 
@@ -13,13 +13,13 @@ pub struct ReshapeNode {
 
 impl<ST> NodeOpsNative<ST, ST> for ReshapeNode
 where
-    ST: InnerType,
+    ST: SmallNIO,
 {
     fn shape(&self) -> Vec<usize> {
         self.output_shape.clone()
     }
 
-    fn evaluate(&self, input: &QArray<ST>) -> QArray<ST> {
+    fn evaluate(&self, input: &Tensor<ST>) -> Tensor<ST> {
         // Sanity checks
         // TODO systematise
 
@@ -37,7 +37,7 @@ where
 
 impl<ST> NodeOpsPadded<ST, ST> for ReshapeNode
 where
-    ST: InnerType,
+    ST: SmallNIO,
 {
     fn padded_shape_log(&self) -> Vec<usize> {
         self.padded_output_shape_log.clone()
@@ -49,7 +49,7 @@ where
 
     // TODO I think this might be broken due to the failure of commutativity
     // between product and and nearest-geq-power-of-two
-    fn padded_evaluate(&self, input: &QArray<ST>) -> QArray<ST> {
+    fn padded_evaluate(&self, input: &Tensor<ST>) -> Tensor<ST> {
         let padded_input_shape: Vec<usize> = self
             .padded_input_shape_log
             .iter()

@@ -4,17 +4,19 @@ use ark_crypto_primitives::sponge::{Absorb, CryptographicSponge};
 use ark_ff::PrimeField;
 use ark_poly::MultilinearExtension;
 use ark_poly_commit::{LabeledPolynomial, PolynomialCommitment};
-use hcs_common::{InferenceProof, InnerType, Model};
-use hcs_common::{NodeCommitment, NodeCommitmentState, Poly, QArray, QTypeArray};
+use hcs_common::{
+    InferenceProof, Model, NIOTensor, NodeCommitment, NodeCommitmentState, Poly, SmallNIO, Tensor,
+};
 
 use crate::NodeOpsProve;
-pub trait ProveModel<F, S, PCS, ST, LT>
+pub trait ProveModel<F, S, PCS, ST>
 where
     F: PrimeField + Absorb,
     S: CryptographicSponge,
     PCS: PolynomialCommitment<F, Poly<F>, S>,
+    ST: SmallNIO,
 {
-    fn padded_evaluate(&self, input: QArray<ST>) -> QArray<ST>;
+    fn padded_evaluate(&self, input: Tensor<ST>) -> Tensor<ST>;
 
     fn prove_inference(
         &self,
@@ -23,8 +25,8 @@ where
         sponge: &mut S,
         node_coms: &Vec<NodeCommitment<F, S, PCS>>,
         node_com_states: &Vec<NodeCommitmentState<F, S, PCS>>,
-        input: QArray<ST>,
-    ) -> InferenceProof<F, S, PCS, ST, LT>;
+        input: Tensor<ST>,
+    ) -> InferenceProof<F, S, PCS, ST>;
 
     fn commit(
         &self,
@@ -33,17 +35,16 @@ where
     ) -> Vec<(NodeCommitment<F, S, PCS>, NodeCommitmentState<F, S, PCS>)>;
 }
 
-impl<F, S, PCS, ST, LT> ProveModel<F, S, PCS, ST, LT> for Model<ST, LT>
+impl<F, S, PCS, ST> ProveModel<F, S, PCS, ST> for Model<ST>
 where
-    F: PrimeField + Absorb + From<ST> + From<LT>,
+    F: PrimeField + Absorb + From<ST> + From<ST::LT>,
     S: CryptographicSponge,
     PCS: PolynomialCommitment<F, Poly<F>, S>,
-    ST: InnerType + TryFrom<LT>,
-    LT: InnerType + From<ST>,
+    ST: SmallNIO,
 {
     /// Unlike the node's `padded_evaluate`, the model's `padded_evaluate` accepts unpadded input
     /// and first re-sizes it before running inference.
-    fn padded_evaluate(&self, input: QArray<ST>) -> QArray<ST> {
+    fn padded_evaluate(&self, input: Tensor<ST>) -> Tensor<ST> {
         // TODO sanity check: input shape matches model input shape
 
         let input = input.compact_resize(
@@ -55,7 +56,7 @@ where
             ST::ZERO,
         );
 
-        let mut output = QTypeArray::S(input);
+        let mut output = NIOTensor::S(input);
 
         for node in &self.nodes {
             output = node.padded_evaluate(&output);
@@ -74,8 +75,8 @@ where
         sponge: &mut S,
         node_coms: &Vec<NodeCommitment<F, S, PCS>>,
         node_com_states: &Vec<NodeCommitmentState<F, S, PCS>>,
-        input: QArray<ST>,
-    ) -> InferenceProof<F, S, PCS, ST, LT> {
+        input: Tensor<ST>,
+    ) -> InferenceProof<F, S, PCS, ST> {
         // TODO Absorb public parameters into s (to be determined what exactly)
 
         let output = input.compact_resize(
@@ -88,7 +89,7 @@ where
 
         let output_f: Vec<F> = output.values().iter().map(|x| F::from(*x)).collect();
 
-        let mut output = QTypeArray::S(output);
+        let mut output = NIOTensor::S(output);
 
         // First pass: computing node values
         // TODO handling F and QSmallType is inelegant; we might want to switch
@@ -103,8 +104,8 @@ where
             output = node.padded_evaluate(&output);
 
             let output_f: Vec<F> = match &output {
-                QTypeArray::S(o) => o.values().iter().map(|x| F::from(*x)).collect(),
-                QTypeArray::L(o) => o.values().iter().map(|x| F::from(*x)).collect(),
+                NIOTensor::S(o) => o.values().iter().map(|x| F::from(*x)).collect(),
+                NIOTensor::L(o) => o.values().iter().map(|x| F::from(*x)).collect(),
             };
 
             node_outputs.push(output.clone());

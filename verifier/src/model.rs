@@ -5,37 +5,37 @@ use ark_poly::Polynomial;
 use ark_poly_commit::PolynomialCommitment;
 use ark_std::log2;
 
-use hcs_common::{InferenceProof, InnerType, Model, NodeCommitment, Poly};
+use hcs_common::{InferenceProof, Model, NodeCommitment, Poly, SmallNIO};
 
-pub trait VerifyModel<F, S, PCS, ST, LT>
+pub trait VerifyModel<F, S, PCS, ST>
 where
     F: PrimeField + Absorb,
     S: CryptographicSponge,
     PCS: PolynomialCommitment<F, Poly<F>, S>,
+    ST: SmallNIO,
 {
     fn verify_inference(
         &self,
         vk: &PCS::VerifierKey,
         sponge: &mut S,
         node_commitments: &Vec<NodeCommitment<F, S, PCS>>,
-        inference_proof: InferenceProof<F, S, PCS, ST, LT>,
+        inference_proof: InferenceProof<F, S, PCS, ST>,
     ) -> bool;
 }
 
-impl<F, S, PCS, ST, LT> VerifyModel<F, S, PCS, ST, LT> for Model<ST, LT>
+impl<F, S, PCS, ST> VerifyModel<F, S, PCS, ST> for Model<ST>
 where
-    F: PrimeField + Absorb + From<ST> + From<LT>,
+    F: PrimeField + Absorb + From<ST> + From<ST::LT>,
     S: CryptographicSponge,
     PCS: PolynomialCommitment<F, Poly<F>, S>,
-    ST: InnerType + TryFrom<LT>,
-    LT: InnerType + From<ST>,
+    ST: SmallNIO,
 {
     fn verify_inference(
         &self,
         vk: &PCS::VerifierKey,
         sponge: &mut S,
         node_commitments: &Vec<NodeCommitment<F, S, PCS>>,
-        inference_proof: InferenceProof<F, S, PCS, ST, LT>,
+        inference_proof: InferenceProof<F, S, PCS, ST>,
     ) -> bool {
         let InferenceProof {
             inputs,
@@ -70,8 +70,8 @@ where
         // output nodes and instead working witht their plain values all along,
         // but that would require messy node-by-node handling
         let input_node_com = node_value_commitments.first().unwrap();
-        let input_node_qarray = inputs[0].ref_small();
-        let input_node_f: Vec<F> = input_node_qarray
+        let input_node_tensor = inputs[0].ref_small();
+        let input_node_f: Vec<F> = input_node_tensor
             .values()
             .iter()
             .map(|x| F::from(*x))
@@ -96,12 +96,12 @@ where
             sponge.squeeze_field_elements(log2(output_node_f.len()) as usize);
 
         // Verifying that the actual input was honestly padded with zeros
-        let padded_input_shape = input_node_qarray.shape().clone();
-        let honestly_padded_input = input_node_qarray
+        let padded_input_shape = input_node_tensor.shape().clone();
+        let honestly_padded_input = input_node_tensor
             .compact_resize(self.input_shape().clone(), ST::ZERO)
             .compact_resize(padded_input_shape, ST::ZERO);
 
-        if honestly_padded_input.values() != input_node_qarray.values() {
+        if honestly_padded_input.values() != input_node_tensor.values() {
             return false;
         }
 

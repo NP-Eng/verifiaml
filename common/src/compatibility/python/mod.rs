@@ -5,7 +5,7 @@ use std::{fs::create_dir_all, path::Path};
 
 use pyo3::{prelude::*, PyAny};
 
-use crate::QArray;
+use crate::Tensor;
 
 const PERCEPTRON_PATH: &str = include_str!(concat!(
     env!("CARGO_MANIFEST_DIR"),
@@ -21,7 +21,7 @@ pub fn get_model(py: Python, model_name: &str, args: Option<Vec<(&str, &str)>>) 
     func.call1(py, (model_name, args)).unwrap()
 }
 
-pub fn save_model_parameters_as_qarray(py: Python, model: &Py<PyAny>, path: &str) {
+pub fn save_model_parameters_as_tensor(py: Python, model: &Py<PyAny>, path: &str) {
     let path = Path::new(path);
 
     if !path.exists() {
@@ -30,13 +30,13 @@ pub fn save_model_parameters_as_qarray(py: Python, model: &Py<PyAny>, path: &str
     }
 
     model
-        .call_method1(py, "save_params_as_qarray", (path,))
+        .call_method1(py, "save_params_as_verifiaml_tensor", (path,))
         .unwrap();
 }
 
-pub fn get_model_input<'py, T>(python: Python<'py>, model: &Py<PyAny>, index: usize) -> QArray<f32>
+pub fn get_model_input<'py, T>(python: Python<'py>, model: &Py<PyAny>, index: usize) -> Tensor<f32>
 where
-    T: Into<QArray<f32>> + FromPyObject<'py> + Clone,
+    T: Into<Tensor<f32>> + FromPyObject<'py> + Clone,
 {
     let result = model.call_method1(python, "get_input", (index,));
 
@@ -46,10 +46,10 @@ where
     model_input.into()
 }
 
-pub fn get_model_output(py: Python, model: &Py<PyAny>, index: usize) -> QArray<u8> {
+pub fn get_model_output(py: Python, model: &Py<PyAny>, index: usize) -> Tensor<u8> {
     let result = model.call_method1(py, "get_output", (index,));
     // Downcast the result to the expected type
     let model_output = result.unwrap().extract::<Vec<u8>>(py).unwrap();
 
-    QArray::from(model_output)
+    Tensor::from(model_output)
 }
